@@ -5,7 +5,7 @@ import { evaluateEligibility, type Qualification, type Student } from "@/lib/cou
 function bandFor(score: number) {
   if (score >= 8) return "Strong Readiness";
   if (score >= 6) return "Ready";
-  if (score >= 4) return "Borderline – Tutor Review Recommended";
+  if (score >= 4) return "Borderline: Tutor Review Recommended";
   return "Not Yet Ready";
 }
 

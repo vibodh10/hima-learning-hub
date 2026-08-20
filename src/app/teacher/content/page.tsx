@@ -48,7 +48,7 @@ export default async function ContentEditorPage() {
   const activityOptions = (activities ?? []).map(activity => ({ id: activity.id, title: `${formatStage(activity.learning_stage)} · ${activity.title}` }));
   const classOptions = (classes ?? []).map(item => ({ id: item.id, title: item.name }));
 
-  return <><AppHeader name={actor.role === "teacher" ? "Hima" : actor.display_name} role={actor.role}/><main className="shell py-10">
+  return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <Link className="link" href="/dashboard">← Teacher dashboard</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Controlled curriculum</p><h1 className="mt-2 text-4xl font-bold">Learning content and allocation</h1><p className="mt-3 max-w-3xl leading-7 text-slate-600">Content is stored in the question bank, mapped to curriculum skills, and student-visible only after approval. Draft placeholders remain hidden.</p></div><Link className="button-secondary" href="/learn/61000000-0000-0000-0000-000000000001">Preview as a student</Link></div>
 

@@ -24,15 +24,15 @@ export default async function ConfirmEmailPage({ searchParams }: ConfirmPageProp
     <main className="shell grid min-h-screen place-items-center py-12">
       <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-sm" aria-labelledby="confirm-title">
         <Link className="mb-8 flex items-center gap-3 font-bold" href="/">
-          <span className="grid size-11 place-items-center rounded-xl bg-teal-700 text-lg text-white" aria-hidden="true">H</span>
-          Hima Learning Hub
+          <span className="grid size-11 place-items-center rounded-xl bg-teal-700 text-lg text-white" aria-hidden="true">S</span>
+          SCCB Digital Learning Hub
         </Link>
         <p className="eyebrow">Secure email confirmation</p>
         <h1 className="mt-3 text-3xl font-bold" id="confirm-title">{valid ? "Continue to set your password" : "This email link is incomplete"}</h1>
         <p className="mt-3 text-slate-600">
           {valid
             ? "Press the button once. This prevents email-security previews from using your one-time link before you do."
-            : "Request a fresh link from Hima, then open only the newest email."}
+            : "Request a fresh link from SCCB Digital Learning Hub, then open only the newest email."}
         </p>
         {valid ? (
           <form className="mt-7" action={confirmEmailToken}>

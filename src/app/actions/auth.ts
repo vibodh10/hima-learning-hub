@@ -38,7 +38,7 @@ export async function requestPasswordReset(_: AuthState, formData: FormData): Pr
   });
   if (error) {
     console.error("Password-reset email could not be sent", { code: error.code, status: error.status });
-    return { message: "The email service could not send another reset link yet. Wait before retrying or ask Hima for a secure account reset." };
+    return { message: "The email service could not send another reset link yet. Wait before retrying or ask an administrator for a secure account reset." };
   }
   // Deliberately do not disclose whether the account exists.
   return { message: "If that address belongs to an account, a reset link has been sent." };

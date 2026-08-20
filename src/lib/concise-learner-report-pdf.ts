@@ -21,7 +21,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   let page = pdf.addPage([595, 842]); let y = 790; let pageNumber = 1;
   const footer = () => {
     page.drawLine({ start: { x: 45, y: 38 }, end: { x: 550, y: 38 }, thickness: .5, color: rgb(.72, .77, .8) });
-    page.drawText(`Hima Learning Hub | Individual Learner Report | Page ${pageNumber}`, { x: 45, y: 22, size: 8, font: regular, color: rgb(.32, .39, .43) });
+    page.drawText(`SCCB Digital Learning Hub | Individual Learner Report | Page ${pageNumber}`, { x: 45, y: 22, size: 8, font: regular, color: rgb(.32, .39, .43) });
   };
   const newPage = () => { footer(); page = pdf.addPage([595, 842]); pageNumber += 1; y = 790; };
   const ensure = (minimum: number) => { if (y < minimum) newPage(); };
@@ -146,9 +146,9 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   subheading("Curriculum question sessions and papers");
   data.curriculumAttempts.slice(0,20).forEach(item=>{
     const submitted=Array.isArray(item.question_results)&&(item.question_results as Row[]).some(result=>typeof result.answer==="string");
-    const outcome=submitted&&item.teacher_mark==null?"awaiting Hima review":`${item.mark}/${item.max_mark} (${Math.round(Number(item.percentage))}%)`;
+    const outcome=submitted&&item.teacher_mark==null?"awaiting teacher review":`${item.mark}/${item.max_mark} (${Math.round(Number(item.percentage))}%)`;
     line(`${date(textOrNull(item.completed_at))} | Unit ${String(item.unit_code)} | ${String(item.topic_code??`${item.paper_mode??"applied"} paper`)} | ${outcome} | ${Number(item.hints_used)} hints | ${Math.round(Number(item.active_seconds)/60)} minutes.`,8);
-    if(item.teacher_feedback)line(`Hima's feedback: ${String(item.teacher_feedback)} | reviewed ${date(textOrNull(item.reviewed_at))}.`,8,false,1);
+    if(item.teacher_feedback)line(`Teacher feedback: ${String(item.teacher_feedback)} | reviewed ${date(textOrNull(item.reviewed_at))}.`,8,false,1);
   });
   if(!data.curriculumAttempts.length)line("No curriculum question sessions or papers recorded.",8);
 
@@ -176,13 +176,13 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   data.overrides.forEach(item => line(`${date(textOrNull(item.created_at))} | ${String(related(item.activities)?.title ?? "Activity")} | ${String(item.reason)}.`, 8));
   if (!data.teacherActions.length && !data.overrides.length) line("No audit or exceptional-access records.", 8);
   subheading("Evidence integrity and scope");
-  line("Academic judgements use dated assessment evidence, mapped curriculum content, recorded support, teacher feedback and follow-up where available. Open-ended practical papers are not treated as finally marked until Hima records a review.",8);
+  line("Academic judgements use dated assessment evidence, mapped curriculum content, recorded support, teacher feedback and follow-up where available. Open-ended practical papers are not treated as finally marked until a teacher records a review.",8);
   line("A missing record is shown as not recorded or not assessed; it is never converted into a progress claim. Rewards are reported separately from academic evidence.",8);
   line("This educational progress report supports inspection discussion but is not an Ofsted certificate. Attendance, safeguarding, SEND plans and statutory records remain in the centre's approved systems and must be considered alongside it.",8);
   footer();
   pdf.setTitle(`${data.learnerName} - Individual Learner Report`);
   pdf.setSubject("Concise starting-point, progress, feedback and target summary");
-  pdf.setAuthor("Hima Learning Hub"); pdf.setCreator("Hima Learning Hub"); pdf.setCreationDate(asAt);
+  pdf.setAuthor("SCCB Digital Learning Hub"); pdf.setCreator("SCCB Digital Learning Hub"); pdf.setCreationDate(asAt);
   return pdf.save();
 }
 

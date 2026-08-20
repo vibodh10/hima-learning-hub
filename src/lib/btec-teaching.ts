@@ -7,7 +7,7 @@ export type TeachingCard={id:string;title:string;purpose:string;points:TeachingP
 export function teachingSequenceFor(unit:PearsonUnit,topic:PearsonTopic,level:ExpertiseLevel):TeachingCard[]{
  const lesson=lessonFor(unit,topic,level),groups=chunk(topic.content,2);
  const conceptCards=groups.map((concepts,index):TeachingCard=>({
-  id:`concept-${index+1}`,title:`Key ideas ${index*2+1}–${Math.min(index*2+concepts.length,topic.content.length)}`,
+  id:`concept-${index+1}`,title:`Key ideas ${index*2+1} to ${Math.min(index*2+concepts.length,topic.content.length)}`,
   purpose:`Understand ${concepts.join(" and ")} before applying them.`,
   points:concepts.map(concept=>({concept,explanation:explainConcept(concept,unit.code,topic.title,level),example:conceptExample(concept,unit.code)})),
   misconception:`Do not earn marks by listing “${concepts[0]}” alone. Define it accurately, apply it to the named organisation and explain the resulting effect.`,

@@ -67,7 +67,7 @@ export function conciseCurrentJudgement(input: {
   latestPercentage?: number | null;
 }) {
   if (input.startingQuestionCount === 0) return "Not yet assessed";
-  if (!input.startingSufficient && !input.validComparableProgress) return "Initial indication — limited evidence";
+  if (!input.startingSufficient && !input.validComparableProgress) return "Initial indication: limited evidence";
   if (!input.validComparableProgress || !input.progressSufficient) return "Awaiting comparable progress evidence";
   if (Number(input.hintsUsed ?? 0) > 0) return "Progress demonstrated with support";
   return Number(input.latestPercentage ?? 0) >= 70

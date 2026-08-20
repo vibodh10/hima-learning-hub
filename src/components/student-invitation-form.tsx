@@ -8,7 +8,7 @@ export function StudentInvitationForm({ classId }: { classId: string }) {
   return <section className="card mt-6 border-blue-200">
     <p className="eyebrow">Authentic registration</p>
     <h2 className="mt-2 text-2xl font-bold">Invite a student securely</h2>
-    <p className="mt-2 text-sm leading-6 text-slate-600">Recommended method: there is no open student sign-up. Hima enters the student’s known email, and Supabase sends a one-person invitation linked directly to this class.</p>
+    <p className="mt-2 text-sm leading-6 text-slate-600">Recommended method: there is no open student sign-up. A teacher enters the student’s known email, and Supabase sends a one-person invitation linked directly to this class.</p>
     <form action={action} className="mt-5 grid gap-4 md:grid-cols-2">
       <input type="hidden" name="classId" value={classId}/>
       <Field label="Student's full name" name="name" error={state.errors?.name?.[0]}/>

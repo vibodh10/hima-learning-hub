@@ -39,10 +39,10 @@ export type EligibilityStatus =
 export type EligibilityDecision = { status: EligibilityStatus; reason: string; ruleUsed: string };
 
 export const COURSE_LABELS: Record<Pathway, string> = {
-  "digital-support-security": "T Level – Digital Support & Security",
-  "digital-software-development": "T Level – Digital Software Development",
-  "btec-national-diploma-it": "Level 3 – BTEC National Diploma in IT",
-  "btec-extended-diploma-it": "Level 3 – BTEC National Extended Diploma in IT",
+  "digital-support-security": "T Level: Digital Support & Security",
+  "digital-software-development": "T Level: Digital Software Development",
+  "btec-national-diploma-it": "Level 3: BTEC National Diploma in IT",
+  "btec-extended-diploma-it": "Level 3: BTEC National Extended Diploma in IT",
 };
 
 function gradeMeets(raw: string, threshold: number) {
@@ -72,7 +72,7 @@ export function evaluateEligibility(student: Student, qualifications: Qualificat
   if (age === null) return { status: "entry_criteria_pending", reason: "A valid date of birth is required.", ruleUsed: "Age validation" };
 
   if (student.pathway === "digital-support-security" || student.pathway === "digital-software-development") {
-    if (age < 16 || age > 18) return { status: "not_eligible", reason: `This T Level route is available to learners aged 16–18. Your recorded age is ${age}.`, ruleUsed: "T Level age 16–18" };
+    if (age < 16 || age > 18) return { status: "not_eligible", reason: `This T Level route is available to learners aged 16 to 18. Your recorded age is ${age}.`, ruleUsed: "T Level age 16 to 18" };
   } else if (age < 16) {
     return { status: "not_eligible", reason: `This Level 3 route is available from age 16. Your recorded age is ${age}.`, ruleUsed: "Level 3 age 16+" };
   }
@@ -109,8 +109,8 @@ export function evaluateEligibility(student: Student, qualifications: Qualificat
     const altConfirmed = rows.find((q) => q.resultStatus === "achieved" && ((/functional skills level 2/i.test(q.qualificationType) && completionPass(q.grade)) || (/level 2 btec/i.test(q.qualificationType) && completionPass(q.grade)) || (/level 2 digital diploma/i.test(q.qualificationType) && completionPass(q.grade))));
     const altPredicted = rows.find((q) => q.resultStatus === "awaiting" && ((/functional skills level 2/i.test(q.qualificationType) && completionPass(q.predictedGrade)) || (/level 2 btec/i.test(q.qualificationType) && completionPass(q.predictedGrade)) || (/level 2 digital diploma/i.test(q.qualificationType) && completionPass(q.predictedGrade))));
     if (altConfirmed) return { status: "eligible", reason: "You meet the initial entry criteria for this course.", ruleUsed: "Accepted Level 2 route" };
-    if (confirmed3 >= 4 && (englishConfirmed4 || mathsConfirmed4)) return { status: "eligible", reason: "You meet the initial entry criteria for this course.", ruleUsed: "Route A – GCSE route" };
-    if (altPredicted || (effective3 >= 4 && (englishEffective4 || mathsEffective4))) return { status: "provisionally_eligible", reason: "Based on your predicted grades, you appear to meet the entry criteria. Final eligibility is subject to confirmation of your official results.", ruleUsed: altPredicted ? "Predicted Level 2 route" : "Route A – GCSE route" };
+    if (confirmed3 >= 4 && (englishConfirmed4 || mathsConfirmed4)) return { status: "eligible", reason: "You meet the initial entry criteria for this course.", ruleUsed: "Route A: GCSE route" };
+    if (altPredicted || (effective3 >= 4 && (englishEffective4 || mathsEffective4))) return { status: "provisionally_eligible", reason: "Based on your predicted grades, you appear to meet the entry criteria. Final eligibility is subject to confirmation of your official results.", ruleUsed: altPredicted ? "Predicted Level 2 route" : "Route A: GCSE route" };
     if (hasPending) return { status: "entry_criteria_pending", reason: "Final eligibility cannot be confirmed until outstanding results are available.", ruleUsed: "BTEC Diploma routes" };
     return { status: "not_eligible", reason: effective3 < 4 ? `You currently have ${effective3} GCSEs at Grade 3 or above. The GCSE route requires 4, or you must meet one of the accepted Level 2 routes.` : "The GCSE route requires Grade 4 or above in either English or Maths, or completion of one of the accepted Level 2 routes.", ruleUsed: "BTEC Diploma routes" };
   }

@@ -74,7 +74,7 @@ async function buildClassPdf(data:Report){
   y-=8;line("Teacher actions and interventions",14,true);
   if(data.actions.length)data.actions.forEach(action=>line(`${new Date(action.created_at).toLocaleDateString("en-GB")} - ${action.action}: ${action.reason}`));
   else line("No teacher actions recorded.");
-  y-=12;line("This factual report covers formative learning and progress evidence only. Formal qualification assignments and grades are outside Hima Learning Hub.",8);
+  y-=12;line("This factual report covers formative learning and progress evidence only. Formal qualification assignments and grades are outside SCCB Digital Learning Hub.",8);
   return pdf.save();
 }
 function average(values:number[]){return values.length?Math.round(values.reduce((sum,value)=>sum+value,0)/values.length*10)/10:null}

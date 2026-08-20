@@ -18,7 +18,7 @@ export function TestModePanel({
   }[]:[];
   return <aside className="mt-8 rounded-2xl border-2 border-fuchsia-500 bg-fuchsia-50 p-5 text-fuchsia-950">
     <p className="text-sm font-black uppercase tracking-widest">Test Mode</p>
-    <h2 className="mt-1 text-xl font-bold">TEST MODE — results are not part of a real learner record.</h2>
+    <h2 className="mt-1 text-xl font-bold">TEST MODE: results are not part of a real learner record.</h2>
     <p className="mt-2 text-sm">All controls below write only to your isolated demo sandbox. They cannot change learner progress, pathways, homework, interventions, permanent coins, streaks, or inspection evidence.</p>
     <form action={action} className="mt-5 grid gap-3">
       <input type="hidden" name="activityId" value={activityId}/>
@@ -40,14 +40,14 @@ export function TestModePanel({
       {state.message&&<p role="status" className={`text-sm ${state.ok?"text-fuchsia-900":"text-red-700"}`}>{state.message}</p>}
     </form>
     {answers.length>0&&<div className="mt-5 grid gap-3">{answers.map((item,index)=><div className="rounded-xl bg-white p-4" key={item.questionId}><p className="font-semibold">{index+1}. {item.question}</p><p className="mt-2 text-sm"><strong>Expected:</strong> {formatValue(item.answer)}</p><p className="mt-1 text-sm">{item.explanation}</p></div>)}</div>}
-    {themePreviews.length>0&&<div className="mt-5 rounded-xl bg-white p-4"><label className="text-sm font-semibold">Preview available theme<select className="input mt-1" value={selectedTheme} onChange={event=>setSelectedTheme(event.target.value)}>{themePreviews.map(item=><option value={item.id} key={item.id}>{item.title}</option>)}</select></label><div className="mt-3 rounded-xl border border-cyan-200 p-5" style={previewStyle(selectedPreview?.config)}><strong>{selectedPreview?.title}</strong><p className="mt-1 text-sm">Sandbox visual preview — no coins charged and no learner setting changed.</p></div></div>}
+    {themePreviews.length>0&&<div className="mt-5 rounded-xl bg-white p-4"><label className="text-sm font-semibold">Preview available theme<select className="input mt-1" value={selectedTheme} onChange={event=>setSelectedTheme(event.target.value)}>{themePreviews.map(item=><option value={item.id} key={item.id}>{item.title}</option>)}</select></label><div className="mt-3 rounded-xl border border-cyan-200 p-5" style={previewStyle(selectedPreview?.config)}><strong>{selectedPreview?.title}</strong><p className="mt-1 text-sm">Sandbox visual preview with no coins charged and no learner setting changed.</p></div></div>}
     <div className="mt-5 flex flex-wrap gap-3">
       {nextHref&&<Link className="button" href={nextHref}>Next activity without submitting →</Link>}
       <button className="button-secondary" type="button" onClick={()=>setCelebrate(true)}>Preview Achievement Notification / Trigger Confetti</button>
       <form action={resetAction}><button className="button-secondary" disabled={resetPending}>{resetPending?"Resetting…":"Reset Demo Learner"}</button></form>
     </div>
     {resetState.message&&<p className="mt-3 text-sm" role="status">{resetState.message}</p>}
-    {celebrate&&<AchievementCelebration title="Python Explorer" reason="Test Mode preview — completed the Python mastery check." onClose={()=>setCelebrate(false)} preview/>}
+    {celebrate&&<AchievementCelebration title="Python Explorer" reason="Test Mode preview after completing the Python mastery check." onClose={()=>setCelebrate(false)} preview/>}
   </aside>;
 }
 

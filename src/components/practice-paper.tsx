@@ -63,12 +63,12 @@ export function PracticePaper({ unit }: { unit: PearsonUnit }) {
     <div className="card sticky top-3 z-10 flex flex-wrap items-center justify-between gap-3 py-4">
       <div><strong>{blueprint.title}</strong><p className="text-sm text-slate-600">{Object.keys(answers).length}/{questions.length} answered · suggested {blueprint.suggestedMinutes} min</p></div>
       {!submitted && <button className="button" onClick={finish}>Finish and mark</button>}
-      {submitted && <strong className="text-2xl">{requiresReview ? "Awaiting Hima review" : `${percent}% · ${earned}/${marks}`}</strong>}
+      {submitted && <strong className="text-2xl">{requiresReview ? "Awaiting teacher review" : `${percent}% · ${earned}/${marks}`}</strong>}
     </div>
     {questions.map((question, index) => <QuestionField key={question.id} question={question} index={index} answer={answers[question.id] ?? ""} submitted={submitted} onAnswer={answer => setAnswers(current => ({ ...current, [question.id]: answer }))}/>)}
     {submitted && <section className="card text-center">
       <h2 className="text-3xl font-bold">{requiresReview ? "Paper submitted for review" : `Paper complete: ${percent}%`}</h2>
-      <p className="mt-2 text-slate-600">{requiresReview ? "Hima will review the written or practical evidence against the mark scheme before a final mark appears in reports." : "Review the mark schemes above, then generate a comparable version or revisit the topics that need development."}</p>
+      <p className="mt-2 text-slate-600">{requiresReview ? "A teacher will review the written or practical evidence against the mark scheme before a final mark appears in reports." : "Review the mark schemes above, then generate a comparable version or revisit the topics that need development."}</p>
       {(syncPending || syncMessage) && <p role="status" className="mt-4 rounded-xl bg-slate-100 p-3 text-sm">{syncPending ? "Adding this paper to your report…" : syncMessage}</p>}
       <div className="mt-5 flex justify-center gap-3">
         <button className="button" onClick={() => { setVersion(value => value + 1); setAnswers({}); setSubmitted(false); setStarted(false); setStartedAt(Date.now()); setSyncMessage(""); }}>New comparable paper</button>
@@ -105,10 +105,10 @@ function QuestionField({ question, index, answer, submitted, onAnswer }: { quest
     {question.evidenceChecklist && <div className="mt-4 rounded-xl bg-blue-50 p-4"><p className="text-sm font-bold text-blue-950">Evidence your response should contain</p><ul className="mt-2 grid gap-1 text-sm text-blue-950">{question.evidenceChecklist.map(item => <li key={item}>□ {item}</li>)}</ul></div>}
     {question.options ? <div className="mt-4 grid gap-2">{question.options.map((option, optionIndex) => <label className="rounded-xl border border-slate-200 p-3" key={option}><input disabled={submitted} className="mr-3" type="radio" name={question.id} checked={answer === String(optionIndex)} onChange={() => onAnswer(String(optionIndex))}/>{option}</label>)}</div> : <>
       <textarea disabled={submitted} spellCheck={question.responseFormat === "written"} className={`input mt-4 ${question.kind === "practical_response" ? "min-h-72 font-mono" : "min-h-36"}`} placeholder={question.kind === "practical_response" ? `Produce the requested ${formatLabel(question.responseFormat)} evidence here.` : `Aim for at least ${question.minimumWords} words.`} value={answer} onChange={event => onAnswer(event.target.value)}/>
-      <p className="mt-2 text-xs text-slate-500">{question.kind === "practical_response" ? "Paste or write the design, SQL, code or test evidence. This is not automatically graded: Hima awards the final mark against the published rubric." : `Indicative minimum ${question.minimumWords} words. Extended responses receive automated guidance and remain available for Hima's review.`}</p>
+      <p className="mt-2 text-xs text-slate-500">{question.kind === "practical_response" ? "Paste or write the design, SQL, code or test evidence. This is not automatically graded: a teacher awards the final mark against the published rubric." : `Indicative minimum ${question.minimumWords} words. Extended responses receive automated guidance and remain available for teacher review.`}</p>
     </>}
     {submitted && <div className={`mt-4 rounded-xl p-4 ${question.kind === "practical_response" ? "bg-blue-50" : correct ? "bg-teal-50" : "bg-amber-50"}`}>
-      <strong>{question.kind === "practical_response" ? "Awaiting Hima's mark" : question.options ? (correct ? "Correct" : "Review this") : (correct ? "Key evidence found" : "More development needed")}</strong>
+      <strong>{question.kind === "practical_response" ? "Awaiting teacher mark" : question.options ? (correct ? "Correct" : "Review this") : (correct ? "Key evidence found" : "More development needed")}</strong>
       <p className="mt-1 text-sm">{question.explanation}</p>
       <details className="mt-3 rounded-xl bg-white/70 p-3"><summary className="cursor-pointer font-bold">Mark scheme and model response</summary><ul className="mt-2 grid gap-1 text-sm">{question.markScheme.map(point => <li key={point}>□ {point}</li>)}</ul><p className="mt-3 whitespace-pre-line text-sm"><strong>Model:</strong> {question.modelAnswer}</p>{question.kind !== "practical_response" && !correct && <p className="mt-2 text-sm"><strong>Watch for:</strong> {question.misconception}</p>}</details>
     </div>}

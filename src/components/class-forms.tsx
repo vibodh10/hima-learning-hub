@@ -23,7 +23,7 @@ export function CreateClassForm({ courses, years }: { courses: { id: string; tit
     <summary className="cursor-pointer font-bold text-teal-800">Create a new class</summary>
     <form action={action} className="mt-5 grid gap-4 md:grid-cols-2">
       <Field label="Class name" name="className" placeholder="L3 Computing A" />
-      <Field label="Enrolment code" name="enrolmentCode" placeholder="HIMA-2026" />
+      <Field label="Enrolment code" name="enrolmentCode" placeholder="SCCB-2026" />
       <label className="grid gap-2 text-sm font-semibold">Course<select className="input" name="courseId" required>{courses.map(c=><option value={c.id} key={c.id}>{c.title}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Academic year<select className="input" name="academicYearId" required>{years.map(y=><option value={y.id} key={y.id}>{y.name}</option>)}</select></label>
       <button className="button md:col-span-2" disabled={pending}>{pending ? "Creating…" : "Create class"}</button>

@@ -8,18 +8,18 @@ const features = [
 ];
 
 export default function Home() {
-  return <main>
+  return <main className="overflow-x-hidden">
     <nav className="shell flex items-center justify-between py-6" aria-label="Main navigation">
-      <Link href="/" className="flex items-center gap-3 font-bold text-slate-950"><Mark>H</Mark><span>Hima <span className="text-teal-700">Learning Hub</span></span></Link>
-      <div className="flex items-center gap-3"><Link href="/privacy" className="nav-link">Privacy</Link><Link href="/login" className="button button-small">Sign in</Link></div>
+      <Link href="/" className="flex min-h-11 items-center gap-3 font-bold text-slate-950"><Mark>S</Mark><span className="sm:hidden">SCCB Hub</span><span className="hidden sm:inline">SCCB <span className="text-teal-700">Digital Learning Hub</span></span></Link>
+      <div className="flex items-center gap-3"><Link href="/privacy" className="nav-link inline-flex min-h-11 items-center">Privacy</Link><Link href="/login" className="button button-small">Sign in</Link></div>
     </nav>
     <section className="shell grid min-h-[72vh] items-center gap-12 py-16 lg:grid-cols-[1.15fr_.85fr]">
       <div>
         <p className="eyebrow">Level 3 Computing & Digital</p>
         <h1 className="mt-5 max-w-3xl text-5xl font-bold leading-[1.04] tracking-[-.04em] text-slate-950 sm:text-7xl">Every learner’s next step, made <span className="text-teal-700">clear.</span></h1>
-        <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600">Calm, focused learning practice for classwork, homework and revision—with progress grounded in each learner’s starting point.</p>
+        <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600">Calm, focused learning practice for classwork, homework and revision, with progress grounded in each learner’s starting point.</p>
         <div className="mt-9 flex flex-wrap gap-3"><Link href="/login?role=student" className="button">Student sign in <span aria-hidden>→</span></Link><Link href="/login?role=teacher" className="button-secondary">Teacher sign in</Link></div>
-        <p className="mt-5 text-sm text-slate-500">Practice and progress only. Formal qualification assignments stay outside Hima.</p>
+        <p className="mt-5 text-sm text-slate-500">Practice and progress only. Formal qualification assignments stay outside SCCB Digital Learning Hub.</p>
       </div>
       <div className="relative">
         <div className="absolute -inset-5 -rotate-3 rounded-[2rem] bg-amber-100" aria-hidden />

@@ -518,7 +518,7 @@ export async function importExistingStudents(_: ActionState,formData:FormData):P
   const classId=databaseUuid.safeParse(formData.get("classId"));
   const emails=String(formData.get("emails")??"").split(/[\r\n,;]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
   const filename=z.string().trim().max(255).safeParse(formData.get("filename")??"pasted-learner-list.csv");
-  if(!classId.success||!filename.success||emails.length<1||emails.length>500||emails.some(email=>!z.email().safeParse(email).success))return{message:"Provide 1–500 valid learner email addresses."};
+  if(!classId.success||!filename.success||emails.length<1||emails.length>500||emails.some(email=>!z.email().safeParse(email).success))return{message:"Provide between 1 and 500 valid learner email addresses."};
   const supabase=await createClient();
   const{data,error}=await supabase.rpc("teacher_import_existing_students",{
     class_uuid:classId.data,emails_value:emails,filename_value:filename.data,
@@ -1045,7 +1045,7 @@ export async function recordBulkTeacherAction(_:ActionState,formData:FormData):P
     outcome:z.string().trim().max(1000),
   }).safeParse(Object.fromEntries(formData));
   const learnerIds=formData.getAll("learnerIds").map(String);
-  if(!parsed.success||learnerIds.length<1||learnerIds.length>100||!learnerIds.every(id=>databaseUuid.safeParse(id).success))return{message:"Select 1–100 learners and record an evidence-based action and reason."};
+  if(!parsed.success||learnerIds.length<1||learnerIds.length>100||!learnerIds.every(id=>databaseUuid.safeParse(id).success))return{message:"Select between 1 and 100 learners and record an evidence-based action and reason."};
   const supabase=await createClient();
   const{data,error}=await supabase.rpc("teacher_record_bulk_action",{
     class_uuid:parsed.data.classId,learner_uuids:learnerIds,

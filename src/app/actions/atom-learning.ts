@@ -36,7 +36,7 @@ export type CurriculumReviewState={ok?:boolean;message?:string;errors?:Record<st
 
 export async function reviewCurriculumAttempt(_:CurriculumReviewState,formData:FormData):Promise<CurriculumReviewState>{
  const actor=await getSessionProfile();
- if(!actor||!['teacher','administrator'].includes(actor.role))return{message:"Only Hima or an administrator can review practical evidence."};
+ if(!actor||!['teacher','administrator'].includes(actor.role))return{message:"Only a teacher or administrator can review practical evidence."};
  const parsed=reviewSchema.safeParse(Object.fromEntries(formData));
  if(!parsed.success)return{errors:parsed.error.flatten().fieldErrors};
  const supabase=await createClient();
@@ -47,5 +47,5 @@ export async function reviewCurriculumAttempt(_:CurriculumReviewState,formData:F
  const{error}=await supabase.from("learner_curriculum_attempts").update({teacher_mark:parsed.data.mark,teacher_feedback:parsed.data.feedback,reviewed_by:actor.id,reviewed_at:new Date().toISOString(),mark:parsed.data.mark,percentage}).eq("id",attempt.id);
  if(error)return{message:"The review could not be saved. Apply the latest database migration, then try again."};
  revalidatePath(`/teacher/learners/${parsed.data.learnerId}`);revalidatePath("/progress");
- return{ok:true,message:"Hima's final mark and feedback are now visible in learner and teacher reports."};
+ return{ok:true,message:"The final mark and teacher feedback are now visible in learner and teacher reports."};
 }

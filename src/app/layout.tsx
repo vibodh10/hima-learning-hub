@@ -5,9 +5,9 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: { default: "Hima Learning Hub", template: "%s · Hima Learning Hub" },
+  title: { default: "SCCB Digital Learning Hub", template: "%s · SCCB Digital Learning Hub" },
   description: "Purposeful learning practice and progress for Level 3 Computing and Digital.",
-  applicationName: "Hima Learning Hub",
+  applicationName: "SCCB Digital Learning Hub",
   manifest: "/manifest.webmanifest",
 };
 

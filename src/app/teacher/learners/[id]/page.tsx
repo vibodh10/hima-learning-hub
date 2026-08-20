@@ -55,7 +55,7 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
   const now = new Date();
   const classInfo = related(enrolments?.[0]?.classes);
   const courseInfo = related(classInfo?.courses);
-  const teacherName = "Hima";
+  const teacherName = actor.display_name;
   const { data: curriculumSkills } = classInfo?.course_id ? await supabase.from("skills")
     .select("id,title,sort_order,topics!inner(id,title,units!inner(id,code,title,course_id))")
     .eq("status", "approved").is("archived_at", null)
@@ -103,7 +103,7 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
   const curriculumNeeds = curriculumPractice.filter(item => Number(item.percentage) < 75);
   const curriculumStrengths = curriculumPractice.filter(item => Number(item.percentage) >= 75);
 
-  return <><AppHeader name={actor.role === "teacher" ? "Hima" : actor.display_name} role={actor.role}/><main className="shell py-10">
+  return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <Link className="link" href={classInfo ? `/teacher/classes/${classInfo.id}` : "/dashboard"}>← {classInfo?.name ?? "Teacher dashboard"}</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
       <div><p className="eyebrow">Individual learner report</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-2 text-slate-600">{courseInfo?.title ?? "Course not recorded"}</p></div>
@@ -159,9 +159,9 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
       <h3 className="mt-6 font-bold">Recent question and paper history</h3><div className="mt-3 grid gap-3">{(curriculumAttempts ?? []).slice(0,10).map(item=>{
         const responses=Array.isArray(item.question_results)?item.question_results as {id?:string;answer?:string;marks?:number}[]:[];
         const hasOpenResponses=item.kind==="practice_paper"&&responses.some(response=>typeof response.answer==="string");
-        return <article className="border-t border-slate-200 py-4 text-sm" key={item.id}><div className="flex flex-wrap justify-between gap-3"><span><strong>{formatDate(item.completed_at)}</strong> · Unit {item.unit_code}{item.topic_code?` · ${item.topic_code}`:` · ${item.paper_mode??"applied"} paper`} · {item.selected_level??"mixed difficulty"}</span><span>{hasOpenResponses&&item.teacher_mark==null?<strong className="text-amber-800">Awaiting Hima review</strong>:<>{Math.round(Number(item.percentage))}% · {item.mark}/{item.max_mark} marks</>} · {item.hints_used} hints · {formatDuration(item.active_seconds)}</span></div>
+        return <article className="border-t border-slate-200 py-4 text-sm" key={item.id}><div className="flex flex-wrap justify-between gap-3"><span><strong>{formatDate(item.completed_at)}</strong> · Unit {item.unit_code}{item.topic_code?` · ${item.topic_code}`:` · ${item.paper_mode??"applied"} paper`} · {item.selected_level??"mixed difficulty"}</span><span>{hasOpenResponses&&item.teacher_mark==null?<strong className="text-amber-800">Awaiting teacher review</strong>:<>{Math.round(Number(item.percentage))}% · {item.mark}/{item.max_mark} marks</>} · {item.hints_used} hints · {formatDuration(item.active_seconds)}</span></div>
           {hasOpenResponses&&<details className="mt-3 rounded-xl bg-slate-50 p-4"><summary className="cursor-pointer font-bold">Review submitted answers and award the final mark</summary><div className="mt-4 grid gap-3">{responses.map((response,index)=><div className="rounded-lg bg-white p-3" key={`${response.id??index}`}><p className="text-xs font-bold uppercase text-slate-500">Activity {index+1} · up to {response.marks??"?"} marks</p><pre className="mt-2 whitespace-pre-wrap font-sans text-sm">{response.answer||"No response supplied."}</pre></div>)}</div><CurriculumAttemptReviewForm attemptId={item.id} learnerId={id} maxMark={item.max_mark} currentMark={item.teacher_mark} currentFeedback={item.teacher_feedback}/></details>}
-          {item.teacher_feedback&&<p className="mt-3 rounded-xl bg-teal-50 p-3"><strong>Hima’s feedback:</strong> {item.teacher_feedback} {item.reviewed_at&&<span className="text-slate-600">· reviewed {formatDate(item.reviewed_at)}</span>}</p>}
+          {item.teacher_feedback&&<p className="mt-3 rounded-xl bg-teal-50 p-3"><strong>Teacher feedback:</strong> {item.teacher_feedback} {item.reviewed_at&&<span className="text-slate-600">· reviewed {formatDate(item.reviewed_at)}</span>}</p>}
         </article>})}{!curriculumAttempts?.length&&<Empty text="No Atom-style question sessions or papers recorded yet."/>}</div>
     </section>
 
@@ -242,7 +242,7 @@ function TopicSummaryCard({ group }: { group: TopicGroup }) {
     <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <CompactFact label="Starting-point date" value={date}/><CompactFact label="Skills sampled" value={`${sampled.length} of ${group.items.length}: ${sampled.map(item => item.skill.title).join(", ") || "None"}`}/>
       <CompactFact label="Starting-point result" value={sampled.length ? `${sampled.length} skills sampled; no secure topic percentage is calculated.` : "Not started"}/>
-      <CompactFact label="Evidence strength" value={secure.length === group.items.length ? "Sufficient to establish a baseline" : sampled.length ? "Limited — one question per sampled skill" : "No evidence yet"}/>
+      <CompactFact label="Evidence strength" value={secure.length === group.items.length ? "Sufficient to establish a baseline" : sampled.length ? "Limited: one question per sampled skill" : "No evidence yet"}/>
       <CompactFact label="Initial strengths" value={positive.length ? `Positive initial indications: ${positive.join(", ")}. These are not yet secure strengths.` : "No secure strengths have been established yet because the baseline evidence is limited."}/>
       <CompactFact label="Initial gaps" value={low.length ? `Lowest initial indication: ${low.join(", ")}.` : "Further assessment is required before support needs can be confirmed."}/>
       <CompactFact label="Next step" value={secure.length < group.items.length ? "Complete a fuller baseline assessment." : progressed.length ? "Review the progress-point evidence." : "Complete a comparable progress-point assessment."}/>
@@ -268,7 +268,7 @@ function overviewStartingStatus(groups: TopicGroup[]) {
 }
 function startingCell(item: TopicItem) {
   if (!item.counts.startingQuestionCount) return "Not assessed";
-  if (!item.counts.startingSufficient) return "Initial indication — limited evidence";
+  if (!item.counts.startingSufficient) return "Initial indication: limited evidence";
   return `${item.comparison?.starting_percentage}%`;
 }
 function supportCell(item: TopicItem) {

@@ -45,11 +45,11 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const average = latestScores.length ? Math.round(latestScores.reduce((sum, score) => sum + score, 0) / latestScores.length) : null;
   const supportSkills = mastery?.filter(skill => skill.current_pathway === "Support").length ?? 0;
 
-  return <><AppHeader name={actor.role === "teacher" ? "Hima" : actor.display_name} role={actor.role}/><main className="shell py-10">
+  return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <Link className="link" href="/dashboard">← Teacher dashboard</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Class overview</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title}</p></div><div className="flex flex-wrap items-center gap-3"><Link className="button-secondary" href={`/api/reports/classes/${id}`}>Class PDF</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Class CSV</Link><p className="rounded-xl bg-slate-100 px-4 py-3 text-sm">Code hint: ends in <strong>{classData.enrolment_code_hint}</strong></p></div></div>
 
-    <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Learners" value={String(studentIds.length)}/><Metric label="Activities completed" value={String(completedActivities)}/><Metric label="Latest average" value={average == null ? "—" : `${average}%`}/><Metric label="Homework attempts" value={String(homeworkAttempts)}/><Metric label="Skills requiring support" value={String(supportSkills)}/></section>
+    <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Learners" value={String(studentIds.length)}/><Metric label="Activities completed" value={String(completedActivities)}/><Metric label="Latest average" value={average == null ? "Not available" : `${average}%`}/><Metric label="Homework attempts" value={String(homeworkAttempts)}/><Metric label="Skills requiring support" value={String(supportSkills)}/></section>
 
     <ClassSettingsForm
       classData={classData}
@@ -84,7 +84,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
         const pathway = learnerProgress?.current_pathway ?? pathwayForScore(latestScore == null ? null : Number(latestScore));
         const learnerSkills = mastery?.filter(row => row.learner_id === enrolment.student_id).sort((a, b) => Number(a.mastery_score) - Number(b.mastery_score));
         const lowest = learnerSkills?.[0];
-        return <tr key={enrolment.student_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{related(enrolment.user_profiles)?.display_name}</td><td className="p-5">{firstScore == null ? "Not started" : `${firstScore}%`}</td><td className="p-5">{latestScore == null ? "—" : `${latestScore}%`}</td><td className="p-5">{pathway ?? "—"}</td><td className="p-5">{lowest ? `${related(lowest.skills)?.title} · ${Math.round(Number(lowest.mastery_score))}%` : "—"}</td><td className="p-5"><Link className="link" href={`/teacher/learners/${enrolment.student_id}`}>View full history</Link></td></tr>;
+        return <tr key={enrolment.student_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{related(enrolment.user_profiles)?.display_name}</td><td className="p-5">{firstScore == null ? "Not started" : `${firstScore}%`}</td><td className="p-5">{latestScore == null ? "Not available" : `${latestScore}%`}</td><td className="p-5">{pathway ?? "Not available"}</td><td className="p-5">{lowest ? `${related(lowest.skills)?.title} · ${Math.round(Number(lowest.mastery_score))}%` : "Not available"}</td><td className="p-5"><Link className="link" href={`/teacher/learners/${enrolment.student_id}`}>View full history</Link></td></tr>;
       })}</tbody>
     </table>{!classData.enrolments?.length && <p className="p-6 text-slate-600">No active learners are enrolled yet.</p>}</section>
 

@@ -17,7 +17,7 @@ describe("individual learner report accuracy rules", () => {
     expect(conciseCurrentJudgement({
       startingQuestionCount: 1, startingSufficient: false,
       progressSufficient: false, validComparableProgress: false, hintsUsed: 0,
-    })).toBe("Initial indication — limited evidence");
+    })).toBe("Initial indication: limited evidence");
   });
 
   it("requires sufficient, dated, comparable progress evidence", () => {

@@ -49,9 +49,9 @@ export default async function ActivityPage({ params }: { params: Promise<{ lesso
       <div className="mt-5 flex flex-wrap gap-3 text-sm">
         <Pill>{questions.length} questions</Pill><Pill>About {data.estimated_minutes} minutes</Pill><Pill>{data.pathway} pathway</Pill><Pill>Up to {data.max_attempts} attempts</Pill>
       </div>
-      {data.learning_stage === "mastery_check" && data.assessment_kind!=="unit_starting_point"&&<p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-950"><strong>Independent check — no hints.</strong> This confirms whether you are ready to move ahead.</p>}
+      {data.learning_stage === "mastery_check" && data.assessment_kind!=="unit_starting_point"&&<p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-950"><strong>Independent check with no hints.</strong> This confirms whether you are ready to move ahead.</p>}
       {hintsAvailable && <p className="mt-5 rounded-xl bg-teal-50 p-4 text-teal-950">Hints are available when needed. Using a hint supports learning and is recorded so mastery reflects independent understanding.</p>}
-      {actor.role==="student"&&activityState&&<p className={`mt-5 rounded-xl p-4 ${canAttempt?"bg-teal-50 text-teal-950":"bg-slate-100 text-slate-700"}`}><strong>{activityState.state}</strong> — {activityState.status_detail}</p>}
+      {actor.role==="student"&&activityState&&<p className={`mt-5 rounded-xl p-4 ${canAttempt?"bg-teal-50 text-teal-950":"bg-slate-100 text-slate-700"}`}><strong>{activityState.state}</strong>: {activityState.status_detail}</p>}
     </header>
     {actor.role==="student"
       ? canAttempt?<section className="mt-8"><PracticeForm activityId={data.id} questions={questions} assessmentKind={data.assessment_kind}/></section>

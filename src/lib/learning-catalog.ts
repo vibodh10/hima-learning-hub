@@ -269,7 +269,7 @@ export function lessonFor(unit: PearsonUnit, selected: PearsonTopic, level: Expe
     summary: [
       `${selected.title} covers ${selected.content.join(", ")}.`,
       "Successful work connects requirements, decisions, implementation evidence and evaluation.",
-      "Independent mastery—not topic choice alone—contributes to project readiness.",
+      "Independent mastery, not topic choice alone, contributes to project readiness.",
     ],
   };
 }
@@ -367,7 +367,7 @@ END WHILE`,
   if (unitCode === "9" && ["A1", "C1–C2"].includes(topicCode)) return {
     language: "Dependency plan",
     caption: "Dependencies determine the earliest start. A delayed critical task moves every dependent milestone unless action is taken.",
-    code: `T1 Confirm requirements       2 days  dependency: —
+    code: `T1 Confirm requirements       2 days  dependency: none
 T2 Approve process design    1 day   dependency: T1
 T3 Configure help desk       4 days  dependency: T2
 T4 Import users              1 day   dependency: T2
@@ -421,7 +421,7 @@ function conceptMeaning(concept: string, topicTitle: string, index: number) {
     [/dependencies|critical activities/, "A dependency constrains task order. Critical-path activities have no scheduling flexibility without moving the project end date."],
     [/risk|issues/, "A risk is an uncertain future event assessed by probability and impact; an issue has already occurred and requires ownership and action."],
     [/change control/, "A documented process for requesting, analysing, approving or rejecting, implementing and reviewing changes to controlled scope or products."],
-    [/security threats/, "Potential causes of harm—such as malware, social engineering, unauthorised access or physical loss—considered with likelihood, vulnerability and impact."],
+    [/security threats/, "Potential causes of harm, such as malware, social engineering, unauthorised access or physical loss, considered with likelihood, vulnerability and impact."],
     [/physical and logical protection/, "Physical controls protect people, buildings and devices; logical controls such as authentication, permissions and encryption protect systems and data."],
     [/pan, lan, wan and vpn/, "PAN, LAN and WAN describe increasing network scope; a VPN creates an authenticated encrypted connection across an untrusted network."],
     [/operating systems/, "System software that manages hardware resources, files, processes, users, security and the services needed by applications."],

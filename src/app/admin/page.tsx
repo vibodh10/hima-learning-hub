@@ -50,7 +50,7 @@ export default async function AdminPage(){
       </div>)}</div></div>
       <div className="card"><h2 className="text-2xl font-bold">Academic years</h2><div className="mt-4 grid gap-3">{years?.map(year=><div className="rounded-xl bg-slate-50 p-4" key={year.id}>
         <strong>{year.name}</strong>
-        <p className="mt-1 text-sm text-slate-500">{new Date(year.starts_on).toLocaleDateString("en-GB")} – {new Date(year.ends_on).toLocaleDateString("en-GB")}{year.archived_at?" · archived":""}</p>
+        <p className="mt-1 text-sm text-slate-500">{new Date(year.starts_on).toLocaleDateString("en-GB")} to {new Date(year.ends_on).toLocaleDateString("en-GB")}{year.archived_at?" · archived":""}</p>
         <AcademicYearStatusForm yearId={year.id} archived={Boolean(year.archived_at)}/>
       </div>)}</div><AcademicYearCreateForm/></div>
     </section>

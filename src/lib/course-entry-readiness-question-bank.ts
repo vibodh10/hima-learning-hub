@@ -1050,7 +1050,7 @@ export const QUESTION_BANK: Question[] = [
     "pathway": "btec-national-diploma-it",
     "category": "Testing",
     "difficulty": "medium",
-    "question": "A password field should accept 12–64 characters. Which values best test its length boundaries?",
+    "question": "A password field should accept 12 to 64 characters. Which values best test its length boundaries?",
     "options": [
       "20 and 30 only",
       "11, 12, 64 and 65 characters",
