@@ -1,0 +1,2 @@
+import { PasswordForm } from "@/components/password-form";
+export default function UpdatePasswordPage(){return <main className="shell grid min-h-screen place-items-center py-12"><div className="w-full max-w-md"><p className="eyebrow">Account access</p><h1 className="mt-3 text-3xl font-bold">Choose a new password</h1><p className="mb-7 mt-2 text-slate-600">Use a unique password with at least 10 characters.</p><PasswordForm mode="update"/></div></main>}

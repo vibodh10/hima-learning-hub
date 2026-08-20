@@ -1,65 +1,37 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Mark } from "@/components/icons";
+
+const features = [
+  ["01", "Know the starting point", "Topic-level diagnostics show what learners already know and where practice should begin."],
+  ["02", "Practise with purpose", "Short lessons, worked examples and immediate feedback make every attempt useful."],
+  ["03", "See the learning journey", "Teachers can follow factual evidence from starting point through practice, review and next target."],
+];
 
 export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+  return <main>
+    <nav className="shell flex items-center justify-between py-6" aria-label="Main navigation">
+      <Link href="/" className="flex items-center gap-3 font-bold text-slate-950"><Mark>H</Mark><span>Hima <span className="text-teal-700">Learning Hub</span></span></Link>
+      <div className="flex items-center gap-3"><Link href="/privacy" className="nav-link">Privacy</Link><Link href="/login" className="button button-small">Sign in</Link></div>
+    </nav>
+    <section className="shell grid min-h-[72vh] items-center gap-12 py-16 lg:grid-cols-[1.15fr_.85fr]">
+      <div>
+        <p className="eyebrow">Level 3 Computing & Digital</p>
+        <h1 className="mt-5 max-w-3xl text-5xl font-bold leading-[1.04] tracking-[-.04em] text-slate-950 sm:text-7xl">Every learner’s next step, made <span className="text-teal-700">clear.</span></h1>
+        <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600">Calm, focused learning practice for classwork, homework and revision—with progress grounded in each learner’s starting point.</p>
+        <div className="mt-9 flex flex-wrap gap-3"><Link href="/login?role=student" className="button">Student sign in <span aria-hidden>→</span></Link><Link href="/login?role=teacher" className="button-secondary">Teacher sign in</Link></div>
+        <p className="mt-5 text-sm text-slate-500">Practice and progress only. Formal qualification assignments stay outside Hima.</p>
+      </div>
+      <div className="relative">
+        <div className="absolute -inset-5 -rotate-3 rounded-[2rem] bg-amber-100" aria-hidden />
+        <div className="card relative overflow-hidden p-0">
+          <div className="border-b border-slate-100 p-6"><p className="text-sm text-slate-500">This week</p><h2 className="mt-1 text-xl font-bold">Network security fundamentals</h2></div>
+          <div className="grid gap-4 p-6">
+            <div className="rounded-2xl bg-teal-50 p-5"><div className="flex items-center justify-between"><span className="font-semibold">Topic progress</span><strong className="text-2xl text-teal-800">72%</strong></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white"><div className="h-full w-[72%] rounded-full bg-teal-600" /></div></div>
+            {["Remember · 5 min","Learn & worked example · 12 min","Core practice · 10 min"].map((item,index)=><div key={item} className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"><span className={`grid size-9 place-items-center rounded-full font-bold ${index===2?"bg-amber-100 text-amber-900":"bg-teal-700 text-white"}`}>{index===2?"→":"✓"}</span><span className="font-medium">{item}</span></div>)}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+      </div>
+    </section>
+    <section className="bg-slate-950 py-20 text-white"><div className="shell"><p className="eyebrow text-teal-300">Designed around good teaching</p><h2 className="mt-4 max-w-2xl text-3xl font-bold sm:text-4xl">A quiet system for purposeful practice.</h2><div className="mt-10 grid gap-8 md:grid-cols-3">{features.map(([n,t,d])=><article key={n} className="border-t border-slate-700 pt-6"><span className="text-sm font-bold text-teal-300">{n}</span><h3 className="mt-4 text-xl font-semibold">{t}</h3><p className="mt-3 leading-7 text-slate-300">{d}</p></article>)}</div></div></section>
+  </main>;
 }

@@ -1,0 +1,22 @@
+import {describe,it} from "vitest";
+import {mkdir,writeFile} from "node:fs/promises";
+import {buildConciseLearnerReportPdf,type ConciseReportEvidence} from "../src/lib/concise-learner-report-pdf";
+
+describe("visual learner report fixture",()=>{
+ it.runIf(process.env.GENERATE_REPORT_FIXTURE==="1")("writes a representative inspection-evidence PDF",async()=>{
+  const topic={id:"topic-normalisation",title:"Normalisation",units:{id:"unit-2",code:"2",title:"Creating Systems to Manage Information"}};
+  const skill={id:"skill-normalise",title:"Normalise data from UNF to 3NF",topics:topic};
+  const evidence:ConciseReportEvidence={
+   learnerName:"Sample Learner",className:"Level 3 IT - Group 1",courseTitle:"Pearson BTEC Level 3 National Information Technology",teacherName:"Hima",enrolledAt:"2026-09-03",exportedAt:"2026-11-20T15:30:00Z",
+   skills:[skill],comparisons:[{skill_id:skill.id,starting_percentage:45,latest_percentage:82,improvement_points:37,evidence:{starting_question_count:6,progress_question_count:6,starting_sufficient:true,progress_sufficient:true},skills:skill,starting_result:{hints_used:2,created_at:"2026-09-12"},progress_result:{hints_used:0,created_at:"2026-11-15"}}],
+   mastery:[{skill_id:skill.id,mastery_score:82,current_pathway:"Stretch",attempts_count:4,hints_used:0,repeated_error_count:0,retrieval_score:79}],
+   attempts:[{id:"attempt-1",activity_id:"activity-1",percentage:45,attempt_number:1,completed_at:"2026-09-12",pathway:"Core",hints_used:2,activities:{title:"Normalisation baseline",lessons:{topics:topic}}},{id:"attempt-2",activity_id:"activity-1",percentage:82,attempt_number:2,completed_at:"2026-11-15",pathway:"Stretch",hints_used:0,activities:{title:"Normalisation reassessment",lessons:{topics:topic}}}],
+   targets:[{id:"target-1",target_text:"Normalise an unfamiliar invoice to 3NF independently and justify every dependency.",status:"active",starts_on:"2026-11-16",target_date:"2026-12-01",review_on:"2026-12-02",reason:"Latest practical work needs a clearer explanation of transitive dependency.",success_measure:"At least 8/10 without hints on a fresh practical task.",topics:topic,skills:skill}],
+   feedback:[],misconceptions:[],teacherActions:[{id:"action-1",action:"additional practice allocated",reason:"Re-teach partial and transitive dependencies using a new source document.",review_on:"2026-12-02",created_at:"2026-11-16"}],
+   snapshots:[{id:"snapshot-1",created_at:"2026-11-18",learner_reflection:"I now check whether every non-key field depends on the key, the whole key and nothing but the key.",next_priorities:"Explain transitive dependencies more precisely.",snapshot_data:{teacher_response:"Good improvement; apply this to a new invoice next."}}],
+   retrieval:[{id:"retrieval-1",scheduled_for:"2026-12-08",status:"scheduled",topics:topic}],badges:[],coins:[],assessments:[{id:"assessment-1",kind:"unit_starting_point",completed_at:"2026-09-12",activities:{title:"Unit 2 starting point"}}],overrides:[],
+   curriculumAttempts:[{id:"curriculum-1",kind:"topic_practice",unit_code:"2",topic_code:"A3",percentage:82,mark:18,max_mark:22,hints_used:0,active_seconds:1320,completed_at:"2026-11-15",question_results:[]},{id:"curriculum-2",kind:"practice_paper",unit_code:"2",paper_mode:"assignment",percentage:83,mark:55,max_mark:66,hints_used:0,active_seconds:18420,completed_at:"2026-11-18",teacher_mark:55,teacher_feedback:"Accurate 3NF design and queries. Improve the justification for the report grouping and record the retest evidence more precisely.",reviewed_at:"2026-11-20",question_results:[{id:"activity-1",answer:"Submitted database design evidence",marks:10}]}],
+  };
+  const bytes=await buildConciseLearnerReportPdf(evidence);await mkdir("output/pdf",{recursive:true});await writeFile("output/pdf/sample-individual-learner-evidence-report.pdf",bytes);
+ });
+});

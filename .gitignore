@@ -12,6 +12,14 @@
 
 # testing
 /coverage
+/.tmp-pg-adaptive-verify/
+/tmp/
+/output/
+
+# local development
+/.idea/
+/.tmp-hima-dev.*.log
+/.railway/
 
 # next.js
 /.next/

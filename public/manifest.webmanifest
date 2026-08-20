@@ -1,0 +1,17 @@
+{
+  "name": "Hima Learning Hub",
+  "short_name": "Hima",
+  "description": "Level 3 Computing and Digital learning practice.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8faf9",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
