@@ -25,10 +25,13 @@ Open student self-registration should remain disabled. Hima should invite each s
 
 1. In Supabase Authentication, enable email authentication.
 2. Configure the email sender and customise the **Invite user** email template with Hima Learning Hub wording.
-3. Add the live website callback URL to Supabase's allowed redirect URLs:
+3. Keep the intentional confirmation screen in the invitation template so email-security scanners cannot consume the link before the student clicks Continue:
+   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/update-password`
+4. Add the live website callback URL to Supabase's allowed redirect URLs:
    `https://YOUR-DOMAIN/auth/callback?next=/update-password`
-4. Keep `SUPABASE_SERVICE_ROLE_KEY` only in the server's environment settings. Never place it in a variable beginning `NEXT_PUBLIC_`, in browser code, screenshots or emails.
-5. Confirm that the public `/register` page is used only for controlled teaching-staff requests. Students must not use it.
+5. Set server-only `APP_URL=https://YOUR-DOMAIN` to the same public HTTPS origin. Do not use Railway's internal localhost address.
+6. Keep `SUPABASE_SERVICE_ROLE_KEY` only in the server's environment settings. Never place it in a variable beginning `NEXT_PUBLIC_`, in browser code, screenshots or emails.
+7. Confirm that the public `/register` page is used only for controlled teaching-staff requests. Students must not use it.
 
 ## How Hima invites a student
 
@@ -37,15 +40,15 @@ Open student self-registration should remain disabled. Hima should invite each s
 3. Find **Authentic registration → Invite a student securely**.
 4. Enter the student's full name and verified email address.
 5. Select **Send secure invitation**.
-6. The student receives a single-account Supabase invitation. Their profile is created as a student and assigned to that class; they cannot choose a teacher or administrator role.
+6. The portal records the invitation lifecycle without storing the one-time token. A new account receives a single-account Supabase invitation; a safe existing student account is connected without sending a duplicate invitation. Staff, archived and cross-organisation account collisions are blocked.
 
 ## What the student does
 
 1. Open the invitation in the same email inbox that Hima invited.
 2. Follow the link to Hima Learning Hub.
-3. Set a password of at least ten characters.
-4. Sign in with the invited email and new password.
-5. The assigned class and units appear automatically. The student does not need a public enrolment code.
+3. Press **Continue securely**, then set a password of at least ten characters.
+4. The portal opens the student's dashboard after the password is saved.
+5. The assigned class and units appear automatically. If immediate provisioning had a temporary failure, acceptance or the next sign-in retries it safely. The student does not need a public enrolment code.
 
 ## Before inviting real students
 
@@ -54,4 +57,3 @@ Open student self-registration should remain disabled. Hima should invite each s
 - Complete one lesson and practical paper, then confirm the evidence appears in Hima's learner report.
 - Confirm that a student cannot open another learner's report or any Hima-only page.
 - Only after this test should real student invitations be sent.
-

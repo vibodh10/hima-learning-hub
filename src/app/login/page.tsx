@@ -13,6 +13,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <p className="font-bold">This email link has expired or has already been used.</p>
       <p className="mt-1">Request a fresh password-reset link below, then open only the newest email.</p>
     </div>}
+    {error === "invitation-association" && <div role="alert" className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+      <p className="font-bold">Your email was confirmed, but the class assignment needs attention.</p>
+      <p className="mt-1">Ask your teacher to retry your invitation. Your account has not been attached to an unrelated class.</p>
+    </div>}
     <AuthForm presetRole={presetRole} showDemo={showDemo} />
     <p className="mt-5 text-center text-sm"><Link className="link" href="/forgot-password">Forgot your password?</Link></p>
     <p className="mt-6 text-center text-sm text-slate-600">Need an account? <Link className="link" href="/register">See how invitations work</Link></p>

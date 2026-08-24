@@ -91,7 +91,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-database-contract.ps1
 ```
 
 The verifier creates a new disposable database for each SQL journey, applies
-the full migration and seed chain, and currently runs 23 independent journeys.
+the full migration and seed chain, and currently runs 27 independent journeys.
 Coverage includes enrolment and class lifecycles, RLS isolation, immutable
 starting points, equivalent progress checks, adaptive routing and homework,
 targets, snapshots, question/activity authoring, teacher and bulk actions,
@@ -111,7 +111,7 @@ npm run lint
 npm run build
 ```
 
-The release gate covers unit tests, 23 independent database journeys,
+The release gate covers unit tests, 27 independent database journeys,
 TypeScript, ESLint and a Next.js production build.
 
 ## Safe Test Mode

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { confirmEmailToken } from "@/app/actions/auth";
 
 type ConfirmPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -35,7 +34,7 @@ export default async function ConfirmEmailPage({ searchParams }: ConfirmPageProp
             : "Request a fresh link from SCCB Digital Learning Hub, then open only the newest email."}
         </p>
         {valid ? (
-          <form className="mt-7" action={confirmEmailToken}>
+          <form className="mt-7" action="/auth/verify" method="post">
             <input name="tokenHash" type="hidden" value={tokenHash} />
             <input name="type" type="hidden" value={type} />
             <input name="next" type="hidden" value={next} />

@@ -7,15 +7,16 @@ function item(kind: SkillEvidence["kind"], correct: boolean, index: number, extr
 }
 
 describe("the eight required realistic learner journeys", () => {
+  const evidenceDate = new Date("2026-08-03T00:00:00.000Z");
   it("1 substantial support: low diagnostic evidence routes to re-teaching", () => {
-    expect(decideTopicRoute([item("initial_diagnostic",false,0),item("initial_diagnostic",false,1),item("initial_diagnostic",true,2)]).status).toBe("Support required");
+    expect(decideTopicRoute([item("initial_diagnostic",false,0),item("initial_diagnostic",false,1),item("initial_diagnostic",true,2)],evidenceDate).status).toBe("Support required");
   });
   it("2 expected level: mixed-secure evidence gets targeted Core review", () => {
-    const route=decideTopicRoute([item("initial_diagnostic",true,0),item("initial_diagnostic",true,1),item("initial_diagnostic",false,2)]);
+    const route=decideTopicRoute([item("initial_diagnostic",true,0),item("initial_diagnostic",true,1),item("initial_diagnostic",false,2)],evidenceDate);
     expect(route.recommendedAction).toBe("targeted_practice"); expect(route.recommendedLevel).toBe("Core");
   });
   it("3 strong prior knowledge: secure difficult evidence recommends Stretch or Challenge", () => {
-    const route=decideTopicRoute([item("initial_diagnostic",true,0,{difficulty:3}),item("initial_diagnostic",true,1,{difficulty:4}),item("initial_diagnostic",true,2)]);
+    const route=decideTopicRoute([item("initial_diagnostic",true,0,{difficulty:3}),item("initial_diagnostic",true,1,{difficulty:4}),item("initial_diagnostic",true,2)],evidenceDate);
     expect(["Stretch","Challenge"]).toContain(route.recommendedLevel);
   });
   it("4 fast-track: sufficient diagnostic evidence records the exact reason and retrieval date", () => {
@@ -23,8 +24,8 @@ describe("the eight required realistic learner journeys", () => {
     expect(route.status).toBe("Fast-tracked through diagnostic evidence"); expect(route.reason).toContain("3/3"); expect(route.retrievalDueAt).toBeTruthy();
   });
   it("5 mixed strengths and gaps: secure and insecure topics receive different routes", () => {
-    const secure=decideTopicRoute([item("initial_diagnostic",true,0),item("initial_diagnostic",true,1),item("initial_diagnostic",true,2)]);
-    const gap=decideTopicRoute([item("initial_diagnostic",false,0),item("initial_diagnostic",true,1),item("initial_diagnostic",false,2)]);
+    const secure=decideTopicRoute([item("initial_diagnostic",true,0),item("initial_diagnostic",true,1),item("initial_diagnostic",true,2)],evidenceDate);
+    const gap=decideTopicRoute([item("initial_diagnostic",false,0),item("initial_diagnostic",true,1),item("initial_diagnostic",false,2)],evidenceDate);
     expect(secure.status).not.toBe(gap.status);
   });
   it("6 repeated misconception: exact misconception returns targeted teaching", () => {

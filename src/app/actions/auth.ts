@@ -4,6 +4,8 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
+import { configuredAppOrigin, resolveAppOrigin } from "@/lib/app-origin";
+import { finalizeCurrentStudentInvitation } from "@/lib/invitation-finalization";
 
 export type AuthState = { message?: string; errors?: Record<string, string[]> };
 const credentials = z.object({
@@ -15,8 +17,17 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   const parsed = credentials.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors };
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { message: "The email or password was not recognised." };
+  const metadata = data.user.user_metadata as Record<string, unknown>;
+  if (metadata.requested_role === "student" && metadata.invited_class_id) {
+    const finalized = await finalizeCurrentStudentInvitation();
+    if (finalized.kind !== "ready") {
+      console.error("Student invitation login association failed", { outcome: finalized.kind, code: "code" in finalized ? finalized.code : undefined });
+      await supabase.auth.signOut();
+      return { message: "Your account is valid, but its class assignment could not be completed. Ask your teacher to retry the invitation." };
+    }
+  }
   redirect("/dashboard");
 }
 
@@ -29,9 +40,11 @@ export async function logout() {
 export async function requestPasswordReset(_: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = z.email().safeParse(formData.get("email"));
   if (!parsed.success) return { errors: { email: ["Enter a valid email address."] } };
-  const requestOrigin = (await headers()).get("origin");
-  const origin = process.env.APP_URL?.replace(/\/$/, "") || requestOrigin;
-  if (!origin) return { message: "The password-reset link could not be created from this address." };
+  const origin = resolveAppOrigin({
+    configuredOrigin: configuredAppOrigin(),
+    requestOrigin: (await headers()).get("origin"),
+  });
+  if (!origin) return { message: "The public application URL is not configured, so no reset email was sent." };
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
     redirectTo: `${origin}/auth/callback?next=/update-password`,
@@ -50,25 +63,5 @@ export async function updatePassword(_: AuthState, formData: FormData): Promise<
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: parsed.data });
   if (error) return { message: "The reset session has expired. Request another link." };
-  return { message: "Password updated. You can now return to your dashboard." };
-}
-
-export async function confirmEmailToken(formData: FormData) {
-  const parsed = z.object({
-    tokenHash: z.string().min(20),
-    type: z.enum(["recovery", "invite"]),
-    next: z.string().startsWith("/").refine((value) => !value.startsWith("//")),
-  }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect("/login?error=invalid-email-link");
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.verifyOtp({
-    token_hash: parsed.data.tokenHash,
-    type: parsed.data.type,
-  });
-  if (error) {
-    console.error("Email token verification failed", { code: error.code, status: error.status });
-    redirect("/login?error=expired-email-link");
-  }
-  redirect(parsed.data.next);
+  redirect("/dashboard");
 }
