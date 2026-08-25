@@ -12,3 +12,6 @@ export function canSubmitPractice(role: Role) {
 export function canViewLearnerEvidence(role: Role) {
   return role === "teacher" || role === "administrator";
 }
+export function canManageCurriculumConfiguration(role: Role) {
+  return role === "administrator";
+}

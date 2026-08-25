@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CurriculumExplorer } from "@/components/curriculum-explorer";
 
 export default async function ContentEditorPage() {
-  const actor = await requireRole("teacher", "administrator");
+  const actor = await requireRole("administrator");
   const supabase = await createClient();
   const [
     { data: lesson }, { data: topics }, { data: skills }, { data: activities },
@@ -23,7 +23,7 @@ export default async function ContentEditorPage() {
     supabase.from("topics").select("id,unit_id,learning_aim_id,title,status,units(code,title)").is("archived_at", null).order("sort_order"),
     supabase.from("skills").select("id,topic_id,title,topics(title)").is("archived_at", null).order("sort_order"),
     supabase.from("activities").select("id,lesson_id,title,learning_stage,status,lessons(title)").is("archived_at", null).order("title"),
-    supabase.from("classes").select("id,name").eq("teacher_id", actor.id).is("archived_at", null).order("name"),
+    supabase.from("classes").select("id,name").is("archived_at", null).order("name"),
     supabase.from("questions").select("id,question_text,kind,pathway,status,explanation,feedback_correct,feedback_incorrect,hint,marks,estimated_seconds,blueprint_id,blueprint_category,tags,skills(title),question_options(option_text),question_misconceptions(misconception_id)").eq("status", "draft").is("archived_at", null).order("updated_at", { ascending: false }).limit(20),
     supabase.from("activity_allocations").select("id,release_at,deadline_at,allocated_pathway,required,activities(title),classes(name)").is("archived_at", null).order("created_at", { ascending: false }).limit(10),
     supabase.from("courses").select("id,title,qualification_type").order("title"),
@@ -44,8 +44,8 @@ export default async function ContentEditorPage() {
   const classOptions = (classes ?? []).map(item => ({ id: item.id, title: item.name }));
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
-    <Link className="link" href="/dashboard">← Teacher dashboard</Link>
-    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Controlled curriculum</p><h1 className="mt-2 text-4xl font-bold">Learning content and allocation</h1><p className="mt-3 max-w-3xl leading-7 text-slate-600">Content is stored in the question bank, mapped to curriculum skills, and student-visible only after approval. Draft placeholders remain hidden.</p></div><Link className="button-secondary" href="/learn/61000000-0000-0000-0000-000000000001">Preview as a student</Link></div>
+    <Link className="link" href="/admin">← Administrator dashboard</Link>
+    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Administrator curriculum configuration</p><h1 className="mt-2 text-4xl font-bold">Learning content and exceptional allocation</h1><p className="mt-3 max-w-3xl leading-7 text-slate-600">Content is stored in the question bank, mapped to curriculum skills, and student-visible only after approval. Ordinary teachers use the pre-built journey and do not maintain these forms.</p></div><Link className="button-secondary" href="/learn/61000000-0000-0000-0000-000000000001">Preview as a student</Link></div>
 
     <nav className="mt-8 flex flex-wrap gap-3 text-sm"><a className="button-secondary" href="#lesson">Lesson</a><a className="button-secondary" href="#questions">Question bank</a><a className="button-secondary" href="#review">Draft review</a><a className="button-secondary" href="#allocation">Allocation</a><a className="button-secondary" href="#settings">Gamification</a></nav>
 

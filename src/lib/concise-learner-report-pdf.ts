@@ -73,7 +73,8 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
 
   heading(1, "Learner overview");
   line(`Learner: ${data.learnerName} | Course: ${data.courseTitle}`, 10, true);
-  line(`Teacher: ${data.teacherName} | Enrolled: ${date(data.enrolledAt)} | Report date: ${date(data.exportedAt)}`);
+  line(`Class / group: ${data.className} | Teacher: ${data.teacherName}`);
+  line(`Enrolled: ${date(data.enrolledAt)} | Report date: ${date(data.exportedAt)}`);
   const partial = groups.filter(group => statusFor(group.items) === "Partially assessed").length;
   const established = groups.filter(group => statusFor(group.items) === "Baseline established").length;
   const progressed = groups.filter(group => statusFor(group.items) === "Progress point completed").length;
@@ -93,7 +94,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
     line(`Starting point: ${sampled.length} of ${group.items.length} skills sampled on ${firstDate(sampled.map(item => assessmentDate(item.comparison?.starting_result)))}.`);
     line(`Evidence: ${secure.length === group.items.length ? "Sufficient to establish a baseline." : sampled.length ? "Limited - one question per sampled skill; no secure topic percentage is calculated." : "Not started."}`);
     line(`Initial indications: ${positive.length ? `positive responses in ${positive.map(item => item.skill.title).join(", ")}` : "no secure strengths established"}${low.length ? `; lowest response in ${low.map(item => item.skill.title).join(", ")}` : ""}.`);
-    line(`Next step: ${secure.length < group.items.length ? "Complete a fuller baseline assessment." : "Complete a comparable progress-point assessment."}`);
+    line(`Next step: ${secure.length < group.items.length ? "Complete a fuller baseline assessment." : group.items.some(item => item.valid) ? "Use the comparison and current target to guide the next learning." : "Complete a comparable progress-point assessment."}`);
   });
 
   heading(3, "Topic progress and feedback");
@@ -138,6 +139,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
     else if (!item.success_measure) line("Warning: Success measure needs to be added.", 8, true);
   });
 
+  ensure(330);
   heading(6, "Before, after and participation evidence");
   const worksheets = data.worksheets ?? [];
   const evidenceTopics = uniqueTopicKeys([
@@ -227,6 +229,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   data.teacherActions.forEach(item => line(`${date(textOrNull(item.created_at))} | ${String(item.action)}: ${String(item.reason)}.`, 8));
   data.overrides.forEach(item => line(`${date(textOrNull(item.created_at))} | ${String(related(item.activities)?.title ?? "Activity")} | ${String(item.reason)}.`, 8));
   if (!data.teacherActions.length && !data.overrides.length) line("No audit or exceptional-access records.", 8);
+  ensure(225);
   subheading("Evidence integrity and scope");
   line("Academic judgements use dated assessment evidence, mapped curriculum content, recorded support, teacher feedback and follow-up where available. Open-ended practical papers are not treated as finally marked until a teacher records a review.",8);
   line("A missing record is shown as not recorded or not assessed; it is never converted into a progress claim. Rewards are reported separately from academic evidence.",8);

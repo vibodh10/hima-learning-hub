@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import { canCreateClass, canJoinClass, canSubmitPractice } from "@/lib/permissions";
+import { canCreateClass, canJoinClass, canManageCurriculumConfiguration, canSubmitPractice } from "@/lib/permissions";
 
 export type ActionState = {
   ok?: boolean;
@@ -323,7 +323,7 @@ const pathway = z.enum(["Support", "Core", "Stretch", "Mastery"]);
 
 export async function saveLesson(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can manage lessons." };
+  if (!actor || !canManageCurriculumConfiguration(actor.role)) return { message: "Administrator access is required to manage lessons." };
   const parsed = z.object({
     lessonId: z.union([databaseUuid, z.literal("")]).transform(value => value || null),
     topicId: databaseUuid,
@@ -356,7 +356,7 @@ export async function saveLesson(_: ActionState, formData: FormData): Promise<Ac
 
 export async function createQuestion(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can manage questions." };
+  if (!actor || !canManageCurriculumConfiguration(actor.role)) return { message: "Administrator access is required to manage questions." };
   const parsed = z.object({
     activityId: databaseUuid, skillId: databaseUuid,
     kind: z.enum([
@@ -394,7 +394,7 @@ export async function createQuestion(_: ActionState, formData: FormData): Promis
 
 export async function setContentStatus(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can approve content." };
+  if (!actor || !canManageCurriculumConfiguration(actor.role)) return { message: "Administrator access is required to approve content." };
   const parsed = z.object({ entity: z.enum(["lesson", "activity", "question"]), entityId: databaseUuid, status: contentStatus }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { message: "Invalid content status change." };
   const supabase = await createClient();
@@ -408,7 +408,7 @@ export async function setContentStatus(_: ActionState, formData: FormData): Prom
 
 export async function allocateActivity(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can allocate learning." };
+  if (!actor || !canManageCurriculumConfiguration(actor.role)) return { message: "Administrator access is required for manual content allocation." };
   const parsed = z.object({
     activityId: databaseUuid, classId: databaseUuid, pathway,
     releaseAt: z.string().min(1), deadlineAt: z.string().min(1),
@@ -428,7 +428,7 @@ export async function allocateActivity(_: ActionState, formData: FormData): Prom
 
 export async function setGamification(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can change these settings." };
+  if (!actor || !canManageCurriculumConfiguration(actor.role)) return { message: "Administrator access is required to change these settings." };
   const classId = databaseUuid.safeParse(formData.get("classId"));
   if (!classId.success) return { message: "Choose a class." };
   const supabase = await createClient();
@@ -1039,7 +1039,7 @@ export async function reviewFormativeResponse(_:ActionState,formData:FormData):P
 
 export async function createAssessmentBlueprint(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only authorised teaching staff can create assessment blueprints."};
+  if(!actor||!canManageCurriculumConfiguration(actor.role))return{message:"Administrator access is required to create assessment blueprints."};
   const parsed=z.object({
     curriculumVersionId:databaseUuid,
     title:z.string().trim().min(3).max(160),
@@ -1061,7 +1061,7 @@ export async function createAssessmentBlueprint(_:ActionState,formData:FormData)
 
 export async function createActivity(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only authorised teaching staff can create activities."};
+  if(!actor||!canManageCurriculumConfiguration(actor.role))return{message:"Administrator access is required to create activities."};
   const parsed=z.object({
     lessonId:databaseUuid,title:z.string().trim().min(3).max(160),
     kind:z.enum(["in_class_learning","in_class_practice","homework","revision","holiday_work","skills_practice","review_check"]),
@@ -1095,7 +1095,7 @@ export async function createActivity(_:ActionState,formData:FormData):Promise<Ac
 
 export async function reviewQuestion(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only authorised teaching staff can review questions."};
+  if(!actor||!canManageCurriculumConfiguration(actor.role))return{message:"Administrator access is required to review questions."};
   const parsed=z.object({
     questionId:databaseUuid,question:z.string().trim().min(5).max(5000),
     correctAnswer:z.string().trim().max(5000),

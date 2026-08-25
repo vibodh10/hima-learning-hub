@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canCreateClass, canJoinClass, canSubmitPractice, canViewLearnerEvidence } from "./permissions";
+import { canCreateClass, canJoinClass, canManageCurriculumConfiguration, canSubmitPractice, canViewLearnerEvidence } from "./permissions";
 
 describe("role permissions", () => {
   it("keeps class administration away from students", () => {
@@ -16,5 +16,10 @@ describe("role permissions", () => {
     expect(canViewLearnerEvidence("student")).toBe(false);
     expect(canViewLearnerEvidence("teacher")).toBe(true);
     expect(canViewLearnerEvidence("administrator")).toBe(true);
+  });
+  it("keeps curriculum authoring and approval in administrator mode", () => {
+    expect(canManageCurriculumConfiguration("student")).toBe(false);
+    expect(canManageCurriculumConfiguration("teacher")).toBe(false);
+    expect(canManageCurriculumConfiguration("administrator")).toBe(true);
   });
 });
