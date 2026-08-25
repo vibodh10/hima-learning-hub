@@ -10,6 +10,7 @@ import {
   PathwayOverrideForm, SnapshotForm, TargetReviewForm, TeacherActionForm, WorkbookDecisionForm,
 } from "@/components/learner-teacher-controls";
 import { configuredUnits } from "@/lib/learning-catalog";
+import { RecognitionForm } from "@/components/recognition-form";
 import {
   conciseCurrentJudgement, evidenceCounts, groupByTopic, hasValidComparableProgress,
   isPriorExperienceSkill, learnerReflectionLabel, reportTargetStatus, topicAssessmentStatus,
@@ -60,6 +61,13 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
     .select("id,title,sort_order,topics!inner(id,title,units!inner(id,code,title,course_id))")
     .eq("status", "approved").is("archived_at", null)
     .eq("topics.units.course_id", classInfo.course_id).order("sort_order") : { data: [] };
+  const {data:recognitionTemplates}=classInfo?await supabase.from("recognition_templates")
+    .select("id,title,category").eq("enabled",true).order("category"): {data:[]};
+  const[{data:achievementRows},{data:recognitions}]=await Promise.all([
+    supabase.rpc("learner_achievement_summary",{learner_uuid:id}),
+    supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id",id).order("recognised_at",{ascending:false}),
+  ]);
+  const achievement=achievementRows?.[0];
 
   const academicSkills = (curriculumSkills ?? []).filter(skill =>
     !isPriorExperienceSkill(skill.title) && String(related(skill.topics)?.title ?? "").toLowerCase() !== "course starting point");
@@ -119,8 +127,11 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
         <Summary label="Current progress status" value={topicGroups.some(group => group.items.some(item => item.valid)) ? "Comparable progress evidence is available." : "No comparable progress-point assessment has been completed yet."}/>
         <Summary label="Active / achieved targets" value={`${activeTargets.length} / ${achievedTargets.length}`}/>
         <Summary label="Next review date" value={formatDate(nextReview)}/>
+        <Summary label="Computing Achievement" value={`${achievement?.ap_total??0} AP · ${achievement?.current_level_title??"Building toward Bronze"}`}/>
       </div>
     </section>
+
+    {classInfo&&<RecognitionForm learnerId={id} classId={classInfo.id} templates={recognitionTemplates??[]}/>}
 
     <section className="mt-6"><p className="eyebrow">2. Starting-point summary by topic</p><h2 className="mt-2 text-2xl font-bold">What the initial evidence shows</h2>
       <div className="mt-5 grid gap-5">{topicGroups.map(group => <TopicSummaryCard key={`${group.unitTitle}-${group.topicTitle}`} group={group}/>)}</div>
@@ -197,7 +208,7 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
         <div className="mt-5 grid gap-6">
           <AdditionalBlock title="Full assessment history">{assessmentInstances?.length ? assessmentInstances.map(item => <p key={item.id}>{formatDate(item.completed_at)} · {item.kind.replaceAll("_", " ")} · {related(item.activities)?.title}</p>) : <Empty text="No formal assessment history recorded."/>}</AdditionalBlock>
           <AdditionalBlock title="Course starting point and learner background">{backgroundComparisons.length ? backgroundComparisons.map(item => <p key={item.skill_id}>{related(item.skills)?.title}: {item.starting_percentage}% recorded response <span className="text-slate-500">{isPriorExperienceSkill(related(item.skills)?.title ?? "") ? "(self-reported, not academic mastery)" : "(course-level starting point, excluded from unit mastery)"}</span></p>) : <Empty text="Course starting point and learner background not yet recorded."/>}</AdditionalBlock>
-          <AdditionalBlock title="Badges and coins"><p>{badges?.length ?? 0} badges · {coinBalance} coins. Rewards remain separate from academic progress.</p>{badges?.map(item => <p key={item.id}>{formatDate(item.awarded_at)} · {related(item.badge_definitions)?.title}</p>)}</AdditionalBlock>
+          <AdditionalBlock title="Achievement and recognition"><p>{achievement?.ap_total??0} AP · {achievement?.current_level_title??"Building toward Bronze"} · {badges?.length??0} badges. Cosmetic coin balance: {coinBalance}.</p>{recognitions?.map(item=><p key={item.id}>{formatDate(item.recognised_at)} · {item.title}: {item.message}</p>)}{badges?.map(item => <p key={item.id}>{formatDate(item.awarded_at)} · {related(item.badge_definitions)?.title}</p>)}</AdditionalBlock>
           <AdditionalBlock title="Coin ledger">{coins?.slice(0, 20).map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.description} · {Number(item.amount) > 0 ? "+" : ""}{item.amount}</p>)}</AdditionalBlock>
           <AdditionalBlock title="Audit and teacher actions">{teacherActions?.length ? teacherActions.map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.action}: {item.reason}{item.outcome ? ` · ${item.outcome}` : ""}</p>) : <Empty text="No teacher actions recorded."/>}</AdditionalBlock>
           <AdditionalBlock title="Exceptional-access records">{overrides?.length ? overrides.map(item => <p key={item.id}>{formatDate(item.created_at)} · {related(item.activities)?.title} · {item.reason}</p>) : <Empty text="No exceptional-access records."/>}</AdditionalBlock>

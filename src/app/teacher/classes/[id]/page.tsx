@@ -7,7 +7,7 @@ import { AdaptiveHomeworkForm, BulkTeacherActionForm, ClassLifecycleForms, Class
 import { CoinRulesForm } from "@/components/gamification-config-forms";
 import { StudentInvitationForm } from "@/components/student-invitation-form";
 
-type AttentionRow={learner_id:string;display_name:string;starting_score:number|null;current_score:number|null;progress_points:number|null;catch_up_status:string;outstanding_count:number;attention_status:string;attention_reason:string};
+type AttentionRow={learner_id:string;display_name:string;starting_score:number|null;current_score:number|null;progress_points:number|null;catch_up_status:string;outstanding_count:number;attention_status:string;attention_reason:string;ap_total:number;achievement_level:string|null};
 
 export default async function ClassPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireRole("teacher", "administrator");
@@ -26,7 +26,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     supabase.from("classes").select("id,name").is("archived_at",null).neq("id",id).order("name"),
   ]);
   const selectedUnitIds = (classData.class_units ?? []).filter(unit => unit.active).map(unit => unit.unit_id);
-  const [{ data: journeyTemplates }, { data: journeyPositions }, {data:attentionRows}] = await Promise.all([
+  const [{ data: journeyTemplates }, { data: journeyPositions }, {data:attentionRows},{data:achievementRows}] = await Promise.all([
     selectedUnitIds.length
       ? supabase.from("learning_journey_templates")
         .select("id,unit_id,title,total_teaching_weeks,units(code,title)")
@@ -34,9 +34,14 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       : Promise.resolve({ data: [] }),
     supabase.rpc("current_class_learning_journey", { class_uuid: id }),
     supabase.rpc("class_learner_attention",{class_uuid:id}),
+    supabase.rpc("class_learner_achievement",{class_uuid:id}),
   ]);
   const journeyPosition = journeyPositions?.[0];
-  const attention=(attentionRows??[]) as AttentionRow[];
+  const achievementByLearner=new Map(((achievementRows??[]) as {learner_id:string;ap_total:number;achievement_level:string|null}[]).map(row=>[row.learner_id,row]));
+  const attention=((attentionRows??[]) as Omit<AttentionRow,"ap_total"|"achievement_level">[]).map(row=>({...row,
+    ap_total:achievementByLearner.get(row.learner_id)?.ap_total??0,
+    achievement_level:achievementByLearner.get(row.learner_id)?.achievement_level??null,
+  }));
   const studentIds = (classData.enrolments ?? []).map(enrolment => enrolment.student_id);
   const [{ data: attempts }, { data: mastery }, { data: misconceptions }, { data: curriculumAttempts }] = studentIds.length ? await Promise.all([
     supabase.from("attempts").select("learner_id,activity_id,percentage,attempt_number,completed_at,activities(kind,learning_stage)").in("learner_id", studentIds).not("completed_at", "is", null).order("completed_at"),
@@ -84,8 +89,8 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     }))}/>}
     <StudentInvitationForm classId={id}/>
 
-    <section className="card mt-8 overflow-x-auto p-0"><div className="p-5"><p className="eyebrow">Who needs me?</p><h2 className="mt-2 text-2xl font-bold">Learner priorities</h2><p className="mt-2 text-sm text-slate-600">Intervention and action appear first. Every colour has a written status and evidence reason.</p></div><table className="w-full min-w-[980px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Learner</th><th className="p-5">Starting</th><th className="p-5">Current</th><th className="p-5">Progress</th><th className="p-5">Catch-up</th><th className="p-5">Status and reason</th><th className="p-5">Evidence</th></tr></thead>
-      <tbody>{attention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5">{row.starting_score==null?"Not recorded":`${row.starting_score}%`}</td><td className="p-5">{row.current_score==null?"Not recorded":`${row.current_score}%`}</td><td className="p-5">{row.progress_points==null?"Not comparable":`${Number(row.progress_points)>=0?"+":""}${row.progress_points} pp`}</td><td className="p-5 capitalize">{row.catch_up_status.replaceAll("_"," ")}{row.outstanding_count?` · ${row.outstanding_count} outstanding`:""}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-sm text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><div className="grid gap-2"><Link className="link" href={`/teacher/learners/${row.learner_id}`}>View full history</Link><Link className="link" href={`/teacher/learners/${row.learner_id}/evidence`}>Compare evidence</Link></div></td></tr>)}</tbody>
+    <section className="card mt-8 overflow-x-auto p-0"><div className="p-5"><p className="eyebrow">Who needs me?</p><h2 className="mt-2 text-2xl font-bold">Learner priorities</h2><p className="mt-2 text-sm text-slate-600">Intervention and action appear first. Every colour has a written status and evidence reason.</p></div><table className="w-full min-w-[1080px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Learner</th><th className="p-5">Starting</th><th className="p-5">Current</th><th className="p-5">Progress</th><th className="p-5">Achievement</th><th className="p-5">Catch-up</th><th className="p-5">Status and reason</th><th className="p-5">Evidence</th></tr></thead>
+      <tbody>{attention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5">{row.starting_score==null?"Not recorded":`${row.starting_score}%`}</td><td className="p-5">{row.current_score==null?"Not recorded":`${row.current_score}%`}</td><td className="p-5">{row.progress_points==null?"Not comparable":`${Number(row.progress_points)>=0?"+":""}${row.progress_points} pp`}</td><td className="p-5"><strong>{row.ap_total} AP</strong><p className="mt-1 text-xs text-slate-500">{row.achievement_level??"Building toward Bronze"}</p></td><td className="p-5 capitalize">{row.catch_up_status.replaceAll("_"," ")}{row.outstanding_count?` · ${row.outstanding_count} outstanding`:""}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-sm text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><div className="grid gap-2"><Link className="link" href={`/teacher/learners/${row.learner_id}`}>View full history</Link><Link className="link" href={`/teacher/learners/${row.learner_id}/evidence`}>Compare evidence</Link></div></td></tr>)}</tbody>
     </table>{!classData.enrolments?.length && <p className="p-6 text-slate-600">No active learners are enrolled yet.</p>}</section>
 
     <details className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">

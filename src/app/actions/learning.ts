@@ -15,6 +15,7 @@ export type ActionState = {
     feedback: { questionId: string; correct: boolean; mark: number; maxMark: number; correctAnswer: unknown; explanation: string }[];
     skillMastery?: { skillId: string; title: string; masteryScore: number; pathway: string }[];
     coinsAwarded?: number;
+    achievementPointsAwarded?: number;
     badgesAwarded?: ({ code: string; title: string } | string)[];
   };
 };
@@ -229,6 +230,11 @@ export async function submitPractice(_: ActionState, formData: FormData): Promis
   });
   if(coinRuleError)console.error("apply_configured_coin_rules failed",{code:coinRuleError.code,message:coinRuleError.message});
   if(typeof coinAdjustment==="number")result.coinsAwarded=(result.coinsAwarded??0)+coinAdjustment;
+  const{data:achievementPoints,error:achievementError}=await supabase.rpc("apply_achievement_point_rules",{
+    attempt_uuid:result.attemptId,
+  });
+  if(achievementError)console.error("apply_achievement_point_rules failed",{code:achievementError.code,message:achievementError.message});
+  if(typeof achievementPoints==="number")result.achievementPointsAwarded=achievementPoints;
   revalidatePath("/dashboard");
   return { ok: true, result };
 }
@@ -249,6 +255,22 @@ export async function purchaseReward(_: ActionState, formData: FormData): Promis
   revalidatePath("/rewards");
   revalidatePath("/dashboard");
   return { ok: true, message: "Cosmetic reward purchased and added to your collection.",testData:data };
+}
+
+export async function recogniseLearner(_:ActionState,formData:FormData):Promise<ActionState>{
+  const actor=await getSessionProfile();
+  if(!actor||!canCreateClass(actor.role))return{message:"Teaching staff access is required."};
+  const parsed=z.object({learnerId:databaseUuid,classId:databaseUuid,templateId:databaseUuid})
+    .safeParse(Object.fromEntries(formData));
+  if(!parsed.success)return{message:"Choose a recognition template."};
+  const supabase=await createClient();
+  const{error}=await supabase.rpc("teacher_recognise_learner",{
+    learner_uuid:parsed.data.learnerId,class_uuid:parsed.data.classId,template_uuid:parsed.data.templateId,
+  });
+  if(error)return{message:"Recognition could not be recorded for this learner and group."};
+  revalidatePath(`/teacher/learners/${parsed.data.learnerId}`);
+  revalidatePath("/dashboard");
+  return{ok:true,message:"Recognition recorded. The learner will see it on their dashboard."};
 }
 
 export async function equipReward(_:ActionState,formData:FormData):Promise<ActionState>{
@@ -766,6 +788,54 @@ export async function updateBadgeDefinition(_:ActionState,formData:FormData):Pro
   if(error)return{message:"The badge configuration could not be saved."};
   revalidatePath("/admin");
   return{ok:true,message:"Badge criteria updated with an audit record."};
+}
+
+export async function updateAchievementRule(_:ActionState,formData:FormData):Promise<ActionState>{
+  const actor=await getSessionProfile();
+  if(!actor||actor.role!=="administrator")return{message:"Administrator access is required."};
+  const parsed=z.object({ruleId:databaseUuid,points:z.coerce.number().int().min(0).max(100)})
+    .safeParse(Object.fromEntries(formData));
+  if(!parsed.success)return{message:"Achievement Points must be a whole number from 0 to 100."};
+  const supabase=await createClient();
+  const{error}=await supabase.rpc("admin_update_achievement_rule",{
+    rule_uuid:parsed.data.ruleId,points_value:parsed.data.points,enabled_value:formData.get("enabled")==="on",
+  });
+  if(error)return{message:"The Achievement Point rule could not be updated."};
+  revalidatePath("/admin");
+  return{ok:true,message:"Achievement Point rule updated with an audit record."};
+}
+
+export async function updateAchievementLevel(_:ActionState,formData:FormData):Promise<ActionState>{
+  const actor=await getSessionProfile();
+  if(!actor||actor.role!=="administrator")return{message:"Administrator access is required."};
+  const parsed=z.object({levelId:databaseUuid,threshold:z.coerce.number().int().min(0).max(100000)})
+    .safeParse(Object.fromEntries(formData));
+  if(!parsed.success)return{message:"Add a valid Achievement Point threshold."};
+  const supabase=await createClient();
+  const{error}=await supabase.rpc("admin_update_achievement_level",{
+    level_uuid:parsed.data.levelId,threshold_value:parsed.data.threshold,
+    certificate_eligible_value:formData.get("certificateEligible")==="on",
+    enabled_value:formData.get("enabled")==="on",
+  });
+  if(error)return{message:"The achievement level could not be updated. Thresholds must remain unique."};
+  revalidatePath("/admin");
+  return{ok:true,message:"Achievement level updated with an audit record."};
+}
+
+export async function updateRecognitionTemplate(_:ActionState,formData:FormData):Promise<ActionState>{
+  const actor=await getSessionProfile();
+  if(!actor||actor.role!=="administrator")return{message:"Administrator access is required."};
+  const parsed=z.object({templateId:databaseUuid,message:z.string().trim().min(10).max(500)})
+    .safeParse(Object.fromEntries(formData));
+  if(!parsed.success)return{message:"Recognition text must contain 10 to 500 characters."};
+  const supabase=await createClient();
+  const{error}=await supabase.rpc("admin_update_recognition_template",{
+    template_uuid:parsed.data.templateId,message_value:parsed.data.message,
+    enabled_value:formData.get("enabled")==="on",
+  });
+  if(error)return{message:"The recognition template could not be updated."};
+  revalidatePath("/admin");
+  return{ok:true,message:"Recognition template updated with an audit record."};
 }
 
 export async function setCoinRules(_:ActionState,formData:FormData):Promise<ActionState>{

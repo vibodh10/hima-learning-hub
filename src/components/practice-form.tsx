@@ -75,7 +75,8 @@ function Result({ result }: { result: NonNullable<ActionState["result"]> }) {
       <h2 className="mt-3 text-4xl font-bold">{result.percentage}%</h2>
       <p className="mt-2">{result.mark} of {result.maxMark} marks · {result.pathway} pathway</p>
       <div className="mt-4 flex flex-wrap gap-3">
-        {Number(result.coinsAwarded) > 0 && <span className="rounded-full bg-amber-300 px-3 py-1 text-sm font-bold text-amber-950">+{result.coinsAwarded} gold coins</span>}
+        {Number(result.achievementPointsAwarded)>0&&<span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold text-blue-950">+{result.achievementPointsAwarded} Achievement Points</span>}
+        {Number(result.coinsAwarded) > 0 && <span className="rounded-full bg-amber-300 px-3 py-1 text-sm font-bold text-amber-950">+{result.coinsAwarded} cosmetic coins</span>}
         {result.badgesAwarded?.map(badge => {
           const title = typeof badge === "string" ? badge : badge.title;
           const key = typeof badge === "string" ? badge : badge.code;

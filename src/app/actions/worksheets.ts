@@ -53,7 +53,7 @@ export async function submitTopicWorksheet(_: WorksheetState, formData: FormData
     });
     if (catchUpError) return { message: "Catch-up is available after your group starts this unit journey." };
   }
-  const { error } = await supabase.rpc("submit_my_topic_worksheet", {
+  const { data:worksheetId,error } = await supabase.rpc("submit_my_topic_worksheet", {
     unit_code_value: unitCode,
     topic_code_value: topicCode,
     mode_value: mode,
@@ -65,8 +65,12 @@ export async function submitTopicWorksheet(_: WorksheetState, formData: FormData
     console.error("submit_my_topic_worksheet failed", { code: error.code, message: error.message });
     return { message: "The worksheet could not be added to your portfolio. Your responses remain on this page so you can retry." };
   }
+  const{data:achievementPoints,error:achievementError}=await supabase.rpc("apply_worksheet_achievement_points",{
+    worksheet_uuid:worksheetId,
+  });
+  if(achievementError)console.error("apply_worksheet_achievement_points failed",{code:achievementError.code,message:achievementError.message});
   revalidatePath("/dashboard");
   revalidatePath("/portfolio");
   revalidatePath(`/curriculum/units/${unitCode}/topics/${encodeURIComponent(topicCode)}`);
-  return { ok: true, message: "Worksheet saved as a new portfolio version. Earlier work has not been overwritten." };
+  return { ok: true, message: `Worksheet saved as a new portfolio version. Earlier work has not been overwritten.${typeof achievementPoints==="number"&&achievementPoints>0?` +${achievementPoints} Achievement Points.`:""}` };
 }

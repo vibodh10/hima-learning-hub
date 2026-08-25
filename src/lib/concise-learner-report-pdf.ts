@@ -12,6 +12,7 @@ export type ConciseReportEvidence = {
   targets: Row[]; feedback: Row[]; misconceptions: Row[]; teacherActions: Row[];
   snapshots: Row[]; retrieval: Row[]; badges: Row[]; coins: Row[];
   assessments: Row[]; overrides: Row[]; curriculumAttempts: Row[];
+  achievement?:Row;
 };
 
 export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) {
@@ -77,6 +78,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   line(`Starting point: ${partial} topic(s) partially assessed; ${established} baseline(s) established. Limited evidence is not a secure baseline.`);
   line(`Current progress: ${progressed ? `${progressed} topic(s) have comparable progress evidence.` : "No comparable progress-point assessment has been completed yet."}`);
   line(`Targets: ${active.length} active | ${achieved.length} achieved | Next review: ${date(nextReview)}.`);
+  if(data.achievement)line(`Computing Achievement: ${Number(data.achievement.ap_total??0)} AP | Level: ${String(data.achievement.current_level_title??"Building toward Bronze")}${data.achievement.next_level_title?` | ${Number(data.achievement.points_to_next??0)} AP to ${String(data.achievement.next_level_title)}`:""}.`);
 
   heading(2, "Starting-point summary by topic");
   groups.forEach(group => {

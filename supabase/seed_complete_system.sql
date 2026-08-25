@@ -373,6 +373,8 @@ on conflict(journey_week_id,lesson_id) do nothing;
 insert into public.catch_up_policies(organisation_id)
 select id from public.organisations on conflict(organisation_id) do nothing;
 
+select public.seed_achievement_configuration();
+
 -- An equivalent, course-specific starting point for T Level learners. Keeping
 -- this separate from the BTEC baseline preserves the correct curriculum
 -- version and prevents a learner from being directed into another course.
