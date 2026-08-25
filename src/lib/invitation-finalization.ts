@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { canIgnoreLegacyInvitationMetadata } from "@/lib/invitation-finalization-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -39,6 +40,10 @@ export async function finalizeCurrentStudentInvitation(): Promise<InvitationFina
     .eq("id", user.id)
     .maybeSingle();
   if (profileReadError) return { kind: "failed", code: "profile_lookup_failed" };
+
+  if (canIgnoreLegacyInvitationMetadata(existingProfile, Boolean(invitation))) {
+    return { kind: "ready" };
+  }
 
   const classId = validUuid(invitation?.class_id) ?? metadataClassId;
   const expectedOrganisationId = validUuid(invitation?.organisation_id) ?? metadataOrganisationId;
