@@ -12,7 +12,9 @@ export type ConciseReportEvidence = {
   targets: Row[]; feedback: Row[]; misconceptions: Row[]; teacherActions: Row[];
   snapshots: Row[]; retrieval: Row[]; badges: Row[]; coins: Row[];
   assessments: Row[]; overrides: Row[]; curriculumAttempts: Row[];
-  achievement?:Row;
+  achievement?: Row;
+  portfolioArtifacts?: Row[]; worksheets?: Row[]; catchUpRecords?: Row[];
+  recognitions?: Row[]; attendanceEvents?: Row[]; certificateReviews?: Row[];
 };
 
 export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) {
@@ -136,7 +138,55 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
     else if (!item.success_measure) line("Warning: Success measure needs to be added.", 8, true);
   });
 
-  heading(6, "Reflection and evidence history");
+  heading(6, "Before, after and participation evidence");
+  const worksheets = data.worksheets ?? [];
+  const evidenceTopics = uniqueTopicKeys([
+    ...(data.portfolioArtifacts ?? []),
+    ...worksheets,
+  ]);
+  if (!evidenceTopics.length) line("No in-portal before, progress-check or after artifacts have been recorded yet.");
+  evidenceTopics.forEach(({ unitCode, topicCode }) => {
+    ensure(165);
+    const topicWorksheets = worksheets.filter(item => String(item.unit_code) === unitCode && String(item.topic_code) === topicCode);
+    const before = topicWorksheets.find(item => item.evidence_stage === "before");
+    const after = [...topicWorksheets].reverse().find(item => item.evidence_stage === "after");
+    const checkpoints = topicWorksheets.filter(item => ["progress_check_1", "progress_check_2"].includes(String(item.evidence_stage)));
+    line(`Unit ${unitCode} | ${topicCode}`, 10, true);
+    line(before
+      ? `Before (${date(textOrNull(before.submitted_at))}): ${worksheetExcerpt(before.responses)}`
+      : "Before: No before artifact recorded.", 8);
+    line(after
+      ? `After (${date(textOrNull(after.submitted_at))}): ${worksheetExcerpt(after.responses)}`
+      : "After: No after artifact recorded.", 8);
+    line(`Progress checks: ${checkpoints.length} recorded${checkpoints.length ? ` on ${checkpoints.map(item => date(textOrNull(item.submitted_at))).join(", ")}` : ""}. Confidence entries: ${topicWorksheets.length ? topicWorksheets.map(item => Number(item.confidence)).join(", ") : "none recorded"}.`, 8);
+    line(before && after
+      ? "A dated before-and-after comparison is available for teacher review; this report does not infer improvement from completion alone."
+      : "A complete before-and-after comparison is not yet available.", 8);
+  });
+
+  subheading("Catch-up and outstanding learning");
+  const catchUp = data.catchUpRecords ?? [];
+  catchUp.forEach(item => line(`${item.completed_at ? "Completed" : "Outstanding"} | Unit ${String(item.unit_code)} | ${String(item.topic_code)} | opened teaching week ${Number(item.opened_teaching_week)} on ${date(textOrNull(item.opened_at))}${item.completed_at ? ` | completed ${date(textOrNull(item.completed_at))}` : ""} | source: ${String(item.source).replaceAll("_", " ")}.`, 8));
+  if (!catchUp.length) line("No catch-up records are currently available.", 8);
+
+  subheading("Recognition and certificate review");
+  const recognitions = data.recognitions ?? [];
+  recognitions.slice(0, 12).forEach(item => line(`${date(textOrNull(item.recognised_at))} | ${String(item.title)}: ${String(item.message)}`, 8));
+  if (!recognitions.length) line("No professional recognition has been recorded yet.", 8);
+  (data.certificateReviews ?? []).forEach(item => {
+    const level = related(item.achievement_levels);
+    line(`${String(level?.title ?? "Achievement level")} | ${String(item.status).replaceAll("_", " ")} since ${date(textOrNull(item.eligible_at))}${item.reviewed_at ? ` | reviewed ${date(textOrNull(item.reviewed_at))}` : " | staff review required"}.`, 8);
+  });
+
+  subheading("Provider-derived attendance record");
+  const attendance = data.attendanceEvents ?? [];
+  if (attendance.length) {
+    const attended = attendance.filter(item => ["present", "late"].includes(String(item.attendance_status))).length;
+    const providers = [...new Set(attendance.map(item => String(item.provider_name)))].join(", ");
+    line(`${attendance.length} imported session record(s) | ${attended} present or late | provider(s): ${providers}. Attendance is reported from imported provider events, not teacher entry.`, 8);
+  } else line("No imported attendance-provider events are available in this report.", 8);
+
+  heading(7, "Reflection and evidence history");
   const latest = data.snapshots.find(item => item.learner_reflection) ?? data.snapshots[0];
   const snapshot = record(latest?.snapshot_data);
   line(`Latest learner reflection: ${learnerReflectionLabel(textOrNull(latest?.learner_reflection))}`);
@@ -238,6 +288,31 @@ function related(input: unknown): Row | undefined { return Array.isArray(input) 
 function record(input: unknown): Row { return input && typeof input === "object" && !Array.isArray(input) ? input as Row : {}; }
 function numberOrNull(input: unknown) { return input == null ? null : Number(input); }
 function textOrNull(input: unknown) { return typeof input === "string" ? input : null; }
+function uniqueTopicKeys(items: Row[]) {
+  const seen = new Set<string>();
+  return items.flatMap(item => {
+    const unitCode = String(item.unit_code ?? "");
+    const topicCode = String(item.topic_code ?? "");
+    const key = `${unitCode}:${topicCode}`;
+    if (!unitCode || !topicCode || seen.has(key)) return [];
+    seen.add(key);
+    return [{ unitCode, topicCode }];
+  });
+}
+function worksheetExcerpt(input: unknown) {
+  const responses = record(input);
+  const selected = [
+    ["Main task", responses.mainTask],
+    ["Practical", responses.practicalApplication],
+    ["Knowledge", responses.knowledgeCheck],
+    ["Improvement", responses.improvement],
+    ["Reflection", responses.todayCan],
+    ["Exit ticket", responses.exitTicket],
+  ].flatMap(([label, value]) => typeof value === "string" && value.trim() ? [`${label}: ${value.trim()}`] : []);
+  const excerpt = selected.join(" | ");
+  if (!excerpt) return "Artifact recorded; no reportable response excerpt is available.";
+  return excerpt.length > 620 ? `${excerpt.slice(0, 617)}...` : excerpt;
+}
 function signed(input: unknown) { const number = Number(input); return `${number >= 0 ? "+" : ""}${number}`; }
 function date(input: string | null | undefined) { return input ? new Date(input).toLocaleDateString("en-GB") : "Not scheduled"; }
 function firstDate(inputs: (string | null)[]) { return date(inputs.filter((item): item is string => Boolean(item)).sort()[0]); }

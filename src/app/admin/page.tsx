@@ -6,7 +6,7 @@ import { AdminSettingsForm } from "@/components/admin-settings-form";
 import { BadgeDefinitionForm } from "@/components/gamification-config-forms";
 import { RewardReconciliationForm } from "@/components/safe-learning-admin-forms";
 import { AcademicCalendarForm } from "@/components/academic-calendar-form";
-import { AchievementLevelForm, AchievementRuleForm, RecognitionTemplateForm } from "@/components/achievement-config-forms";
+import { AchievementLevelForm, AchievementRuleForm, CertificateEligibilityReviewForm, RecognitionTemplateForm } from "@/components/achievement-config-forms";
 import {
   AcademicYearCreateForm, AcademicYearStatusForm, CourseStatusForm,
   CurriculumVersionCreateForm, CurriculumVersionStatusForm,
@@ -19,7 +19,7 @@ export default async function AdminPage(){
   const[
     {data:profiles},{data:courses},{data:versions},{data:years},
     {data:classes},{data:audit},{data:retention},{data:badges},{data:deletionRequests},
-    {data:periods},{data:calendarEvents},{data:achievementRules},{data:achievementLevels},{data:recognitionTemplates},
+    {data:periods},{data:calendarEvents},{data:achievementRules},{data:achievementLevels},{data:recognitionTemplates},{data:certificateReviews},
   ]=await Promise.all([
     supabase.from("user_profiles").select("id,display_name,role,created_at,archived_at").order("display_name"),
     supabase.from("courses").select("id,title,qualification_type,qualification_level,active,archived_at").order("title"),
@@ -35,6 +35,7 @@ export default async function AdminPage(){
     supabase.from("achievement_point_rules").select("id,title,points,enabled").order("title"),
     supabase.from("achievement_levels").select("id,title,threshold,certificate_eligible,enabled").order("threshold"),
     supabase.from("recognition_templates").select("id,title,category,message,enabled").order("category"),
+    supabase.from("certificate_eligibility_reviews").select("id,status,eligible_at,user_profiles!certificate_eligibility_reviews_learner_id_fkey(display_name),achievement_levels(title)").eq("status","pending_review").order("eligible_at"),
   ]);
   const activeCourses=(courses??[]).filter(course=>course.active&&!course.archived_at);
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
@@ -69,6 +70,7 @@ export default async function AdminPage(){
     <section className="mt-6"><AdminSettingsForm settings={retention}/></section>
     <section className="card mt-6"><p className="eyebrow">Coin integrity</p><h2 className="mt-2 text-2xl font-bold">Reward purchase reconciliation</h2><p className="mt-2 text-sm text-slate-600">Find historic debits that did not create completed ownership and issue an explicit refund ledger entry. Successful purchases are left unchanged.</p><RewardReconciliationForm/></section>
     <section className="card mt-6"><p className="eyebrow">Computing Achievement</p><h2 className="mt-2 text-2xl font-bold">Achievement Points and levels</h2><p className="mt-2 text-sm text-slate-600">These cumulative AP rules are separate from spendable cosmetic coins. Gold and Diamond can only create certificate eligibility for authorised staff review.</p><h3 className="mt-6 text-lg font-bold">Point rules</h3><div className="mt-4 grid gap-4 lg:grid-cols-2">{achievementRules?.map(rule=><AchievementRuleForm rule={rule} key={rule.id}/>)}</div><h3 className="mt-7 text-lg font-bold">Levels</h3><div className="mt-4 grid gap-4 lg:grid-cols-2">{achievementLevels?.map(level=><AchievementLevelForm level={level} key={level.id}/>)}</div></section>
+    <section className="card mt-6"><p className="eyebrow">Authorised recognition review</p><h2 className="mt-2 text-2xl font-bold">Certificate eligibility</h2><p className="mt-2 text-sm text-slate-600">Review Gold and Diamond threshold eligibility against the learner&apos;s evidence. A confirmed review does not issue or promise an SCCB certificate.</p><div className="mt-5 grid gap-4 lg:grid-cols-2">{certificateReviews?.map(review=><CertificateEligibilityReviewForm review={{id:review.id,learnerName:related(review.user_profiles)?.display_name??"Learner",levelTitle:related(review.achievement_levels)?.title??"Achievement level",eligibleAt:review.eligible_at}} key={review.id}/>)}{!certificateReviews?.length&&<p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No certificate eligibility reviews are pending.</p>}</div></section>
     <section className="card mt-6"><p className="eyebrow">You&apos;ve been noticed</p><h2 className="mt-2 text-2xl font-bold">Recognition templates</h2><p className="mt-2 text-sm text-slate-600">Teachers select these short professional messages when their judgement is required.</p><div className="mt-5 grid gap-4 lg:grid-cols-2">{recognitionTemplates?.map(template=><RecognitionTemplateForm template={template} key={template.id}/>)}</div></section>
     <section className="card mt-6"><p className="eyebrow">Configurable recognition</p><h2 className="mt-2 text-2xl font-bold">Badge criteria</h2><p className="mt-2 text-sm text-slate-600">Criteria changes are administrator-only and recorded in the audit log.</p><div className="mt-5 grid gap-4 lg:grid-cols-2">{badges?.map(badge=><BadgeDefinitionForm badge={badge} key={badge.id}/>)}</div></section>
     <section className="card mt-6 overflow-x-auto"><h2 className="text-2xl font-bold">Audit log</h2><table className="mt-4 w-full min-w-[680px] text-left text-sm"><thead><tr><th className="pb-3">Date</th><th className="pb-3">Actor</th><th className="pb-3">Action</th><th className="pb-3">Entity</th></tr></thead><tbody>{audit?.map(row=><tr className="border-t border-slate-200" key={row.id}><td className="py-3">{new Date(row.occurred_at).toLocaleString("en-GB")}</td><td>{related(row.user_profiles)?.display_name??"System"}</td><td>{row.action}</td><td>{row.entity_type}</td></tr>)}</tbody></table></section>

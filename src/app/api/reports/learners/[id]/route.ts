@@ -21,7 +21,9 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     { data: learner }, { data: enrolment }, { data: attempts }, { data: targets },
     { data: comparisons }, { data: mastery }, { data: feedback }, { data: misconceptions },
     { data: teacherActions }, { data: snapshots }, { data: retrieval }, { data: badges },
-    { data: coins }, { data: assessments }, { data: overrides }, { data: curriculumAttempts },{data:achievementRows},
+    { data: coins }, { data: assessments }, { data: overrides }, { data: curriculumAttempts }, { data: achievementRows },
+    { data: portfolioArtifacts }, { data: worksheets }, { data: catchUpRecords },
+    { data: recognitions }, { data: attendanceEvents }, { data: certificateReviews },
   ] = await Promise.all([
     supabase.from("user_profiles").select("id,display_name").eq("id", id).eq("role", "student").single(),
     supabase.from("enrolments").select("enrolled_at,classes(id,name,course_id,courses(id,title),teachers:teacher_id(display_name))").eq("student_id", id).is("archived_at", null).limit(1).maybeSingle(),
@@ -40,6 +42,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     supabase.from("activity_unlock_overrides").select("id,reason,expires_at,created_at,revoked_at,activities(title,lessons(topics(id,title,units(id,code,title)))),teachers:teacher_id(display_name)").eq("learner_id", id).order("created_at"),
     supabase.from("learner_curriculum_attempts").select("id,kind,unit_code,topic_code,paper_mode,selected_level,percentage,mark,max_mark,hints_used,active_seconds,question_results,completed_at,teacher_mark,teacher_feedback,reviewed_at").eq("learner_id",id).order("completed_at",{ascending:false}).limit(200),
     supabase.rpc("learner_achievement_summary",{learner_uuid:id}),
+    supabase.from("learner_portfolio_artifacts").select("id,unit_code,topic_code,stage,title,source_type,source_id,version_number,evidence,recorded_at").eq("learner_id", id).order("recorded_at", { ascending: true }),
+    supabase.from("learner_topic_worksheets").select("id,unit_code,topic_code,attempt_number,mode,evidence_stage,responses,confidence,submitted_at").eq("learner_id", id).order("submitted_at", { ascending: true }),
+    supabase.from("learner_catch_up_records").select("id,unit_code,topic_code,source,opened_teaching_week,opened_at,completed_at").eq("learner_id", id).order("opened_at", { ascending: false }),
+    supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id", id).order("recognised_at", { ascending: false }),
+    supabase.from("attendance_events").select("id,session_on,attendance_status,provider_name,imported_at").eq("learner_id", id).order("session_on", { ascending: false }).limit(200),
+    supabase.from("certificate_eligibility_reviews").select("id,status,eligible_at,reviewed_at,review_note,achievement_levels(title,threshold_points)").eq("learner_id", id).order("eligible_at", { ascending: false }),
   ]);
   if (!learner) return new Response("Learner not found or not authorised.", { status: 404 });
 
@@ -74,7 +82,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     assessments: rows(assessments),
     overrides: rows(overrides),
     curriculumAttempts: rows(curriculumAttempts),
-    achievement:rows(achievementRows)[0],
+    achievement: rows(achievementRows)[0],
+    portfolioArtifacts: rows(portfolioArtifacts),
+    worksheets: rows(worksheets),
+    catchUpRecords: rows(catchUpRecords),
+    recognitions: rows(recognitions),
+    attendanceEvents: rows(attendanceEvents),
+    certificateReviews: rows(certificateReviews),
   };
   const safeName = learner.display_name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
   if (new URL(request.url).searchParams.get("format") === "csv") {
@@ -106,7 +120,9 @@ export type ReportEvidence = {
   targets: Row[]; feedback: Row[]; misconceptions: Row[]; teacherActions: Row[];
   snapshots: Row[]; retrieval: Row[]; badges: Row[]; coins: Row[];
   assessments: Row[]; overrides: Row[]; curriculumAttempts: Row[];
-  achievement?:Row;
+  achievement?: Row;
+  portfolioArtifacts?: Row[]; worksheets?: Row[]; catchUpRecords?: Row[];
+  recognitions?: Row[]; attendanceEvents?: Row[]; certificateReviews?: Row[];
 };
 
 function buildCsvRows(data: ReportEvidence): LearnerJourneyCsvRow[] {

@@ -838,6 +838,23 @@ export async function updateRecognitionTemplate(_:ActionState,formData:FormData)
   return{ok:true,message:"Recognition template updated with an audit record."};
 }
 
+export async function reviewCertificateEligibility(_:ActionState,formData:FormData):Promise<ActionState>{
+  const actor=await getSessionProfile();
+  if(!actor||actor.role!=="administrator")return{message:"Administrator access is required."};
+  const parsed=z.object({
+    reviewId:databaseUuid,status:z.enum(["confirmed","declined"]),
+    note:z.string().trim().min(5).max(1000),
+  }).safeParse(Object.fromEntries(formData));
+  if(!parsed.success)return{message:"Choose a review decision and record a note of 5 to 1,000 characters."};
+  const supabase=await createClient();
+  const{error}=await supabase.rpc("admin_review_certificate_eligibility",{
+    review_uuid:parsed.data.reviewId,status_value:parsed.data.status,note_value:parsed.data.note,
+  });
+  if(error)return{message:"This pending eligibility review could not be updated."};
+  revalidatePath("/admin");
+  return{ok:true,message:"Eligibility review recorded in the audit trail. No college certificate has been promised or issued."};
+}
+
 export async function setCoinRules(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
   if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can change coin rules."};

@@ -79,6 +79,12 @@ export function journeyWeekFor(unitCode: string, teachingWeek: number) {
     .find(item => item.week === teachingWeek);
 }
 
+export function nextJourneyMilestone(unitCode: string, teachingWeek: number) {
+  if (!(unitCode in configuredUnitJourneys)) return undefined;
+  return configuredUnitJourneys[unitCode as keyof typeof configuredUnitJourneys]
+    .find(item => item.week >= teachingWeek && item.milestone !== "learning");
+}
+
 export function evidenceStageForMilestone(milestone: JourneyMilestone) {
   if (milestone === "starting_point") return "before";
   if (milestone === "final") return "after";

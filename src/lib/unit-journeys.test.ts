@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { configuredUnitJourneys, evidenceStageForMilestone, validateConfiguredUnitJourneys } from "./unit-journeys";
+import { configuredUnitJourneys, evidenceStageForMilestone, nextJourneyMilestone, validateConfiguredUnitJourneys } from "./unit-journeys";
 
 describe("preconfigured Unit 2, 4 and 6 teaching journeys", () => {
   it("maps every teaching week to a real configured topic", () => {
@@ -21,5 +21,13 @@ describe("preconfigured Unit 2, 4 and 6 teaching journeys", () => {
     expect(evidenceStageForMilestone("progress_check_1")).toBe("progress_check_1");
     expect(evidenceStageForMilestone("progress_check_2")).toBe("progress_check_2");
     expect(evidenceStageForMilestone("final")).toBe("after");
+  });
+
+  it("finds the next checkpoint from a teaching week without calendar dates", () => {
+    expect(nextJourneyMilestone("4", 2)).toMatchObject({ week: 6, milestone: "progress_check_1" });
+    expect(nextJourneyMilestone("4", 6)).toMatchObject({ week: 6, milestone: "progress_check_1" });
+    expect(nextJourneyMilestone("4", 7)).toMatchObject({ week: 10, milestone: "progress_check_2" });
+    expect(nextJourneyMilestone("4", 11)).toMatchObject({ week: 12, milestone: "final" });
+    expect(nextJourneyMilestone("4", 13)).toBeUndefined();
   });
 });
