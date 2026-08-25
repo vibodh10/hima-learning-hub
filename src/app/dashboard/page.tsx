@@ -53,7 +53,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     { data: progress }, { data: targets }, { data: enrolments }, { data: pilot },
     { data: mastery }, { data: badges }, { data: coins }, { data: retrieval },
     { data: streak }, { data: attempts }, { data: assessments },
-    { data: comparisons }, { data: routes }, { data: courseStartingActivities },
+    { data: comparisons }, { data: routes }, { data: courseStartingActivities }, { data: recentFeedback },
   ] = await Promise.all([
     supabase.from("topic_progress").select("latest_score,best_score,current_pathway,topics(title)").eq("learner_id", id).limit(4),
     supabase.from("targets").select("id,target_text,target_date,status,reason,evidence,success_measure,unit_id,topic_id,skill_id,linked_activity_id,approved_by,approved_at,teacher_note,skills(title),activities:linked_activity_id(lesson_id)").eq("learner_id", id).in("status", ["proposed","approved","active","extended"]).order("target_date").limit(20),
@@ -69,6 +69,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     supabase.from("skill_progress_comparisons").select("starting_percentage,latest_percentage,improvement_points,status,evidence,skills(title)").eq("learner_id", id).order("updated_at", { ascending: false }),
     supabase.from("learner_routes").select("route,status,retention_due_on,topics(title)").eq("learner_id", id).eq("status", "active"),
     supabase.from("activities").select("id,title,estimated_minutes,lesson_id,lessons(id,title,status,topics(units(course_id)))").eq("assessment_kind","course_starting_point").eq("status","approved"),
+    supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_at,attempt_answers(feedback,questions(question_text),attempts(activities(title)))").eq("learner_id",id).not("reviewed_at","is",null).order("reviewed_at",{ascending:false}).limit(3),
   ]);
 
   const course = related(enrolments?.[0]?.classes);
@@ -156,6 +157,8 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     </section>}
 
     {catchUps.some(item=>item.status!=="completed")&&<section className="card mt-6 border-amber-200" aria-labelledby="catch-up-title"><p className="eyebrow">Missed learning</p><h2 className="mt-2 text-2xl font-bold" id="catch-up-title">Catch-up to complete</h2><div className="mt-5 grid gap-3">{catchUps.filter(item=>item.status!=="completed").map(item=>{const topic=topicByCode(item.unit_code,item.topic_code);return <Link className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 hover:bg-amber-50" href={`/curriculum/units/${item.unit_code}/topics/${encodeURIComponent(item.topic_code)}?catchup=1#worksheet`} key={item.catch_up_id}><div><p className="font-semibold">Unit {item.unit_code} · {topic?.title??item.topic_code}</p><p className="mt-1 text-sm text-slate-600">Opened in Teaching Week {item.opened_teaching_week} · now Week {item.current_teaching_week}</p></div><span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-950">{item.status.replaceAll("_"," ")}</span></Link>})}</div></section>}
+
+    <section className="card mt-6" aria-labelledby="recent-feedback-title"><p className="eyebrow">Recent feedback and checking</p><h2 className="mt-2 text-2xl font-bold" id="recent-feedback-title">What to use next</h2><div className="mt-5 grid gap-3">{recentFeedback?.map(review=>{const answer=related(review.attempt_answers);const attempt=related(answer?.attempts);return <article className="rounded-xl border border-slate-200 p-4" key={review.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{related(attempt?.activities)?.title??"Reviewed learning"}</h3><p className="mt-1 text-xs text-slate-500">Checked {review.reviewed_at?new Date(review.reviewed_at).toLocaleDateString("en-GB"):"date not recorded"}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold capitalize text-blue-900">{review.status.replaceAll("_"," ")}</span></div><p className="mt-3 text-sm leading-6 text-slate-700">{review.feedback??answer?.feedback??"No feedback text was recorded."}</p>{related(answer?.questions)?.question_text&&<p className="mt-2 text-xs text-slate-500">Related check: {related(answer?.questions)?.question_text}</p>}</article>})}{!recentFeedback?.length&&<p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No reviewed feedback is available yet. Checked work will appear here when it has been recorded.</p>}</div></section>
 
     <section className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       <Metric label="Current pathway" value={progress?.[0]?.current_pathway ?? mastery?.[0]?.current_pathway ?? "Starting point"} description="The current difficulty level selected from your learning evidence."/>
