@@ -7,7 +7,6 @@ import {
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { CurriculumExplorer } from "@/components/curriculum-explorer";
-import { AcademicCalendarForm } from "@/components/academic-calendar-form";
 
 export default async function ContentEditorPage() {
   const actor = await requireRole("teacher", "administrator");
@@ -18,8 +17,7 @@ export default async function ContentEditorPage() {
     { data: courses }, { data: units }, { data: aims }, { data: classUnits },
     { data: topicProgress }, { data: misconceptions }, { data: questionCoverage },
     { data: allLessons }, {data:curriculumVersions}, {data:blueprints},
-    {data:misconceptionDefinitions},{data:academicYears},{data:academicPeriods},
-    {data:calendarEvents},
+    {data:misconceptionDefinitions},
   ] = await Promise.all([
     supabase.from("lessons").select("id,topic_id,week_number,title,learn,remember,worked_example,reflection_prompt,language,objectives,estimated_minutes,status").eq("id", "61000000-0000-0000-0000-000000000001").maybeSingle(),
     supabase.from("topics").select("id,unit_id,learning_aim_id,title,status,units(code,title)").is("archived_at", null).order("sort_order"),
@@ -39,9 +37,6 @@ export default async function ContentEditorPage() {
     supabase.from("curriculum_versions").select("id,version_label,courses(title)").eq("active",true).is("archived_at",null).order("created_at"),
     supabase.from("assessment_blueprints").select("id,title,scope").eq("status","approved").is("archived_at",null).order("title"),
     supabase.from("misconceptions").select("id,title,skills(title)").order("title"),
-    supabase.from("academic_years").select("id,name").is("archived_at",null).order("starts_on",{ascending:false}),
-    supabase.from("academic_periods").select("id,name,academic_year_id").is("archived_at",null).order("starts_on"),
-    supabase.from("academic_calendar_events").select("id,academic_year_id,academic_period_id,title,kind,starts_on,ends_on,metadata").is("archived_at",null).order("starts_on").limit(50),
   ]);
   const topicOptions = (topics ?? []).map(topic => ({ id: topic.id, title: `${related(topic.units)?.code ?? ""} · ${topic.title}` }));
   const skillOptions = (skills ?? []).map(skill => ({ id: skill.id, title: `${related(skill.topics)?.title ?? ""} · ${skill.title}` }));
@@ -52,7 +47,7 @@ export default async function ContentEditorPage() {
     <Link className="link" href="/dashboard">← Teacher dashboard</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Controlled curriculum</p><h1 className="mt-2 text-4xl font-bold">Learning content and allocation</h1><p className="mt-3 max-w-3xl leading-7 text-slate-600">Content is stored in the question bank, mapped to curriculum skills, and student-visible only after approval. Draft placeholders remain hidden.</p></div><Link className="button-secondary" href="/learn/61000000-0000-0000-0000-000000000001">Preview as a student</Link></div>
 
-    <nav className="mt-8 flex flex-wrap gap-3 text-sm"><a className="button-secondary" href="#lesson">Lesson</a><a className="button-secondary" href="#questions">Question bank</a><a className="button-secondary" href="#review">Draft review</a><a className="button-secondary" href="#allocation">Allocation</a><a className="button-secondary" href="#calendar">Calendar</a><a className="button-secondary" href="#settings">Gamification</a></nav>
+    <nav className="mt-8 flex flex-wrap gap-3 text-sm"><a className="button-secondary" href="#lesson">Lesson</a><a className="button-secondary" href="#questions">Question bank</a><a className="button-secondary" href="#review">Draft review</a><a className="button-secondary" href="#allocation">Allocation</a><a className="button-secondary" href="#settings">Gamification</a></nav>
 
     <CurriculumExplorer
       courses={courses??[]}
@@ -97,11 +92,6 @@ export default async function ContentEditorPage() {
 
     <section className="card mt-8" id="allocation"><p className="eyebrow">Weekly learning</p><h2 className="mt-2 text-2xl font-bold">Allocate activity to a class</h2><p className="mb-6 mt-2 text-sm text-slate-600">Set pathway, release date, deadline and whether the practice is required.</p><AllocationForm activities={activityOptions} classes={classOptions}/>
       {allocations?.length ? <div className="mt-8"><h3 className="font-bold">Recent allocations</h3><div className="mt-3 grid gap-2">{allocations.map(item => <div className="rounded-xl bg-slate-50 p-4 text-sm" key={item.id}><strong>{related(item.activities)?.title}</strong> → {related(item.classes)?.name ?? "individual learner"} · {item.allocated_pathway} · due {item.deadline_at ? new Date(item.deadline_at).toLocaleDateString("en-GB") : "no deadline"} · {item.required ? "required" : "optional"}</div>)}</div></div> : null}
-    </section>
-
-    <section className="card mt-8" id="calendar"><p className="eyebrow">Academic calendar</p><h2 className="mt-2 text-2xl font-bold">Teaching, review and course dates</h2><p className="mb-6 mt-2 text-sm text-slate-600">Add holidays, teaching weeks, progress points, review weeks and examination reminders. These dates appear on learner dashboards and do not represent formal assignment handling.</p>
-      <AcademicCalendarForm years={academicYears??[]} periods={academicPeriods??[]}/>
-      <div className="mt-6 grid gap-3">{calendarEvents?.map(event=><details className="rounded-xl border border-slate-200 p-4" key={event.id}><summary className="cursor-pointer font-semibold">{event.title} · {event.kind.replaceAll("_"," ")} · {new Date(event.starts_on).toLocaleDateString("en-GB")}</summary><div className="mt-4"><AcademicCalendarForm years={academicYears??[]} periods={academicPeriods??[]} event={event}/></div></details>)}</div>
     </section>
 
     <section className="card mt-8" id="settings"><p className="eyebrow">Healthy motivation</p><h2 className="mt-2 text-2xl font-bold">Class gamification settings</h2><p className="mb-6 mt-2 text-sm text-slate-600">Badges, coins and scheduled-day streaks can be disabled without affecting academic progress evidence.</p><GamificationForm classes={classOptions}/></section>

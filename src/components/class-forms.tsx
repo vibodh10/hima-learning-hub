@@ -3,7 +3,8 @@ import { useActionState, useState } from "react";
 import {
   addClassTeacher, allocateAdaptiveHomework, archiveClass, archiveEnrolment,
   configureClass, createClass, duplicateClass, importExistingStudents, joinClass,
-  moveStudent, recordBulkTeacherAction, saveWeeklyPlan, setPathwayThresholds, type ActionState,
+  moveStudent, recordBulkTeacherAction, saveWeeklyPlan, setPathwayThresholds,
+  startGroupLearningJourney, type ActionState,
 } from "@/app/actions/learning";
 
 export function JoinClassForm() {
@@ -75,12 +76,6 @@ export function ClassSettingsForm({
             {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map((day,index) => <option value={index+1} key={day}>{day}</option>)}
           </select>
         </label>
-        <label className="grid gap-2 text-sm font-semibold">Class starts
-          <input className="input" name="startsOn" type="date" defaultValue={classData.starts_on ?? ""} required/>
-        </label>
-        <label className="grid gap-2 text-sm font-semibold">Class ends
-          <input className="input" name="endsOn" type="date" defaultValue={classData.ends_on ?? ""} required/>
-        </label>
       </div>
       <fieldset>
         <legend className="text-sm font-bold">Units / Content Areas</legend>
@@ -105,6 +100,37 @@ export function ClassSettingsForm({
       {state.message && <p role="status" className={`text-sm ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}
     </form>
   </details>;
+}
+
+export function StartGroupJourneyForm({
+  classId,
+  templates,
+}: {
+  classId: string;
+  templates: { id: string; title: string; unitCode: string; unitTitle: string; totalTeachingWeeks: number }[];
+}) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(startGroupLearningJourney, {});
+  return <form action={action} className="card mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
+    <input type="hidden" name="classId" value={classId}/>
+    <div className="md:col-span-2">
+      <p className="eyebrow">Configured curriculum</p>
+      <h2 className="mt-2 text-2xl font-bold">Start learning journey</h2>
+      <p className="mt-2 text-sm text-slate-600">Choose the unit once. The portal starts Teaching Week 1 and pauses for configured holidays and closures.</p>
+    </div>
+    <label className="grid gap-2 text-sm font-semibold">Unit journey
+      <select className="input" name="templateId" required defaultValue="">
+        <option value="" disabled>Choose an approved journey</option>
+        {templates.map(template => <option value={template.id} key={template.id}>
+          Unit {template.unitCode}: {template.unitTitle} · {template.totalTeachingWeeks} teaching weeks
+        </option>)}
+      </select>
+    </label>
+    <button className="button self-end" disabled={pending || !templates.length}>
+      {pending ? "Starting…" : "Start learning journey"}
+    </button>
+    {!templates.length && <p className="text-sm text-amber-900 md:col-span-2">No approved shared journey is available for this class’s active units.</p>}
+    {state.message && <p role="status" className={`text-sm md:col-span-2 ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}
+  </form>;
 }
 
 function relatedYear(value: Period["academic_years"]) {

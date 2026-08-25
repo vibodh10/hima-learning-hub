@@ -27,6 +27,12 @@ a,button,input { outline-offset:3px; }
 .confetti-layer i{position:absolute;top:-2rem;width:.7rem;height:1.1rem;border-radius:.15rem;animation:confetti-fall 2.4s ease-in both}
 @keyframes confetti-fall{to{translate:1.5rem 110vh;rotate:720deg}}
 @media (prefers-contrast:more) { .card,.input { border-width:2px; border-color:#475569; } }
+@media print {
+  body { background:#fff; }
+  .no-print,header:has(nav) { display:none!important; }
+  .shell { width:100%; }
+  .card { break-inside:avoid; box-shadow:none; }
+}
 body[data-theme="ocean"] { background:linear-gradient(145deg,#ecfeff 0%,#eff6ff 48%,#f0fdfa 100%); }
 body[data-theme="ocean"] .card { border-color:#a5f3fc;box-shadow:0 16px 45px rgb(8 145 178 / 10%); }
 body[data-badge-frame="python"] [data-achievement-badge] { border:3px solid #2563eb;box-shadow:0 0 0 4px #facc15,0 8px 20px rgb(37 99 235 / 18%); }

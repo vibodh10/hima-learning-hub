@@ -7,6 +7,8 @@ import { CreateClassForm, JoinClassForm } from "@/components/class-forms";
 import { NewBadgeNotifications } from "@/components/achievement-celebration";
 import { summariseActivityProgress } from "@/lib/activity-progress";
 import { selectNextTarget } from "@/lib/target-priority";
+import { topicByCode } from "@/lib/learning-catalog";
+import { evidenceStageForMilestone, journeyWeekFor } from "@/lib/unit-journeys";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -23,6 +25,11 @@ type ActivityState = {
   status_detail: string;
   percentage: number|null;
 };
+type CatchUpStatus = {
+  catch_up_id:string;unit_code:string;topic_code:string;status:string;
+  opened_teaching_week:number;current_teaching_week:number;
+};
+type TeacherAttentionRow={classId:string;className:string;learner_id:string;display_name:string;current_score:number|null;progress_points:number|null;catch_up_status:string;outstanding_count:number;attention_status:string;attention_reason:string};
 
 export default async function DashboardPage({searchParams}:{searchParams:Promise<TeacherFilters>}) {
   const profile = await getSessionProfile();
@@ -65,6 +72,12 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
   );
   const courseStartLesson = related(courseStartActivity?.lessons);
   const classId = enrolments?.[0]?.class_id;
+  const {data:journeyPositions}=classId
+    ? await supabase.rpc("current_class_learning_journey",{class_uuid:classId})
+    : {data:[]};
+  const journeyPosition=journeyPositions?.[0];
+  const {data:catchUpStatuses}=await supabase.rpc("my_catch_up_status");
+  const catchUps=(catchUpStatuses??[]) as CatchUpStatus[];
   const {data:pilotStates}=await supabase.rpc("learner_activity_states",{
     lesson_uuid:pilotLessonId,learner_uuid:id,
   });
@@ -95,6 +108,12 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
   const assignedUnitIds=new Set(((course?.class_units??[]) as {active:boolean;units:{id:string}|{id:string}[]|null}[])
     .filter(item=>item.active).map(item=>related(item.units)?.id).filter((value):value is string=>Boolean(value)));
   const activeUnitId=course?.active_unit_id;
+  const activeUnit=((course?.class_units??[]) as {active:boolean;units:{id:string;code:string;title:string}|{id:string;code:string;title:string}[]|null}[])
+    .map(item=>related(item.units)).find(unit=>unit?.id===activeUnitId);
+  const activeUnitCode=activeUnit?.code;
+  const currentJourneyWeek=activeUnitCode&&journeyPosition
+    ? journeyWeekFor(activeUnitCode,Number(journeyPosition.teaching_week))
+    : undefined;
   const nextTarget=selectNextTarget(targets??[],assignedUnitIds,activeUnitId);
   const unseenBadges=(badges??[]).filter(award=>!award.notification_seen_at).map(award=>({
     id:award.id,title:related(award.badge_definitions)?.title??"Achievement",reason:award.reason,
@@ -113,6 +132,15 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     <h1 className="mt-2 text-4xl font-bold">Good to see you, {name.split(" ")[0]}.</h1>
     <p className="mt-2 text-slate-600">{course ? `${related(course.courses)?.title ?? "Your course"} is ready.` : "Join your class with the enrolment code from your teacher."}</p>
     {!course && <JoinClassForm/>}
+
+    {journeyPosition&&<section className="card mt-8" aria-labelledby="my-computing-journey-title">
+      <div className="flex flex-wrap items-start justify-between gap-5"><div><p className="eyebrow">My Computing Journey</p><h2 className="mt-2 text-3xl font-bold" id="my-computing-journey-title">{activeUnit?`Unit ${activeUnit.code} — ${activeUnit.title}`:journeyPosition.journey_title}</h2><p className="mt-2 text-lg font-semibold text-teal-800">Teaching Week {journeyPosition.teaching_week} of {journeyPosition.total_teaching_weeks}</p></div><span className={`rounded-full px-4 py-2 text-sm font-bold ${journeyPosition.position_status==="paused"?"bg-sky-100 text-sky-900":journeyPosition.position_status==="completed"?"bg-teal-100 text-teal-900":"bg-emerald-100 text-emerald-900"}`}>{journeyPosition.position_status==="paused"?"Paused for college break":journeyPosition.position_status==="completed"?"Journey complete":"In progress"}</span></div>
+      {journeyPosition.position_status==="paused"&&<p className="mt-5 rounded-xl bg-sky-50 p-4 text-sm text-sky-950"><strong>{journeyPosition.pause_reason}</strong> does not count as a teaching week. Your journey resumes on {formatJourneyDate(journeyPosition.next_teaching_on)}.</p>}
+      {currentJourneyWeek&&activeUnitCode&&<div className="mt-5 rounded-2xl border border-slate-200 p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Current topic · {currentJourneyWeek.topicCode}</p><h3 className="mt-2 text-xl font-bold">{currentJourneyWeek.title}</h3><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{currentJourneyWeek.focus}</p></div><span className="rounded-full bg-blue-100 px-3 py-2 text-sm font-bold text-blue-900">{journeyMilestoneLabel(currentJourneyWeek.milestone)}</span></div><div className="mt-4 flex flex-wrap gap-3"><Link className="button" href={`/curriculum/units/${activeUnitCode}/topics/${encodeURIComponent(currentJourneyWeek.topicCode)}?stage=${evidenceStageForMilestone(currentJourneyWeek.milestone)}#worksheet`}>{currentJourneyWeek.milestone==="learning"?"Open this week's lesson and worksheet":"Open milestone evidence"} →</Link><Link className="button-secondary" href="/portfolio">View preserved evidence</Link></div></div>}
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><JourneyFact label="Starting point" value={comparisons?.[0]?.starting_percentage==null?"Not yet recorded":`${comparisons[0].starting_percentage}%`}/><JourneyFact label="Current position" value={progress?.[0]?`${progress[0].latest_score}%`:"Not yet recorded"}/><JourneyFact label="Progress" value={comparisons?.[0]?.improvement_points==null?"Not yet comparable":`${Number(comparisons[0].improvement_points)>=0?"+":""}${comparisons[0].improvement_points} percentage points`}/><JourneyFact label="Missed learning" value={catchUps.filter(item=>item.status!=="completed").length?`${catchUps.filter(item=>item.status!=="completed").length} catch-up item${catchUps.filter(item=>item.status!=="completed").length===1?"":"s"}`:"No catch-up recorded"}/><JourneyFact label="Next action" value={nextTarget?.target_text??"Complete your current learning activity"}/></div>
+    </section>}
+
+    {catchUps.some(item=>item.status!=="completed")&&<section className="card mt-6 border-amber-200" aria-labelledby="catch-up-title"><p className="eyebrow">Missed learning</p><h2 className="mt-2 text-2xl font-bold" id="catch-up-title">Catch-up to complete</h2><div className="mt-5 grid gap-3">{catchUps.filter(item=>item.status!=="completed").map(item=>{const topic=topicByCode(item.unit_code,item.topic_code);return <Link className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 hover:bg-amber-50" href={`/curriculum/units/${item.unit_code}/topics/${encodeURIComponent(item.topic_code)}?catchup=1#worksheet`} key={item.catch_up_id}><div><p className="font-semibold">Unit {item.unit_code} · {topic?.title??item.topic_code}</p><p className="mt-1 text-sm text-slate-600">Opened in Teaching Week {item.opened_teaching_week} · now Week {item.current_teaching_week}</p></div><span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-950">{item.status.replaceAll("_"," ")}</span></Link>})}</div></section>}
 
     <section className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       <Metric label="Current pathway" value={progress?.[0]?.current_pathway ?? mastery?.[0]?.current_pathway ?? "Starting point"} description="The current difficulty level selected from your learning evidence."/>
@@ -216,6 +244,11 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
     supabase.from("teacher_actions").select("learner_id,review_on,outcome").is("archived_at",null),
     supabase.from("learner_routes").select("learner_id,route,status").eq("status","active"),
   ]);
+  const attentionResults=await Promise.all((classes??[]).map(async item=>{
+    const{data}=await supabase.rpc("class_learner_attention",{class_uuid:item.id});
+    return ((data??[]) as Omit<TeacherAttentionRow,"classId"|"className">[]).map(row=>({...row,classId:item.id,className:item.name}));
+  }));
+  const allAttention=attentionResults.flat();
   const latestAttemptByLearnerActivity=new Map<string,{started_at:string;completed_at:string|null}>();
   for(const attempt of attemptEvidence??[]){
     const key=`${attempt.learner_id}:${attempt.activity_id}`;
@@ -251,6 +284,8 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
     (!filters.completionStatus||completionClassIds.has(item.id))&&
     (!filters.unit||(item.class_units??[]).some(unit=>unit.active&&unit.unit_id===filters.unit))
   );
+  const visibleClassIds=new Set(visibleClasses.map(item=>item.id));
+  const attention=allAttention.filter(item=>visibleClassIds.has(item.classId));
   const visibleLearners=new Set<string>();
   const filteredMastery=(mastery??[]).filter(item=>
     (!filters.pathway||item.current_pathway===filters.pathway)&&
@@ -292,7 +327,8 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
   ).length;
 
   return <main className="shell py-10">
-    <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Teaching overview</p><h1 className="mt-2 text-4xl font-bold">Class progress at a glance</h1><p className="mt-2 text-slate-600">Academic evidence remains primary; gamification is shown separately.</p></div><div className="flex flex-wrap gap-3"><Link className="button-secondary" href="/teacher/sample-report">Preview sample reports</Link><Link className="button-secondary" href={`/learn/${pilotLessonId}`}>Preview Python lesson</Link><Link className="button" href="/teacher/content">Manage learning content</Link></div></div>
+    <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Teaching overview</p><h1 className="mt-2 text-4xl font-bold">Who needs me?</h1><p className="mt-2 text-slate-600">Prioritised from recorded catch-up, intervention, outstanding work and current learning evidence.</p></div><div className="flex flex-wrap gap-3"><Link className="button-secondary" href="/teacher/sample-report">Preview sample reports</Link><Link className="button-secondary" href={`/learn/${pilotLessonId}`}>Preview Python lesson</Link>{role==="administrator"&&<Link className="button" href="/teacher/content">Curriculum administration</Link>}</div></div>
+    <section className="card mt-8 overflow-x-auto"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><PriorityCount label="Intervention Required" value={attention.filter(item=>item.attention_status==="intervention_required").length} status="intervention_required"/><PriorityCount label="Action Required" value={attention.filter(item=>item.attention_status==="action_required").length} status="action_required"/><PriorityCount label="Catch-up Required" value={attention.filter(item=>item.attention_status==="catch_up_required").length} status="catch_up_required"/><PriorityCount label="On Track" value={attention.filter(item=>item.attention_status==="on_track").length} status="on_track"/><PriorityCount label="Exceeding" value={attention.filter(item=>item.attention_status==="exceeding").length} status="exceeding"/></div><table className="mt-6 w-full min-w-[900px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-600"><th className="pb-3">Student</th><th className="pb-3">Group</th><th className="pb-3">Current</th><th className="pb-3">Progress</th><th className="pb-3">Catch-up / outstanding</th><th className="pb-3">Status and reason</th></tr></thead><tbody>{attention.slice(0,20).map(item=><tr className="border-b border-slate-100" key={`${item.classId}:${item.learner_id}`}><td className="py-4 font-semibold"><Link className="link" href={`/teacher/learners/${item.learner_id}`}>{item.display_name}</Link></td><td>{item.className}</td><td>{item.current_score==null?"Not recorded":`${item.current_score}%`}</td><td>{item.progress_points==null?"Not comparable":`${Number(item.progress_points)>=0?"+":""}${item.progress_points} pp`}</td><td className="capitalize">{item.catch_up_status.replaceAll("_"," ")}{item.outstanding_count?` · ${item.outstanding_count} outstanding`:""}</td><td><PriorityBadge status={item.attention_status}/><p className="mt-1 max-w-xs text-xs text-slate-500">{item.attention_reason}</p></td></tr>)}</tbody></table>{!attention.length&&<p className="mt-5 rounded-xl bg-slate-50 p-5 text-slate-600">No enrolled learners match the current filters.</p>}</section>
     <section className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><Metric label="Classes" value={String(classCount)}/><Metric label="Learners" value={String(learnerCount)}/><Metric label="Skills requiring support" value={String(supportCount)}/><Metric label="Skills at mastery" value={String(masteryCount)}/></section>
 
     <section className="card mt-6"><p className="eyebrow">Evidence signals</p><h2 className="mt-2 text-2xl font-bold">Completion, progress and action</h2><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -358,6 +394,10 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
 }
 
 function Metric({ label, value,description }: { label: string; value: string;description?:string }) { return <div className="card"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold">{value}</p>{description&&<p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>}</div>; }
+function JourneyFact({label,value}:{label:string;value:string}) { return <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-semibold text-slate-900">{value}</p></div>; }
+function journeyMilestoneLabel(value:string){return value==="starting_point"?"Starting Point":value==="progress_check_1"?"Progress Check 1":value==="progress_check_2"?"Progress Check 2":value==="final"?"Final / Summative":"Weekly Learning";}
+function PriorityBadge({status}:{status:string}){const values:Record<string,[string,string]>={intervention_required:["Intervention Required","bg-red-100 text-red-900"],action_required:["Action Required","bg-orange-100 text-orange-950"],catch_up_required:["Catch-up Required","bg-amber-100 text-amber-950"],on_track:["On Track","bg-emerald-100 text-emerald-900"],exceeding:["Exceeding","bg-blue-100 text-blue-900"]};const [label,colour]=values[status]??[status.replaceAll("_"," "),"bg-slate-100 text-slate-900"];return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${colour}`}>{label}</span>}
+function PriorityCount({label,value,status}:{label:string;value:number;status:string}){return <div className="rounded-xl border border-slate-200 p-4"><PriorityBadge status={status}/><p className="mt-3 text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-slate-500">{label}</p></div>}
 function Signal({label,value,tone="neutral"}:{label:string;value:number;tone?:"neutral"|"good"|"risk"}){
   const colour=tone==="good"?"bg-teal-50 text-teal-900":tone==="risk"?"bg-amber-50 text-amber-950":"bg-slate-50 text-slate-900";
   return <div className={`rounded-xl p-4 ${colour}`}><p className="text-sm font-semibold">{label}</p><p className="mt-1 text-2xl font-bold">{value}</p></div>;
@@ -414,3 +454,4 @@ function routeMessage(route?: string) {
   if (route === "Reduced Practice") return "A little selected practice will help secure this skill.";
   return "Complete the learning, worked examples, guided practice, core practice, mastery check and later retrieval review.";
 }
+function formatJourneyDate(value:string|null){return value?new Date(`${value}T12:00:00Z`).toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}):"after the break";}

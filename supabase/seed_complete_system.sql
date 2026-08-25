@@ -330,6 +330,49 @@ where c.course_id='30000000-0000-0000-0000-000000000001'
 update public.classes set published=true
 where id='a0000000-0000-0000-0000-000000000001';
 
+-- Shared 12-teaching-week journeys for the initial SCCB units. These contain
+-- sequence/milestone structure only; Pearson aims and criteria remain linked
+-- to the separately versioned curriculum records and are never invented here.
+insert into public.learning_journey_templates(
+  unit_id,title,total_teaching_weeks,status,source_reference,approved_at
+)
+select unit.id,unit.title||' — 12 teaching weeks',12,'approved',
+  version.source_reference,now()
+from public.units unit
+join public.courses course on course.id=unit.course_id
+left join public.curriculum_versions version
+  on version.id=unit.curriculum_version_id and version.active and version.archived_at is null
+where unit.code in ('2','4','6') and unit.archived_at is null
+  and (lower(coalesce(course.awarding_organisation,'')) like '%pearson%'
+    or lower(course.title) like '%btec%')
+on conflict(unit_id,version_number) do nothing;
+
+insert into public.learning_journey_weeks(template_id,teaching_week,title,milestone)
+select template.id,week_number,'Teaching Week '||week_number,
+  case week_number when 1 then 'starting_point'
+    when 6 then 'progress_check_1'
+    when 10 then 'progress_check_2'
+    when 12 then 'final' else 'learning' end
+from public.learning_journey_templates template
+cross join generate_series(1,12) week_number
+where template.status='approved' and template.archived_at is null
+on conflict(template_id,teaching_week) do nothing;
+
+select public.seed_initial_learning_journey_weeks();
+
+insert into public.learning_journey_week_lessons(journey_week_id,lesson_id,sequence)
+select journey_week.id,lesson.id,
+  row_number() over(partition by journey_week.id order by topic.sort_order,lesson.title)::integer
+from public.learning_journey_weeks journey_week
+join public.learning_journey_templates template on template.id=journey_week.template_id
+join public.topics topic on topic.unit_id=template.unit_id and topic.archived_at is null
+join public.lessons lesson on lesson.topic_id=topic.id
+  and lesson.week_number=journey_week.teaching_week and lesson.archived_at is null
+on conflict(journey_week_id,lesson_id) do nothing;
+
+insert into public.catch_up_policies(organisation_id)
+select id from public.organisations on conflict(organisation_id) do nothing;
+
 -- An equivalent, course-specific starting point for T Level learners. Keeping
 -- this separate from the BTEC baseline preserves the correct curriculum
 -- version and prevents a learner from being directed into another course.

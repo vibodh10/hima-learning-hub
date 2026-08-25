@@ -107,7 +107,7 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
     <Link className="link" href={classInfo ? `/teacher/classes/${classInfo.id}` : "/dashboard"}>← {classInfo?.name ?? "Teacher dashboard"}</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
       <div><p className="eyebrow">Individual learner report</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-2 text-slate-600">{courseInfo?.title ?? "Course not recorded"}</p></div>
-      <div className="flex gap-3"><a className="button-secondary" href={`/api/reports/learners/${id}?format=csv`}>Export CSV</a><a className="button" href={`/api/reports/learners/${id}`}>Export PDF</a></div>
+      <div className="flex flex-wrap gap-3"><Link className="button-secondary" href={`/teacher/learners/${id}/evidence`}>Evidence View</Link><a className="button-secondary" href={`/api/reports/learners/${id}?format=csv`}>Export CSV</a><a className="button" href={`/api/reports/learners/${id}`}>Export PDF</a></div>
     </div>
 
     <section className="card mt-8"><p className="eyebrow">1. Learner overview</p><h2 className="mt-2 text-2xl font-bold">At a glance</h2>

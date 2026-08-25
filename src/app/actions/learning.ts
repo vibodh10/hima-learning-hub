@@ -109,22 +109,25 @@ export async function configureClass(_: ActionState, formData: FormData): Promis
     academicPeriodId: databaseUuid,
     courseId: databaseUuid,
     activeUnitId: databaseUuid,
-    startsOn: z.iso.date(),
-    endsOn: z.iso.date(),
     weeklyLearningDay: z.coerce.number().int().min(1).max(7),
   }).safeParse(Object.fromEntries(formData));
   const unitIds = formData.getAll("unitIds").map(String);
   if (!parsed.success || unitIds.length < 1 || !unitIds.every(id => databaseUuid.safeParse(id).success)
-    || !unitIds.includes(parsed.data.activeUnitId)
-    || parsed.data.endsOn < parsed.data.startsOn) {
-    return { message: "Choose a period, course, at least one unit, an active unit, and valid class dates." };
+    || !unitIds.includes(parsed.data.activeUnitId)) {
+    return { message: "Choose a period, course, at least one unit, an active unit, and the usual learning day." };
   }
   const supabase = await createClient();
+  const [{ data: currentClass }, { data: period }] = await Promise.all([
+    supabase.from("classes").select("starts_on,ends_on").eq("id", parsed.data.classId).single(),
+    supabase.from("academic_periods").select("starts_on,ends_on").eq("id", parsed.data.academicPeriodId).single(),
+  ]);
+  if (!period) return { message: "The selected academic period is not available." };
   const { error } = await supabase.rpc("teacher_configure_class", {
     class_uuid: parsed.data.classId, name_value: parsed.data.className,
     period_uuid: parsed.data.academicPeriodId, course_uuid: parsed.data.courseId,
     unit_uuids: unitIds, active_unit_uuid: parsed.data.activeUnitId,
-    starts_value: parsed.data.startsOn, ends_value: parsed.data.endsOn,
+    starts_value: currentClass?.starts_on ?? period.starts_on,
+    ends_value: currentClass?.ends_on ?? period.ends_on,
     weekday_value: parsed.data.weeklyLearningDay,
     published_value: formData.get("published") === "on",
   });
@@ -135,6 +138,30 @@ export async function configureClass(_: ActionState, formData: FormData): Promis
   revalidatePath("/dashboard");
   revalidatePath(`/teacher/classes/${parsed.data.classId}`);
   return { ok: true, message: "Class curriculum and schedule saved." };
+}
+
+export async function startGroupLearningJourney(_: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await getSessionProfile();
+  if (!actor || !canCreateClass(actor.role)) return { message: "Only authorised teaching staff can start a group journey." };
+  const parsed = z.object({
+    classId: databaseUuid,
+    templateId: databaseUuid,
+  }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { message: "Choose an approved unit journey." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("start_group_learning_journey", {
+    class_uuid: parsed.data.classId,
+    template_uuid: parsed.data.templateId,
+  });
+  if (error) {
+    console.error("start_group_learning_journey failed", { code: error.code, message: error.message });
+    return { message: error.message.includes("journey_already_active")
+      ? "This group already has an active learning journey. Complete that journey before starting another."
+      : "The selected journey could not be started for this group." };
+  }
+  revalidatePath("/dashboard");
+  revalidatePath(`/teacher/classes/${parsed.data.classId}`);
+  return { ok: true, message: "Learning journey started at Teaching Week 1. Holidays and closures will pause it automatically." };
 }
 
 export async function joinClass(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -1059,12 +1086,12 @@ export async function recordBulkTeacherAction(_:ActionState,formData:FormData):P
 
 export async function saveCalendarEvent(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only authorised teaching staff can manage the academic calendar."};
+  if(!actor||actor.role!=="administrator")return{message:"Administrator access is required to manage the academic calendar."};
   const parsed=z.object({
     academicYearId:databaseUuid,
     academicPeriodId:z.union([databaseUuid,z.literal("")]),
     title:z.string().trim().min(3).max(160),
-    kind:z.enum(["holiday","teaching_week","progress_point_week","review_week","examination_reminder"]),
+    kind:z.enum(["holiday","college_closure","non_teaching","teaching_week","progress_point_week","review_week","examination_reminder"]),
     startsOn:z.iso.date(),endsOn:z.iso.date(),
     note:z.string().trim().max(1000),
     eventId:z.union([databaseUuid,z.literal("")]),
