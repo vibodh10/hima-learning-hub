@@ -1,4 +1,6 @@
 \set ON_ERROR_STOP on
+update public.user_profiles set role='administrator'
+where id='90000000-0000-0000-0000-000000000001';
 create temporary table adaptive_test_results(label text primary key,payload jsonb);
 create temporary table adaptive_test_ids(label text primary key,id uuid);
 grant select,insert on adaptive_test_results,adaptive_test_ids to authenticated;

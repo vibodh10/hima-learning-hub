@@ -218,8 +218,8 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
           <AdditionalBlock title="Teacher tools">
             <WorkbookDecisionForm learnerId={id} units={configuredUnits.map(unit => ({ code: unit.code, title: unit.title, topics: unit.topics.map(topic => ({ code: topic.code, title: topic.title })) }))}/>
             {classInfo && <TeacherActionForm learnerId={id} classId={classInfo.id}/>}
-            {classInfo && <SnapshotForm learnerId={id} classId={classInfo.id} periods={periods ?? []}/>}
-            <CoinCorrectionForm learnerId={id}/>
+            {actor.role==="administrator"&&classInfo&&<SnapshotForm learnerId={id} classId={classInfo.id} periods={periods ?? []}/>}
+            {actor.role==="administrator"&&<CoinCorrectionForm learnerId={id}/>}
             <PathwayOverrideForm learnerId={id} skills={(mastery ?? []).filter(row => !isPriorExperienceSkill(related(row.skills)?.title ?? "")).map(row => ({ skill_id: row.skill_id, title: related(row.skills)?.title ?? "Skill", pathway: row.current_pathway }))}/>
             <ActivityLockOverrideForm learnerId={id} activities={approvedActivities ?? []}/>
             {formativeReviews?.filter(review => review.status === "pending").map(review => {

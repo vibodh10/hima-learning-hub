@@ -1,5 +1,7 @@
 \set ON_ERROR_STOP on
 
+update public.user_profiles set role='administrator'
+where id='90000000-0000-0000-0000-000000000001';
 grant select on public.assessment_blueprints,public.curriculum_versions,public.misconceptions,public.courses to authenticated;
 create temporary table review_question_ids(id uuid);
 grant select on review_question_ids to authenticated;

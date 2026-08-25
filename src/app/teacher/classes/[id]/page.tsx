@@ -93,9 +93,9 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       <tbody>{attention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5">{row.starting_score==null?"Not recorded":`${row.starting_score}%`}</td><td className="p-5">{row.current_score==null?"Not recorded":`${row.current_score}%`}</td><td className="p-5">{row.progress_points==null?"Not comparable":`${Number(row.progress_points)>=0?"+":""}${row.progress_points} pp`}</td><td className="p-5"><strong>{row.ap_total} AP</strong><p className="mt-1 text-xs text-slate-500">{row.achievement_level??"Building toward Bronze"}</p></td><td className="p-5 capitalize">{row.catch_up_status.replaceAll("_"," ")}{row.outstanding_count?` · ${row.outstanding_count} outstanding`:""}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-sm text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><div className="grid gap-2"><Link className="link" href={`/teacher/learners/${row.learner_id}`}>View full history</Link><Link className="link" href={`/teacher/learners/${row.learner_id}/evidence`}>Compare evidence</Link></div></td></tr>)}</tbody>
     </table>{!classData.enrolments?.length && <p className="p-6 text-slate-600">No active learners are enrolled yet.</p>}</section>
 
-    <details className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+    {actor.role==="administrator"&&<details className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
       <summary className="cursor-pointer text-lg font-bold text-slate-800">Advanced class administration</summary>
-      <p className="mt-2 text-sm text-slate-600">Occasional setup, lifecycle and professional-judgement controls. These are not part of the routine teaching journey.</p>
+      <p className="mt-2 text-sm text-slate-600">Administrator-only setup, lifecycle and system configuration. Ordinary teachers are not asked to maintain these forms.</p>
       <ClassSettingsForm classData={classData} courses={courses ?? []} units={units ?? []} periods={periods ?? []} selectedUnitIds={selectedUnitIds}/>
       <ClassLifecycleForms classId={id}/>
       <ExtendedClassLifecycleForms classId={id} teachers={teachers??[]} otherClasses={otherClasses??[]} learners={(classData.enrolments??[]).map(enrolment=>({
@@ -105,8 +105,9 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       <PathwayThresholdForm classId={id}/>
       <CoinRulesForm classId={id}/>
       <AdaptiveHomeworkForm classId={id} topics={(topics??[]).map(topic=>({id:topic.id,title:topic.title,unitTitle:related(topic.units)?.title??"Unit / Content Area"}))}/>
-      <BulkTeacherActionForm classId={id} learners={(classData.enrolments??[]).map(enrolment=>({id:enrolment.student_id,displayName:related(enrolment.user_profiles)?.display_name??"Learner"}))}/>
-    </details>
+    </details>}
+
+    <section className="mt-8" aria-labelledby="professional-judgement-title"><p className="eyebrow">Professional judgement</p><h2 className="mt-2 text-2xl font-bold" id="professional-judgement-title">Intervene only where needed</h2><p className="mt-2 text-sm text-slate-600">Record a concise evidence-based action when several learners genuinely require the same intervention. Routine progression, adaptation, points and catch-up remain managed by the portal.</p><BulkTeacherActionForm classId={id} learners={(classData.enrolments??[]).map(enrolment=>({id:enrolment.student_id,displayName:related(enrolment.user_profiles)?.display_name??"Learner"}))}/></section>
 
     <section className="mt-6 grid gap-6 lg:grid-cols-2">
       <div className="card"><h2 className="text-2xl font-bold">Mastery distribution</h2><p className="mt-2 text-sm text-slate-600">Number of learner-skill records at each current pathway.</p><div className="mt-5 grid grid-cols-2 gap-3">{["Support","Core","Stretch","Mastery"].map(pathway => <Metric key={pathway} label={pathway} value={String(mastery?.filter(skill => skill.current_pathway === pathway).length ?? 0)}/>)}</div></div>

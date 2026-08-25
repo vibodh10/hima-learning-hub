@@ -1,6 +1,8 @@
 \set ON_ERROR_STOP on
 
 grant select on public.classes to authenticated;
+update public.user_profiles set role='administrator'
+where id='90000000-0000-0000-0000-000000000001';
 set request.jwt.claim.sub='90000000-0000-0000-0000-000000000002';
 set role authenticated;
 do $$ begin

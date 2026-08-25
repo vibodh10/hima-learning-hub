@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import { canCreateClass, canJoinClass, canManageCurriculumConfiguration, canSubmitPractice } from "@/lib/permissions";
+import { canCreateClass, canJoinClass, canManageCurriculumConfiguration, canManageGroupConfiguration, canSubmitPractice } from "@/lib/permissions";
 
 export type ActionState = {
   ok?: boolean;
@@ -85,7 +85,7 @@ const classInput = z.object({
 
 export async function createClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "You are not authorised to create a class." };
+  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to create a class." };
   const parsed = classInput.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { message: "Check the class name, course, academic year and enrolment code." };
   const supabase = await createClient();
@@ -103,7 +103,7 @@ export async function createClass(_: ActionState, formData: FormData): Promise<A
 
 export async function configureClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can configure classes." };
+  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to configure classes." };
   const parsed = z.object({
     classId: databaseUuid,
     className: z.string().trim().min(2).max(80),
@@ -464,7 +464,7 @@ export async function updateTarget(_: ActionState, formData: FormData): Promise<
 
 export async function adjustCoins(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can correct coin records." };
+  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to correct coin records." };
   const parsed = z.object({
     learnerId: databaseUuid, amount: z.coerce.number().int().min(-500).max(500).refine(value => value !== 0),
     note: z.string().trim().min(5).max(500),
@@ -523,7 +523,7 @@ export async function overridePathway(_: ActionState, formData: FormData): Promi
 
 export async function createProgressSnapshot(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can create snapshots." };
+  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to create legacy period snapshots." };
   const parsed = z.object({
     learnerId: databaseUuid, classId: databaseUuid, academicPeriodId: databaseUuid,
     reflection: z.string().trim().max(2000), nextPriorities: z.string().trim().min(5).max(2000),
@@ -545,7 +545,7 @@ export async function createProgressSnapshot(_: ActionState, formData: FormData)
 
 export async function duplicateClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can duplicate classes."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to duplicate classes."};
   const parsed=z.object({
     sourceClassId:databaseUuid,newName:z.string().trim().min(2).max(80),
     enrolmentCode:z.string().trim().min(6).max(24).regex(/^[a-zA-Z0-9-]+$/),
@@ -580,7 +580,7 @@ export async function importExistingStudents(_: ActionState,formData:FormData):P
 
 export async function allocateAdaptiveHomework(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can allocate homework."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required for manual homework allocation."};
   const parsed=z.object({
     classId:databaseUuid,topicId:databaseUuid,
     pathwayMode:z.enum(["Auto","Support","Core","Stretch","Mastery"]),
@@ -635,7 +635,7 @@ export async function createTeacherTarget(_:ActionState,formData:FormData):Promi
 
 export async function saveWeeklyPlan(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can manage weekly plans."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to manage weekly plans."};
   const parsed=z.object({
     classId:databaseUuid,weekStart:z.iso.date(),
     title:z.string().trim().min(3).max(160),
@@ -680,7 +680,7 @@ export async function updateAdminSettings(_:ActionState,formData:FormData):Promi
 
 export async function setPathwayThresholds(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can change pathway thresholds."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to change pathway thresholds."};
   const parsed=z.object({
     classId:databaseUuid,supportMax:z.coerce.number().min(0).max(99),
     coreMax:z.coerce.number().min(1).max(99),stretchMax:z.coerce.number().min(1).max(99),
@@ -706,7 +706,7 @@ export async function setPathwayThresholds(_:ActionState,formData:FormData):Prom
 
 export async function archiveClass(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can archive classes."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to archive classes."};
   const classId=databaseUuid.safeParse(formData.get("classId"));
   const confirmation=z.literal("ARCHIVE").safeParse(String(formData.get("confirmation")??"").trim().toUpperCase());
   if(!classId.success||!confirmation.success)return{message:"Type ARCHIVE to confirm."};
@@ -719,7 +719,7 @@ export async function archiveClass(_:ActionState,formData:FormData):Promise<Acti
 
 export async function addClassTeacher(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can add co-teachers."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to add co-teachers."};
   const parsed=z.object({classId:databaseUuid,teacherId:databaseUuid}).safeParse(Object.fromEntries(formData));
   if(!parsed.success)return{message:"Choose a teacher."};
   const supabase=await createClient();
@@ -733,7 +733,7 @@ export async function addClassTeacher(_:ActionState,formData:FormData):Promise<A
 
 export async function moveStudent(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can move learners."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to move learners."};
   const parsed=z.object({
     learnerId:databaseUuid,fromClassId:databaseUuid,toClassId:databaseUuid,
     reason:z.string().trim().min(3).max(500),
@@ -752,7 +752,7 @@ export async function moveStudent(_:ActionState,formData:FormData):Promise<Actio
 
 export async function archiveEnrolment(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can archive enrolments."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to archive enrolments."};
   const parsed=z.object({
     learnerId:databaseUuid,classId:databaseUuid,
     reason:z.string().trim().min(3).max(500),
@@ -857,7 +857,7 @@ export async function reviewCertificateEligibility(_:ActionState,formData:FormDa
 
 export async function setCoinRules(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can change coin rules."};
+  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to change coin rules."};
   const parsed=z.object({
     classId:databaseUuid,
     requiredLearning:z.coerce.number().int().min(0).max(100),

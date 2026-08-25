@@ -9,13 +9,14 @@ import { summariseActivityProgress } from "@/lib/activity-progress";
 import { selectNextTarget } from "@/lib/target-priority";
 import { topicByCode } from "@/lib/learning-catalog";
 import { evidenceStageForMilestone, journeyWeekFor, nextJourneyMilestone } from "@/lib/unit-journeys";
+import { scopedTeacherAttention, selectTeacherDashboardLearners } from "@/lib/teacher-dashboard-filters";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
 
 type TeacherFilters={
   academicYear?:string;period?:string;course?:string;class?:string;unit?:string;
-  topic?:string;skill?:string;pathway?:string;activityType?:string;
+  topic?:string;skill?:string;student?:string;pathway?:string;activityType?:string;
   dateFrom?:string;dateTo?:string;completionStatus?:string;
 };
 type ActivityState = {
@@ -266,20 +267,20 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
     supabase.from("courses").select("id,title,qualification_type,qualification_level,awarding_organisation,units(id,code,title,kind,initial_teaching,status)").eq("active", true).is("archived_at", null).order("title"),
     supabase.from("academic_years").select("id,name").is("archived_at", null).order("starts_on", { ascending: false }),
     supabase.from("skill_mastery").select("learner_id,skill_id,mastery_score,current_pathway,skills(topic_id)"),
-    supabase.from("learner_misconceptions").select("occurrence_count,misconceptions(title,skills(title))").order("occurrence_count", { ascending: false }).limit(5),
-    supabase.from("badge_awards").select("id"),
-    supabase.from("coin_transactions").select("amount"),
+    supabase.from("learner_misconceptions").select("learner_id,skill_id,occurrence_count,misconceptions(title,skills(title))").order("occurrence_count", { ascending: false }),
+    supabase.from("badge_awards").select("id,learner_id"),
+    supabase.from("coin_transactions").select("learner_id,amount"),
     supabase.from("academic_periods").select("id,name,academic_year_id").is("archived_at",null).order("starts_on"),
     supabase.from("units").select("id,course_id,code,title").is("archived_at",null).order("sort_order"),
     supabase.from("topics").select("id,unit_id,title").is("archived_at",null).order("sort_order"),
     supabase.from("skills").select("id,topic_id,title").is("archived_at",null).order("sort_order"),
-    supabase.from("attempts").select("learner_id,activity_id,started_at,completed_at,activities(kind)").order("started_at",{ascending:false}).limit(1000),
-    supabase.from("activity_allocations").select("id,class_id,learner_id,activity_id,release_at,deadline_at,activities(kind)").is("archived_at",null).limit(1000),
-    supabase.from("assessment_instances").select("learner_id,kind,completed_at").not("completed_at","is",null),
-    supabase.from("skill_progress_comparisons").select("learner_id,improvement_points,status"),
+    supabase.from("attempts").select("learner_id,activity_id,started_at,completed_at,activities(kind,lessons(topics(id,unit_id)))").order("started_at",{ascending:false}).limit(1000),
+    supabase.from("activity_allocations").select("id,class_id,learner_id,activity_id,release_at,deadline_at,activities(kind,lessons(topics(id,unit_id)))").is("archived_at",null).limit(1000),
+    supabase.from("assessment_instances").select("learner_id,kind,completed_at,activities(lessons(topics(id,unit_id)))").not("completed_at","is",null),
+    supabase.from("skill_progress_comparisons").select("learner_id,skill_id,improvement_points,status"),
     supabase.from("targets").select("learner_id,status,target_date,review_on").is("archived_at",null),
     supabase.from("teacher_actions").select("learner_id,review_on,outcome").is("archived_at",null),
-    supabase.from("learner_routes").select("learner_id,route,status").eq("status","active"),
+    supabase.from("learner_routes").select("learner_id,topic_id,route,status").eq("status","active"),
   ]);
   const classSignals=await Promise.all((classes??[]).map(async item=>{
     const[{data:attentionData},{data:achievementData},{data:journeyData}]=await Promise.all([
@@ -324,55 +325,97 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
         : attempt?"started"
         : deadline&&deadline<now?"overdue":"not_attempted";
       return{classId:allocation.class_id,learnerId,activityId:allocation.activity_id,status,
-        kind:related(allocation.activities)?.kind};
+        kind:related(allocation.activities)?.kind,topicId:activityTopicId(allocation.activities),
+        evidenceAt:attempt?.completed_at??allocation.release_at};
     });
   });
-  const completionClassIds=new Set(completionEvidence
-    .filter(row=>!filters.completionStatus
-      ||filters.completionStatus==="assigned"
-      ||row.status===filters.completionStatus)
-    .map(row=>row.classId).filter(Boolean));
-  const visibleClasses=(classes??[]).filter(item=>
+  const baseVisibleClasses=(classes??[]).filter(item=>
     (!filters.academicYear||item.academic_year_id===filters.academicYear)&&
     (!filters.period||item.academic_period_id===filters.period)&&
     (!filters.course||item.course_id===filters.course)&&
     (!filters.class||item.id===filters.class)&&
-    (!filters.completionStatus||completionClassIds.has(item.id))&&
     (!filters.unit||(item.class_units??[]).some(unit=>unit.active&&unit.unit_id===filters.unit))
   );
-  const visibleClassIds=new Set(visibleClasses.map(item=>item.id));
-  const attention=allAttention.filter(item=>visibleClassIds.has(item.classId));
-  const visibleJourneySignals=groupJourneySignals.filter(item=>visibleClassIds.has(item.classId));
-  const visibleLearners=new Set<string>();
+  const baseVisibleClassIds=new Set(baseVisibleClasses.map(item=>item.id));
+  const baseLearners=new Set(baseVisibleClasses.flatMap(item=>(item.class_enrolments??[]).map(row=>row.student_id)));
+  const topicUnitById=new Map((topics??[]).map(topic=>[topic.id,topic.unit_id]));
+  const skillTopicById=new Map((skills??[]).map(skill=>[skill.id,skill.topic_id]));
+  const skillIdsByUnit=new Map<string,string[]>();
+  for(const skill of skills??[]){
+    const unitId=topicUnitById.get(skill.topic_id);
+    if(unitId)skillIdsByUnit.set(unitId,[...(skillIdsByUnit.get(unitId)??[]),skill.id]);
+  }
+  const unitSkillIds=new Set(filters.unit?skillIdsByUnit.get(filters.unit)??[]:[]);
   const filteredMastery=(mastery??[]).filter(item=>
+    baseLearners.has(item.learner_id)&&
+    (!filters.unit||unitSkillIds.has(item.skill_id))&&
     (!filters.pathway||item.current_pathway===filters.pathway)&&
     (!filters.skill||item.skill_id===filters.skill)&&
     (!filters.topic||related(item.skills)?.topic_id===filters.topic)
   );
   const filteredAttempts=(attemptEvidence??[]).filter(item=>
+    baseLearners.has(item.learner_id)&&
     item.completed_at&&
+    (!filters.unit||activityUnitId(item.activities)===filters.unit)&&
     (!filters.activityType||related(item.activities)?.kind===filters.activityType)&&
     (!filters.dateFrom||new Date(item.completed_at)>=new Date(`${filters.dateFrom}T00:00:00`))&&
     (!filters.dateTo||new Date(item.completed_at)<=new Date(`${filters.dateTo}T23:59:59`))
   );
   const filteredCompletionEvidence=completionEvidence.filter(row=>
+    baseVisibleClassIds.has(row.classId??"")&&
+    (!filters.unit||topicUnitById.get(row.topicId??"")===filters.unit)&&
+    (!filters.topic||row.topicId===filters.topic)&&
     (!filters.completionStatus||filters.completionStatus==="assigned"||row.status===filters.completionStatus)&&
-    (!filters.activityType||row.kind===filters.activityType)
+    (!filters.activityType||row.kind===filters.activityType)&&
+    (!filters.dateFrom||Boolean(row.evidenceAt&&new Date(row.evidenceAt)>=new Date(`${filters.dateFrom}T00:00:00`)))&&
+    (!filters.dateTo||Boolean(row.evidenceAt&&new Date(row.evidenceAt)<=new Date(`${filters.dateTo}T23:59:59`)))
   );
-  filteredMastery.forEach(item=>visibleLearners.add(item.learner_id));
+  const matchingActivityLearners=new Set(filteredAttempts.map(item=>item.learner_id));
+  filteredCompletionEvidence.forEach(item=>matchingActivityLearners.add(item.learnerId));
+  const selectedLearners=selectTeacherDashboardLearners({
+    baseLearnerIds:[...baseLearners],studentId:filters.student,
+    masteryFilterActive:Boolean(filters.pathway),
+    masteryLearnerIds:filteredMastery.map(item=>item.learner_id),
+    attemptFilterActive:Boolean(filters.dateFrom||filters.dateTo),
+    attemptLearnerIds:[...new Set([...filteredAttempts.map(item=>item.learner_id),...filteredCompletionEvidence.map(item=>item.learnerId)])],
+    activityFilterActive:Boolean(filters.activityType),activityLearnerIds:[...matchingActivityLearners],
+    completionFilterActive:Boolean(filters.completionStatus),
+    completionLearnerIds:filteredCompletionEvidence.map(item=>item.learnerId),
+  });
+  const learnerEvidenceFilterActive=Boolean(filters.student||filters.unit||filters.topic||filters.skill||filters.pathway||filters.activityType||filters.dateFrom||filters.dateTo||filters.completionStatus);
+  const visibleClasses=learnerEvidenceFilterActive
+    ? baseVisibleClasses.filter(item=>(item.class_enrolments??[]).some(row=>selectedLearners.has(row.student_id)))
+    : baseVisibleClasses;
+  const visibleClassIds=new Set(visibleClasses.map(item=>item.id));
+  const visibleJourneySignals=groupJourneySignals.filter(item=>visibleClassIds.has(item.classId));
   const classCount = visibleClasses.length;
-  const learnerCount = visibleClasses.reduce((count, item) => count + Number(item.enrolments?.[0]?.count ?? 0), 0);
-  const supportCount = filteredMastery.filter(item => item.current_pathway === "Support").length;
-  const masteryCount = filteredMastery.filter(item => item.current_pathway === "Mastery").length;
-  const evidenceLearners=new Set((classes??[]).flatMap(item=>(item.class_enrolments??[]).map(row=>row.student_id)));
+  const learnerCount = selectedLearners.size;
+  const supportCount = filteredMastery.filter(item => selectedLearners.has(item.learner_id)&&item.current_pathway === "Support").length;
+  const masteryCount = filteredMastery.filter(item => selectedLearners.has(item.learner_id)&&item.current_pathway === "Mastery").length;
+  const evidenceLearners=selectedLearners;
   const assessmentCount=(kind:string)=>new Set((assessmentEvidence??[])
-    .filter(row=>evidenceLearners.has(row.learner_id)&&row.kind===kind)
+    .filter(row=>evidenceLearners.has(row.learner_id)&&row.kind===kind&&(!filters.unit||activityUnitId(row.activities)===filters.unit)&&(!filters.topic||activityTopicId(row.activities)===filters.topic))
     .map(row=>row.learner_id)).size;
   const completionCount=(kind:string)=>filteredCompletionEvidence
-    .filter(row=>row.kind===kind&&["completed","late"].includes(row.status)).length;
-  const improvementRows=(progressComparisons??[]).filter(row=>evidenceLearners.has(row.learner_id)&&row.improvement_points!=null);
+    .filter(row=>evidenceLearners.has(row.learnerId)&&row.kind===kind&&["completed","late"].includes(row.status)).length;
+  const improvementRows=(progressComparisons??[]).filter(row=>evidenceLearners.has(row.learner_id)&&row.improvement_points!=null&&(!filters.unit||unitSkillIds.has(row.skill_id))&&(!filters.topic||skillTopicById.get(row.skill_id)===filters.topic)&&(!filters.skill||row.skill_id===filters.skill));
+  const curriculumDetailFilterActive=Boolean(filters.topic||filters.skill);
+  const scopedScoreByLearner=averageByLearner(filteredMastery,"mastery_score");
+  const scopedProgressByLearner=averageByLearner(improvementRows,"improvement_points");
+  const attention=allAttention.filter(item=>visibleClassIds.has(item.classId)&&selectedLearners.has(item.learner_id)).map(item=>{
+    if(!curriculumDetailFilterActive)return item;
+    const currentScore=scopedScoreByLearner.get(item.learner_id)??null;
+    const scoped=scopedTeacherAttention({baseStatus:item.attention_status,baseReason:item.attention_reason,catchUpStatus:item.catch_up_status,outstandingCount:item.outstanding_count,currentScore});
+    return {...item,current_score:currentScore,progress_points:scopedProgressByLearner.get(item.learner_id)??null,attention_status:scoped.status,attention_reason:scoped.reason};
+  }).sort((left,right)=>attentionRank(left.attention_status)-attentionRank(right.attention_status)||left.display_name.localeCompare(right.display_name));
+  const filteredMisconceptions=(misconceptions??[]).filter(row=>
+    selectedLearners.has(row.learner_id)&&
+    (!filters.unit||unitSkillIds.has(row.skill_id))&&
+    (!filters.topic||skillTopicById.get(row.skill_id)===filters.topic)&&
+    (!filters.skill||row.skill_id===filters.skill)
+  );
   const routeCount=(route:string)=>new Set((routeEvidence??[])
-    .filter(row=>evidenceLearners.has(row.learner_id)&&row.route===route)
+    .filter(row=>evidenceLearners.has(row.learner_id)&&row.route===route&&(!filters.topic||row.topic_id===filters.topic)&&(!filters.unit||topicUnitById.get(row.topic_id)===filters.unit))
     .map(row=>row.learner_id)).size;
   const todayIso=new Date(now).toISOString().slice(0,10);
   const activeTargets=(targetEvidence??[]).filter(row=>evidenceLearners.has(row.learner_id));
@@ -382,12 +425,6 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
   const actionsAwaitingReview=(teacherActionEvidence??[]).filter(row=>
     evidenceLearners.has(row.learner_id)&&row.review_on&&row.review_on<=todayIso&&!row.outcome
   ).length;
-  const topicUnitById=new Map((topics??[]).map(topic=>[topic.id,topic.unit_id]));
-  const skillIdsByUnit=new Map<string,string[]>();
-  for(const skill of skills??[]){
-    const unitId=topicUnitById.get(skill.topic_id);
-    if(unitId)skillIdsByUnit.set(unitId,[...(skillIdsByUnit.get(unitId)??[]),skill.id]);
-  }
   const masteryByLearnerSkill=new Map((mastery??[]).map(row=>[`${row.learner_id}:${row.skill_id}`,Number(row.mastery_score)]));
   const assessmentReadyLearners=new Set<string>();
   for(const group of visibleClasses){
@@ -416,7 +453,7 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
       <Signal label="Progress points complete" value={assessmentCount("progress_point")}/>
       <Signal label="Classwork complete" value={completionCount("in_class_practice")}/>
       <Signal label="Homework complete" value={completionCount("homework")}/>
-      <Signal label="Overdue work" value={completionEvidence.filter(row=>row.status==="overdue").length} tone="risk"/>
+      <Signal label="Overdue work" value={filteredCompletionEvidence.filter(row=>evidenceLearners.has(row.learnerId)&&row.status==="overdue").length} tone="risk"/>
       <Signal label="Significant improvement" value={improvementRows.filter(row=>Number(row.improvement_points)>=10).length} tone="good"/>
       <Signal label="No clear improvement" value={improvementRows.filter(row=>Number(row.improvement_points)<=0).length} tone="risk"/>
       <Signal label="Learners ready for Stretch" value={new Set(filteredMastery.filter(row=>row.current_pathway==="Stretch").map(row=>row.learner_id)).size}/>
@@ -435,6 +472,7 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
       <FilterSelect label="Term / semester" name="period" value={filters.period} options={(periods??[]).map(item=>({id:item.id,title:item.name}))}/>
       <FilterSelect label="Course" name="course" value={filters.course} options={(courses??[]).map(item=>({id:item.id,title:item.title}))}/>
       <FilterSelect label="Class" name="class" value={filters.class} options={(classes??[]).map(item=>({id:item.id,title:item.name}))}/>
+      <FilterSelect label="Student" name="student" value={filters.student} options={uniqueLearnerOptions(allAttention)}/>
       <FilterSelect label="Unit / Content Area" name="unit" value={filters.unit} options={(units??[]).map(item=>({id:item.id,title:`${item.code} · ${item.title}`}))}/>
       <FilterSelect label="Topic" name="topic" value={filters.topic} options={(topics??[]).map(item=>({id:item.id,title:item.title}))}/>
       <FilterSelect label="Skill" name="skill" value={filters.skill} options={(skills??[]).map(item=>({id:item.id,title:item.title}))}/>
@@ -444,17 +482,17 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
       <label className="grid gap-1 text-sm font-semibold">To date<input className="input" type="date" name="dateTo" defaultValue={filters.dateTo??""}/></label>
       <FilterSelect label="Completion status" name="completionStatus" value={filters.completionStatus} options={["assigned","started","completed","overdue","late","not_attempted"].map(item=>({id:item,title:item.replaceAll("_"," ")}))}/>
       <div className="flex items-end gap-3"><button className="button-secondary">Apply filters</button><Link className="link pb-3 text-sm" href="/dashboard">Clear</Link></div>
-      <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">{filteredAttempts.length} completed attempts match the activity/date filters · {filteredCompletionEvidence.length} allocations match the completion filter · {visibleLearners.size} learners match the skill/pathway filters.</p>
+      <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">{filteredAttempts.filter(item=>selectedLearners.has(item.learner_id)).length} completed attempts match the activity/date filters · {filteredCompletionEvidence.filter(item=>selectedLearners.has(item.learnerId)).length} allocations match the completion filter · {selectedLearners.size} learners match all active filters.</p>
     </form>
 
     <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
       <div className="card"><div><p className="eyebrow">Your classes</p><h2 className="mt-2 text-2xl font-bold">Groups and active courses</h2></div>
         <div className="mt-6 grid gap-3">{visibleClasses.length ? visibleClasses.map(item => <Link href={`/teacher/classes/${item.id}`} key={item.id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-5 hover:bg-teal-50"><div><p className="font-bold">{item.name}</p><p className="text-sm text-slate-500">{item.enrolments?.[0]?.count ?? 0} learners · {related(item.courses)?.title} · {item.published?"published":"draft setup"}</p><p className="mt-1 text-xs text-slate-500">{(item.class_units??[]).filter(unit=>unit.active).map(unit=>related(unit.units)?.title).filter(Boolean).join(", ")||"No active units"}</p></div><span className="font-bold text-teal-700">View class →</span></Link>) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">No class matches these filters.</p>}</div>
-        <CreateClassForm courses={courses ?? []} years={years ?? []}/>
+        {role==="administrator"&&<CreateClassForm courses={courses ?? []} years={years ?? []}/>}
       </div>
       <div className="grid gap-6">
-        <div className="card"><h2 className="text-xl font-bold">Common misconceptions</h2><div className="mt-4 grid gap-3">{misconceptions?.length ? misconceptions.map((row, index) => <div key={index} className="rounded-xl bg-amber-50 p-4"><p className="font-semibold">{related(row.misconceptions)?.title}</p><p className="mt-1 text-sm text-amber-900">{related(related(row.misconceptions)?.skills)?.title} · seen {row.occurrence_count} times</p></div>) : <p className="text-slate-600">No misconception evidence recorded yet.</p>}</div></div>
-        <div className="card"><h2 className="text-xl font-bold">Gamification overview</h2><div className="mt-4 grid grid-cols-2 gap-3"><Metric label="Badges awarded" value={String(badges?.length ?? 0)}/><Metric label="Net coins issued" value={String(coins?.reduce((sum, item) => sum + Number(item.amount), 0) ?? 0)}/></div></div>
+        <div className="card"><h2 className="text-xl font-bold">Common misconceptions</h2><div className="mt-4 grid gap-3">{filteredMisconceptions.length ? filteredMisconceptions.slice(0,5).map((row, index) => <div key={index} className="rounded-xl bg-amber-50 p-4"><p className="font-semibold">{related(row.misconceptions)?.title}</p><p className="mt-1 text-sm text-amber-900">{related(related(row.misconceptions)?.skills)?.title} · seen {row.occurrence_count} times</p></div>) : <p className="text-slate-600">No misconception evidence recorded for the selected learners and curriculum scope.</p>}</div></div>
+        <div className="card"><h2 className="text-xl font-bold">Gamification overview</h2><div className="mt-4 grid grid-cols-2 gap-3"><Metric label="Badges awarded" value={String(badges?.filter(item=>selectedLearners.has(item.learner_id)).length ?? 0)}/><Metric label="Net coins issued" value={String(coins?.filter(item=>selectedLearners.has(item.learner_id)).reduce((sum, item) => sum + Number(item.amount), 0) ?? 0)}/></div></div>
       </div>
     </section>
 
@@ -477,6 +515,7 @@ function Metric({ label, value,description }: { label: string; value: string;des
 function JourneyFact({label,value}:{label:string;value:string}) { return <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-semibold text-slate-900">{value}</p></div>; }
 function journeyMilestoneLabel(value:string){return value==="starting_point"?"Starting Point":value==="progress_check_1"?"Progress Check 1":value==="progress_check_2"?"Progress Check 2":value==="final"?"Final / Summative":"Weekly Learning";}
 function PriorityBadge({status}:{status:string}){const values:Record<string,[string,string]>={intervention_required:["Intervention Required","bg-red-100 text-red-900"],action_required:["Action Required","bg-orange-100 text-orange-950"],catch_up_required:["Catch-up Required","bg-amber-100 text-amber-950"],on_track:["On Track","bg-emerald-100 text-emerald-900"],exceeding:["Exceeding","bg-blue-100 text-blue-900"]};const [label,colour]=values[status]??[status.replaceAll("_"," "),"bg-slate-100 text-slate-900"];return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${colour}`}>{label}</span>}
+function attentionRank(status:string){return ({intervention_required:0,action_required:1,catch_up_required:2,on_track:3,exceeding:4} as Record<string,number>)[status]??5}
 function PriorityCount({label,value,status}:{label:string;value:number;status:string}){return <div className="rounded-xl border border-slate-200 p-4"><PriorityBadge status={status}/><p className="mt-3 text-3xl font-bold">{value}</p><p className="mt-1 text-xs text-slate-500">{label}</p></div>}
 function Signal({label,value,tone="neutral"}:{label:string;value:number;tone?:"neutral"|"good"|"risk"}){
   const colour=tone==="good"?"bg-teal-50 text-teal-900":tone==="risk"?"bg-amber-50 text-amber-950":"bg-slate-50 text-slate-900";
@@ -484,6 +523,31 @@ function Signal({label,value,tone="neutral"}:{label:string;value:number;tone?:"n
 }
 function FilterSelect({label,name,value,options}:{label:string;name:string;value?:string;options:{id:string;title:string}[]}){
   return <label className="grid gap-1 text-sm font-semibold">{label}<select className="input capitalize" name={name} defaultValue={value??""}><option value="">All</option>{options.map(option=><option value={option.id} key={option.id}>{option.title}</option>)}</select></label>;
+}
+function uniqueLearnerOptions(rows:TeacherAttentionRow[]){
+  return [...new Map(rows.map(row=>[row.learner_id,{id:row.learner_id,title:row.display_name}])).values()]
+    .sort((left,right)=>left.title.localeCompare(right.title));
+}
+function averageByLearner<T extends {learner_id:string}>(rows:T[],key:keyof T){
+  const values=new Map<string,number[]>();
+  for(const row of rows){
+    const number=Number(row[key]);
+    if(Number.isFinite(number))values.set(row.learner_id,[...(values.get(row.learner_id)??[]),number]);
+  }
+  return new Map([...values].map(([learnerId,items])=>[learnerId,Math.round(items.reduce((sum,item)=>sum+item,0)/items.length)]));
+}
+function activityUnitId(activityValue:unknown){
+  const topic=activityTopic(activityValue);
+  return typeof topic?.unit_id==="string"?topic.unit_id:null;
+}
+function activityTopicId(activityValue:unknown){
+  const topic=activityTopic(activityValue);
+  return typeof topic?.id==="string"?topic.id:null;
+}
+function activityTopic(activityValue:unknown){
+  const activity=related(activityValue as Record<string,unknown>|Record<string,unknown>[]|null|undefined);
+  const lesson=related(activity?.lessons as Record<string,unknown>|Record<string,unknown>[]|null|undefined);
+  return related(lesson?.topics as Record<string,unknown>|Record<string,unknown>[]|null|undefined);
 }
 function related<T>(value: T | T[] | null | undefined): T | undefined { return Array.isArray(value) ? value[0] : value ?? undefined; }
 function calendarNote(metadata:unknown){

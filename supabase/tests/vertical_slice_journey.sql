@@ -10,6 +10,8 @@ grant select on public.user_profiles, public.academic_years, public.courses,
   public.achievements to authenticated;
 
 -- Use an additional fictional learner to prove cross-learner isolation.
+update public.user_profiles set role='administrator'
+where id='90000000-0000-0000-0000-000000000001';
 insert into auth.users(instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
 values('00000000-0000-0000-0000-000000000000','90000000-0000-0000-0000-000000000003','authenticated','authenticated',
 'other.learner@northbridge.example',extensions.crypt('LocalOther!26',extensions.gen_salt('bf')),now(),'{}','{}',now(),now());

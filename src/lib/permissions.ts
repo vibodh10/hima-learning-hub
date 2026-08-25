@@ -15,3 +15,6 @@ export function canViewLearnerEvidence(role: Role) {
 export function canManageCurriculumConfiguration(role: Role) {
   return role === "administrator";
 }
+export function canManageGroupConfiguration(role: Role) {
+  return role === "administrator";
+}

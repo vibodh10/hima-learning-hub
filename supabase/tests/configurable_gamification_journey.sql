@@ -1,5 +1,7 @@
 \set ON_ERROR_STOP on
 
+update public.user_profiles set role='administrator'
+where id='90000000-0000-0000-0000-000000000001';
 set request.jwt.claim.sub='90000000-0000-0000-0000-000000000001';
 set role authenticated;
 
@@ -50,4 +52,3 @@ begin
     raise exception 'gamification configuration audit evidence is missing';
   end if;
 end $$;
-
