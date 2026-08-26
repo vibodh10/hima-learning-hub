@@ -2,18 +2,18 @@ import Link from "next/link";
 import { configuredUnits, metaForUnit } from "@/lib/learning-catalog";
 import { CourseWorkbookProgress } from "@/components/learning-journey";
 import { loadCurriculumProgress } from "@/lib/curriculum-progress-server";
-import { getSessionProfile } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { progressKeyFor } from "@/lib/learning-progress";
 
 export default async function CurriculumPage() {
-  const [progress, actor] = await Promise.all([loadCurriculumProgress(), getSessionProfile()]);
+  const [progress, actor] = await Promise.all([loadCurriculumProgress(), requireRole("student", "teacher", "administrator")]);
   return <main className="shell py-10">
     <Link className="link text-sm" href="/dashboard">← Back to dashboard</Link>
-    <p className="eyebrow mt-8">Pearson BTEC Level 3 National Information Technology</p>
-    <h1 className="mt-3 max-w-4xl text-4xl font-bold">Your units and topics</h1>
-    <p className="mt-4 max-w-4xl leading-7 text-slate-600">Open a unit, choose a topic and learn it through explanation, worked examples, guided practice, independent practice and mastery. Each unit ends with a vocational Challenge project.</p>
+    <p className="eyebrow mt-8">{actor.role==="student"?"My course":"Course content preview"}</p>
+    <h1 className="mt-3 max-w-4xl text-4xl font-bold">{actor.role==="student"?"Your units and topics":"Units and learner activities"}</h1>
+    <p className="mt-4 max-w-4xl leading-7 text-slate-600">{actor.role==="student"?"Open a unit, choose a topic and follow the lesson, practice and assessment steps shown to you.":"Preview the approved explanations, practice and assessment activities available to students. Teaching and administration actions remain on your dashboard and class pages."}</p>
     <aside className="mt-5 max-w-4xl rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Specification basis:</strong> audited against the Pearson BTEC Level 3 National Extended Diploma in Information Technology (2016/2017 specification, Issue 6, April 2021) for Units 1, 2, 4, 6, 8 and 9. Centres should still confirm the learner’s registered qualification size and current Pearson assessment arrangements.</aside>
-    <CourseWorkbookProgress units={configuredUnits} initialProgress={progress} storageKey={progressKeyFor(actor?.id ?? "guest")}/>
+    {actor.role==="student"&&<CourseWorkbookProgress units={configuredUnits} initialProgress={progress} storageKey={progressKeyFor(actor.id)}/>}
     <section className="mt-8 grid gap-5 md:grid-cols-2">{configuredUnits.map(unit => {
       const meta = metaForUnit(unit.code);
       return <Link className="card group hover:border-teal-400 hover:bg-teal-50" href={`/curriculum/units/${unit.code}`} key={unit.code}>

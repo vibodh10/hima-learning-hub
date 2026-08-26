@@ -1,6 +1,6 @@
-# Hima Learning Hub
+# SCCB Digital Learning Hub
 
-Hima's build explanation and the invitation-only student onboarding procedure are in [docs/HIMA_WEBSITE_AND_STUDENT_ONBOARDING.md](docs/HIMA_WEBSITE_AND_STUDENT_ONBOARDING.md).
+The build explanation and invitation-only student onboarding procedure are in [docs/HIMA_WEBSITE_AND_STUDENT_ONBOARDING.md](docs/HIMA_WEBSITE_AND_STUDENT_ONBOARDING.md).
 
 A responsive learning-practice and progress application for Level 3 Computing and
 Digital learners. Formal BTEC and T Level assignments are explicitly out of scope.
@@ -51,29 +51,15 @@ Prerequisites: Node.js 20+, npm, Supabase CLI, and a Supabase project.
    files.
 5. Install and run: `npm install` then `npm run dev`.
 
-## Quick hosted-data demo
+## Local role testing
 
-Double-click `START_HIMA.cmd`, keep its terminal window open, and visit
-`http://localhost:3000`. If the terminal is closed, the local website stops.
+Run `npm run dev` and visit `http://localhost:3000`.
 
-The home page has separate **Student sign in** and **Teacher sign in** buttons.
-Each opens a pre-filled fictional test account; press **Sign in** to enter:
-
-- student: `student.hima.ms38skyz@example.com`
-- teacher: `teacher.hima.ms38skyz@example.com`
-- password for both: `password`
-
-These weak credentials exist only to make the connected test model easy to
-evaluate. Change or delete the accounts before publishing the application.
-
-Local-only fictional accounts:
-
-- `teacher@northbridge.example` / `LocalTeacher!26`
-- `learner@northbridge.example` / `LocalLearner!26`
-- class enrolment code: `HIMA-2026`
-
-These credentials are intentionally documented for local development and must
-never be deployed to a shared or production Supabase project.
+The sign-in form is deliberately role-neutral. Use a distinct teacher account
+and invited student account: one account has one database-backed role and cannot
+switch roles from a login link or URL. Student accounts should be created through
+the invitation flow on an authorised class page. No pre-filled demo credentials
+or fake student records are included in the application UI.
 
 For a hosted test project, use `supabase/seed_hosted_curriculum.sql` for the
 fictional organisation base and then

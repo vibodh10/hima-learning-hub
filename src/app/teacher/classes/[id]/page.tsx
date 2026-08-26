@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/app-header";
 import { AdaptiveHomeworkForm, BulkTeacherActionForm, ClassLifecycleForms, ClassSettingsForm, ExtendedClassLifecycleForms, PathwayThresholdForm, StartGroupJourneyForm, WeeklyPlanForm } from "@/components/class-forms";
 import { CoinRulesForm } from "@/components/gamification-config-forms";
 import { StudentInvitationForm } from "@/components/student-invitation-form";
+import { RoleBanner } from "@/components/role-banner";
 
 type AttentionRow={learner_id:string;display_name:string;starting_score:number|null;current_score:number|null;progress_points:number|null;catch_up_status:string;outstanding_count:number;attention_status:string;attention_reason:string;ap_total:number;achievement_level:string|null};
 
@@ -64,10 +65,14 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const supportSkills = mastery?.filter(skill => skill.current_pathway === "Support").length ?? 0;
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
-    <Link className="link" href="/dashboard">← Teacher dashboard</Link>
-    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Class overview</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title}</p></div><div className="flex flex-wrap items-center gap-3"><Link className="button-secondary" href={`/api/reports/classes/${id}`}>Class PDF</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Class CSV</Link><p className="rounded-xl bg-slate-100 px-4 py-3 text-sm">Code hint: ends in <strong>{classData.enrolment_code_hint}</strong></p></div></div>
+    <RoleBanner role={actor.role}/>
+    <Link className="link mt-6 inline-block" href="/dashboard">← Teacher dashboard</Link>
+    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Class overview</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title}</p></div><div className="flex flex-wrap items-center gap-3">{studentIds.length>0&&<><Link className="button-secondary" href={`/api/reports/classes/${id}`}>Class PDF</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Class CSV</Link></>}<p className="rounded-xl bg-slate-100 px-4 py-3 text-sm">Code hint: ends in <strong>{classData.enrolment_code_hint}</strong></p></div></div>
 
-    <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Learners" value={String(studentIds.length)}/><Metric label="Activities completed" value={String(completedActivities)}/><Metric label="Latest average" value={average == null ? "Not available" : `${average}%`}/><Metric label="Homework attempts" value={String(homeworkAttempts)}/><Metric label="Skills requiring support" value={String(supportSkills)}/></section>
+    <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Students" value={String(studentIds.length)}/><Metric label="Activities completed" value={String(completedActivities)}/><Metric label="Latest average" value={average == null ? "Not available" : `${average}%`}/><Metric label="Homework attempts" value={String(homeworkAttempts)}/><Metric label="Skills requiring support" value={String(supportSkills)}/></section>
+
+    {!studentIds.length&&<section className="card mt-6 border-blue-200 bg-blue-50"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold">Invite your first student</h2><p className="mt-3 max-w-3xl text-slate-700">This class is ready, but nobody is enrolled. Send a secure invitation to a student&apos;s verified email address. Results and progress will stay at zero until genuine work is completed.</p></section>}
+    <StudentInvitationForm classId={id}/>
 
     {journeyPosition ? <section className="card mt-6" aria-labelledby="journey-position-title">
       <div className="flex flex-wrap items-start justify-between gap-5">
@@ -87,11 +92,9 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       unitTitle: related(template.units)?.title ?? template.title,
       totalTeachingWeeks: template.total_teaching_weeks,
     }))}/>}
-    <StudentInvitationForm classId={id}/>
-
-    <section className="card mt-8 overflow-x-auto p-0"><div className="p-5"><p className="eyebrow">Who needs me?</p><h2 className="mt-2 text-2xl font-bold">Learner priorities</h2><p className="mt-2 text-sm text-slate-600">Intervention and action appear first. Every colour has a written status and evidence reason.</p></div><table className="w-full min-w-[1080px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Learner</th><th className="p-5">Starting</th><th className="p-5">Current</th><th className="p-5">Progress</th><th className="p-5">Achievement</th><th className="p-5">Catch-up</th><th className="p-5">Status and reason</th><th className="p-5">Evidence</th></tr></thead>
+    {studentIds.length>0&&<section className="card mt-8 overflow-x-auto p-0"><div className="p-5"><p className="eyebrow">Who needs me?</p><h2 className="mt-2 text-2xl font-bold">Student priorities</h2><p className="mt-2 text-sm text-slate-600">Intervention and action appear first. Every colour has a written status and evidence reason.</p></div><table className="w-full min-w-[1080px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Student</th><th className="p-5">Starting</th><th className="p-5">Current</th><th className="p-5">Progress</th><th className="p-5">Achievement</th><th className="p-5">Catch-up</th><th className="p-5">Status and reason</th><th className="p-5">Evidence</th></tr></thead>
       <tbody>{attention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5">{row.starting_score==null?"Not recorded":`${row.starting_score}%`}</td><td className="p-5">{row.current_score==null?"Not recorded":`${row.current_score}%`}</td><td className="p-5">{row.progress_points==null?"Not comparable":`${Number(row.progress_points)>=0?"+":""}${row.progress_points} pp`}</td><td className="p-5"><strong>{row.ap_total} AP</strong><p className="mt-1 text-xs text-slate-500">{row.achievement_level??"Building toward Bronze"}</p></td><td className="p-5 capitalize">{row.catch_up_status.replaceAll("_"," ")}{row.outstanding_count?` · ${row.outstanding_count} outstanding`:""}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-sm text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><div className="grid gap-2"><Link className="link" href={`/teacher/learners/${row.learner_id}`}>View full history</Link><Link className="link" href={`/teacher/learners/${row.learner_id}/evidence`}>Compare evidence</Link></div></td></tr>)}</tbody>
-    </table>{!classData.enrolments?.length && <p className="p-6 text-slate-600">No active learners are enrolled yet.</p>}</section>
+    </table></section>}
 
     {actor.role==="administrator"&&<details className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
       <summary className="cursor-pointer text-lg font-bold text-slate-800">Advanced class administration</summary>
@@ -107,12 +110,12 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       <AdaptiveHomeworkForm classId={id} topics={(topics??[]).map(topic=>({id:topic.id,title:topic.title,unitTitle:related(topic.units)?.title??"Unit / Content Area"}))}/>
     </details>}
 
-    <section className="mt-8" aria-labelledby="professional-judgement-title"><p className="eyebrow">Professional judgement</p><h2 className="mt-2 text-2xl font-bold" id="professional-judgement-title">Intervene only where needed</h2><p className="mt-2 text-sm text-slate-600">Record a concise evidence-based action when several learners genuinely require the same intervention. Routine progression, adaptation, points and catch-up remain managed by the portal.</p><BulkTeacherActionForm classId={id} learners={(classData.enrolments??[]).map(enrolment=>({id:enrolment.student_id,displayName:related(enrolment.user_profiles)?.display_name??"Learner"}))}/></section>
+    {studentIds.length>0&&<section className="mt-8" aria-labelledby="professional-judgement-title"><p className="eyebrow">Professional judgement</p><h2 className="mt-2 text-2xl font-bold" id="professional-judgement-title">Intervene only where needed</h2><p className="mt-2 text-sm text-slate-600">Record a concise evidence-based action when several students genuinely require the same intervention. Routine progression, adaptation, points and catch-up remain managed by the portal.</p><BulkTeacherActionForm classId={id} learners={(classData.enrolments??[]).map(enrolment=>({id:enrolment.student_id,displayName:related(enrolment.user_profiles)?.display_name??"Student"}))}/></section>}
 
-    <section className="mt-6 grid gap-6 lg:grid-cols-2">
+    {studentIds.length>0&&<section className="mt-6 grid gap-6 lg:grid-cols-2">
       <div className="card"><h2 className="text-2xl font-bold">Mastery distribution</h2><p className="mt-2 text-sm text-slate-600">Number of learner-skill records at each current pathway.</p><div className="mt-5 grid grid-cols-2 gap-3">{["Support","Core","Stretch","Mastery"].map(pathway => <Metric key={pathway} label={pathway} value={String(mastery?.filter(skill => skill.current_pathway === pathway).length ?? 0)}/>)}</div></div>
       <div className="card"><h2 className="text-2xl font-bold">Common misconceptions</h2><p className="mt-2 text-sm text-slate-600">Repeated patterns support re-teaching decisions and intervention review.</p><div className="mt-5 grid gap-3">{misconceptions?.length ? misconceptions.slice(0, 6).map((row, index) => <div className="rounded-xl bg-amber-50 p-4" key={index}><p className="font-semibold">{related(row.misconceptions)?.title}</p><p className="mt-1 text-sm text-amber-900">{related(related(row.misconceptions)?.skills)?.title} · {row.occurrence_count} occurrences · {row.resolved_at ? "resolved" : "open"}</p></div>) : <p className="text-slate-600">No tagged misconception evidence yet.</p>}</div></div>
-    </section>
+    </section>}
   </main></>;
 }
 

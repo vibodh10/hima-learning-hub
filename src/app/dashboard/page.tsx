@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSessionProfile } from "@/lib/auth";
+import { getSessionProfile, type Role } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
+import { RoleBanner } from "@/components/role-banner";
 import { CreateClassForm, JoinClassForm } from "@/components/class-forms";
 import { NewBadgeNotifications } from "@/components/achievement-celebration";
 import { summariseActivityProgress } from "@/lib/activity-progress";
@@ -10,6 +11,7 @@ import { selectNextTarget } from "@/lib/target-priority";
 import { topicByCode } from "@/lib/learning-catalog";
 import { evidenceStageForMilestone, journeyWeekFor, nextJourneyMilestone } from "@/lib/unit-journeys";
 import { scopedTeacherAttention, selectTeacherDashboardLearners } from "@/lib/teacher-dashboard-filters";
+import { summariseTeacherOverview } from "@/lib/dashboard-summary";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -78,6 +80,25 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
   ]);
 
   const course = related(enrolments?.[0]?.classes);
+  if (!course) {
+    return <main className="shell py-10">
+      <RoleBanner role="student" />
+      <div className="mt-8 max-w-3xl">
+        <p className="eyebrow">Student dashboard</p>
+        <h1 className="mt-2 text-4xl font-bold">Welcome, {name.split(" ")[0]}.</h1>
+      </div>
+      <section className="card mt-8 max-w-3xl border-blue-200 bg-blue-50" aria-labelledby="no-course-title">
+        <p className="eyebrow">Next step</p>
+        <h2 className="mt-2 text-2xl font-bold" id="no-course-title">No course assigned yet</h2>
+        <p className="mt-3 leading-7 text-slate-700">Your account is active, but it is not currently enrolled in a class. Ask your teacher to send or retry your SCCB invitation. Your course, assessments and progress will appear here after enrolment.</p>
+        <details className="mt-5 rounded-xl border border-blue-200 bg-white p-4">
+          <summary className="cursor-pointer font-semibold">I was given a class code</summary>
+          <p className="mt-3 text-sm text-slate-600">Use the code below only if your teacher specifically asked you to join this way.</p>
+          <JoinClassForm />
+        </details>
+      </section>
+    </main>;
+  }
   const courseStartActivity = courseStartingActivities?.find(activity =>
     related(related(related(activity.lessons)?.topics)?.units)?.course_id === course?.course_id
   );
@@ -160,10 +181,12 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
 
   return <main className="shell py-10">
     {unseenBadges.length>0&&<NewBadgeNotifications awards={unseenBadges}/>}
-    <p className="eyebrow">Your learning</p>
-    <h1 className="mt-2 text-4xl font-bold">Good to see you, {name.split(" ")[0]}.</h1>
-    <p className="mt-2 text-slate-600">{course ? `${related(course.courses)?.title ?? "Your course"} is ready.` : "Join your class with the enrolment code from your teacher."}</p>
-    {!course && <JoinClassForm/>}
+    <RoleBanner role="student" />
+    <div className="mt-8">
+      <p className="eyebrow">Student dashboard</p>
+      <h1 className="mt-2 text-4xl font-bold">Good to see you, {name.split(" ")[0]}.</h1>
+      <p className="mt-2 text-slate-600">{related(course.courses)?.title ?? "Your course"} is ready. Start with the next action shown below.</p>
+    </div>
 
     {journeyPosition&&<section className="card mt-8" aria-labelledby="my-computing-journey-title">
       <div className="flex flex-wrap items-start justify-between gap-5"><div><p className="eyebrow">My Computing Journey</p><h2 className="mt-2 text-3xl font-bold" id="my-computing-journey-title">{activeUnit?`Unit ${activeUnit.code} — ${activeUnit.title}`:journeyPosition.journey_title}</h2><p className="mt-2 text-lg font-semibold text-teal-800">Teaching Week {journeyPosition.teaching_week} of {journeyPosition.total_teaching_weeks}</p></div><span className={`rounded-full px-4 py-2 text-sm font-bold ${journeyPosition.position_status==="paused"?"bg-sky-100 text-sky-900":journeyPosition.position_status==="completed"?"bg-teal-100 text-teal-900":"bg-emerald-100 text-emerald-900"}`}>{journeyPosition.position_status==="paused"?"Paused for college break":journeyPosition.position_status==="completed"?"Journey complete":"In progress"}</span></div>
@@ -250,7 +273,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
   </main>;
 }
 
-async function TeacherDashboard({ id,role,filters }: { id: string;role:string;filters:TeacherFilters }) {
+async function TeacherDashboard({ id,role,filters }: { id: string;role:Exclude<Role,"student">;filters:TeacherFilters }) {
   const supabase = await createClient();
   const now=await currentTimestamp();
   const classesQuery=supabase.from("classes").select("id,name,course_id,academic_year_id,academic_period_id,published,enrolments(count),class_enrolments:enrolments(student_id),courses(title),class_units(unit_id,active,units(code,title))").is("archived_at", null);
@@ -305,6 +328,13 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
     return {attention,journey};
   }));
   const allAttention=classSignals.flatMap(item=>item.attention);
+  const allClassLearnerIds=(classes??[]).flatMap(item=>(item.class_enrolments??[]).map(row=>row.student_id));
+  const overview=summariseTeacherOverview({
+    enrolmentLearnerIds:allClassLearnerIds,
+    completedAssessmentLearnerIds:(assessmentEvidence??[]).map(row=>row.learner_id),
+    attentionStatuses:allAttention.map(item=>item.attention_status),
+  });
+  const totalStudentCount=overview.students;
   const groupJourneySignals=classSignals.flatMap(item=>item.journey?[item.journey]:[]);
   const latestAttemptByLearnerActivity=new Map<string,{started_at:string;completed_at:string|null}>();
   for(const attempt of attemptEvidence??[]){
@@ -388,10 +418,6 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
     : baseVisibleClasses;
   const visibleClassIds=new Set(visibleClasses.map(item=>item.id));
   const visibleJourneySignals=groupJourneySignals.filter(item=>visibleClassIds.has(item.classId));
-  const classCount = visibleClasses.length;
-  const learnerCount = selectedLearners.size;
-  const supportCount = filteredMastery.filter(item => selectedLearners.has(item.learner_id)&&item.current_pathway === "Support").length;
-  const masteryCount = filteredMastery.filter(item => selectedLearners.has(item.learner_id)&&item.current_pathway === "Mastery").length;
   const evidenceLearners=selectedLearners;
   const assessmentCount=(kind:string)=>new Set((assessmentEvidence??[])
     .filter(row=>evidenceLearners.has(row.learner_id)&&row.kind===kind&&(!filters.unit||activityUnitId(row.activities)===filters.unit)&&(!filters.topic||activityTopicId(row.activities)===filters.topic))
@@ -441,13 +467,17 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
   })).filter(item=>item.milestone);
 
   return <main className="shell py-10">
-    <div className="flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Teaching overview</p><h1 className="mt-2 text-4xl font-bold">Who needs me?</h1><p className="mt-2 text-slate-600">Prioritised from recorded catch-up, intervention, outstanding work and current learning evidence.</p></div><div className="flex flex-wrap gap-3"><Link className="button-secondary" href="/teacher/sample-report">Preview sample reports</Link><Link className="button-secondary" href={`/learn/${pilotLessonId}`}>Preview Python lesson</Link>{role==="administrator"&&<Link className="button" href="/teacher/content">Curriculum administration</Link>}</div></div>
-    <section className="card mt-8 overflow-x-auto"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><PriorityCount label="Intervention Required" value={attention.filter(item=>item.attention_status==="intervention_required").length} status="intervention_required"/><PriorityCount label="Action Required" value={attention.filter(item=>item.attention_status==="action_required").length} status="action_required"/><PriorityCount label="Catch-up Required" value={attention.filter(item=>item.attention_status==="catch_up_required").length} status="catch_up_required"/><PriorityCount label="On Track" value={attention.filter(item=>item.attention_status==="on_track").length} status="on_track"/><PriorityCount label="Exceeding" value={attention.filter(item=>item.attention_status==="exceeding").length} status="exceeding"/></div><table className="mt-6 w-full min-w-[1050px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-600"><th className="pb-3">Student</th><th className="pb-3">Group</th><th className="pb-3">Current</th><th className="pb-3">Progress</th><th className="pb-3">Achievement</th><th className="pb-3">Catch-up / outstanding</th><th className="pb-3">Status and reason</th></tr></thead><tbody>{attention.slice(0,20).map(item=><tr className="border-b border-slate-100" key={`${item.classId}:${item.learner_id}`}><td className="py-4 font-semibold"><Link className="link" href={`/teacher/learners/${item.learner_id}`}>{item.display_name}</Link></td><td>{item.className}</td><td>{item.current_score==null?"Not recorded":`${item.current_score}%`}</td><td>{item.progress_points==null?"Not comparable":`${Number(item.progress_points)>=0?"+":""}${item.progress_points} pp`}</td><td><strong>{item.ap_total} AP · {item.achievement_level??"Building"}</strong><p className="mt-1 text-xs text-slate-500">{item.next_level?`${item.points_to_next} AP to ${item.next_level}`:"Highest configured level"}{item.certificate_status?" · certificate review eligible":""}</p></td><td className="capitalize">{item.catch_up_status.replaceAll("_"," ")}{item.outstanding_count?` · ${item.outstanding_count} outstanding`:""}</td><td><PriorityBadge status={item.attention_status}/><p className="mt-1 max-w-xs text-xs text-slate-500">{item.attention_reason}</p></td></tr>)}</tbody></table>{!attention.length&&<p className="mt-5 rounded-xl bg-slate-50 p-5 text-slate-600">No enrolled learners match the current filters.</p>}</section>
-    <section className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"><Metric label="Classes" value={String(classCount)}/><Metric label="Learners" value={String(learnerCount)}/><Metric label="Skills requiring support" value={String(supportCount)}/><Metric label="Skills at mastery" value={String(masteryCount)}/></section>
+    <RoleBanner role={role}/>
+    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">{role==="administrator"?"Teaching administration":"Teacher dashboard"}</p><h1 className="mt-2 text-4xl font-bold">{role==="administrator"?"Teaching overview":"Your teaching overview"}</h1><p className="mt-2 max-w-3xl text-slate-600">Start with students who need attention, then open a class for assessments, results and teaching actions.</p></div><div className="flex flex-wrap gap-3"><Link className="button-secondary" href="/teacher/sample-report">Preview reports</Link><Link className="button-secondary" href={`/learn/${pilotLessonId}`}>Preview a lesson</Link>{role==="administrator"&&<Link className="button" href="/teacher/content">Manage curriculum</Link>}</div></div>
+    <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="Live teaching totals"><Metric label="Students" value={String(overview.students)}/><Metric label="Active enrolments" value={String(overview.activeEnrolments)}/><Metric label="Completed assessments" value={String(overview.completedAssessments)}/><Metric label="Need attention" value={String(overview.needAttention)}/></section>
 
-    <section className="card mt-6"><p className="eyebrow">Teaching-sequence milestones</p><h2 className="mt-2 text-2xl font-bold">Upcoming progress checks</h2><p className="mt-2 text-sm text-slate-600">Derived from each group&apos;s teaching-week clock. College holidays and closures do not consume a teaching week.</p><div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{upcomingCheckpoints.map(item=><article className="rounded-xl border border-slate-200 p-4" key={item.classId}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{item.className}</h3><p className="mt-1 text-sm text-slate-600">Unit {item.unitCode} · now Teaching Week {item.teachingWeek}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-900">{journeyMilestoneLabel(item.milestone!.milestone)}</span></div><p className="mt-3 text-sm"><strong>Teaching Week {item.milestone!.week}:</strong> {item.milestone!.title}</p>{item.positionStatus==="paused"&&<p className="mt-3 rounded-lg bg-sky-50 p-3 text-xs text-sky-950">Timer paused for a non-teaching period; resumes {formatJourneyDate(item.nextTeachingOn)}.</p>}<Link className="link mt-3 inline-block text-sm" href={`/teacher/classes/${item.classId}`}>Open group evidence →</Link></article>)}{!upcomingCheckpoints.length&&<p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No active group journey has a further checkpoint in the current filters.</p>}</div></section>
+    {totalStudentCount===0&&<section className="card mt-6 border-blue-200 bg-blue-50" aria-labelledby="no-students-title"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold" id="no-students-title">No students yet</h2><p className="mt-3 max-w-3xl leading-7 text-slate-700">There are no active student enrolments, so progress, results and assessment totals correctly show zero. {classes?.length?"Open a class below and invite each student using their verified email address.":role==="administrator"?"Create the first class below, then invite students from its class page.":"Ask an administrator to create and assign your first class."}</p>{classes?.[0]&&<Link className="button mt-5" href={`/teacher/classes/${classes[0].id}`}>Open {classes[0].name} →</Link>}</section>}
 
-    <section className="card mt-6"><p className="eyebrow">Evidence signals</p><h2 className="mt-2 text-2xl font-bold">Completion, progress and action</h2><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    {totalStudentCount>0&&<section className="card mt-6 overflow-x-auto"><div><p className="eyebrow">Priority list</p><h2 className="mt-2 text-2xl font-bold">Who needs me?</h2><p className="mt-2 text-sm text-slate-600">Based on recorded catch-up, intervention, outstanding work and current learning evidence.</p></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><PriorityCount label="Intervention Required" value={attention.filter(item=>item.attention_status==="intervention_required").length} status="intervention_required"/><PriorityCount label="Action Required" value={attention.filter(item=>item.attention_status==="action_required").length} status="action_required"/><PriorityCount label="Catch-up Required" value={attention.filter(item=>item.attention_status==="catch_up_required").length} status="catch_up_required"/><PriorityCount label="On Track" value={attention.filter(item=>item.attention_status==="on_track").length} status="on_track"/><PriorityCount label="Exceeding" value={attention.filter(item=>item.attention_status==="exceeding").length} status="exceeding"/></div><table className="mt-6 w-full min-w-[1050px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-600"><th className="pb-3">Student</th><th className="pb-3">Group</th><th className="pb-3">Current</th><th className="pb-3">Progress</th><th className="pb-3">Achievement</th><th className="pb-3">Catch-up / outstanding</th><th className="pb-3">Status and reason</th></tr></thead><tbody>{attention.slice(0,20).map(item=><tr className="border-b border-slate-100" key={`${item.classId}:${item.learner_id}`}><td className="py-4 font-semibold"><Link className="link" href={`/teacher/learners/${item.learner_id}`}>{item.display_name}</Link></td><td>{item.className}</td><td>{item.current_score==null?"Not recorded":`${item.current_score}%`}</td><td>{item.progress_points==null?"Not comparable":`${Number(item.progress_points)>=0?"+":""}${item.progress_points} pp`}</td><td><strong>{item.ap_total} AP · {item.achievement_level??"Building"}</strong><p className="mt-1 text-xs text-slate-500">{item.next_level?`${item.points_to_next} AP to ${item.next_level}`:"Highest configured level"}{item.certificate_status?" · certificate review eligible":""}</p></td><td className="capitalize">{item.catch_up_status.replaceAll("_"," ")}{item.outstanding_count?` · ${item.outstanding_count} outstanding`:""}</td><td><PriorityBadge status={item.attention_status}/><p className="mt-1 max-w-xs text-slate-500">{item.attention_reason}</p></td></tr>)}</tbody></table>{!attention.length&&<p className="mt-5 rounded-xl bg-slate-50 p-5 text-slate-600">No students match the current filters. <Link className="link" href="/dashboard">Clear filters</Link></p>}</section>}
+
+    {totalStudentCount>0&&<section className="card mt-6"><p className="eyebrow">Teaching-sequence milestones</p><h2 className="mt-2 text-2xl font-bold">Upcoming progress checks</h2><p className="mt-2 text-sm text-slate-600">Derived from each group&apos;s teaching-week clock. College holidays and closures do not consume a teaching week.</p><div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{upcomingCheckpoints.map(item=><article className="rounded-xl border border-slate-200 p-4" key={item.classId}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{item.className}</h3><p className="mt-1 text-sm text-slate-600">Unit {item.unitCode} · now Teaching Week {item.teachingWeek}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-900">{journeyMilestoneLabel(item.milestone!.milestone)}</span></div><p className="mt-3 text-sm"><strong>Teaching Week {item.milestone!.week}:</strong> {item.milestone!.title}</p>{item.positionStatus==="paused"&&<p className="mt-3 rounded-lg bg-sky-50 p-3 text-xs text-sky-950">Timer paused for a non-teaching period; resumes {formatJourneyDate(item.nextTeachingOn)}.</p>}<Link className="link mt-3 inline-block text-sm" href={`/teacher/classes/${item.classId}`}>Open group evidence →</Link></article>)}{!upcomingCheckpoints.length&&<p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No active group journey has a further checkpoint in the current filters.</p>}</div></section>}
+
+    {totalStudentCount>0&&<section className="card mt-6"><p className="eyebrow">Evidence signals</p><h2 className="mt-2 text-2xl font-bold">Completion, progress and action</h2><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Signal label="Course starting point complete" value={assessmentCount("course_starting_point")}/>
       <Signal label="Unit starting point complete" value={assessmentCount("unit_starting_point")}/>
       <Signal label="Progress points complete" value={assessmentCount("progress_point")}/>
@@ -465,9 +495,9 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
       <Signal label="Targets achieved" value={activeTargets.filter(row=>row.status==="achieved").length} tone="good"/>
       <Signal label="Overdue targets" value={activeTargets.filter(row=>["approved","active","extended"].includes(row.status)&&row.target_date<todayIso).length} tone="risk"/>
       <Signal label="Actions awaiting review" value={actionsAwaitingReview} tone="risk"/>
-    </div><p className="mt-4 text-sm text-slate-500">Counts are evidence records or distinct learners, not a single overall average. Assessment readiness requires at least 70% recorded mastery across every mapped skill in an active unit; it does not represent an official Pearson outcome. Open a class to drill down through learner and attempt history.</p></section>
+    </div><p className="mt-4 text-sm text-slate-500">Counts are evidence records or distinct learners, not a single overall average. Assessment readiness requires at least 70% recorded mastery across every mapped skill in an active unit; it does not represent an official Pearson outcome. Open a class to drill down through learner and attempt history.</p></section>}
 
-    <form className="card mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" method="get">
+    {totalStudentCount>0&&<details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Filter this dashboard</summary><form className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" method="get">
       <FilterSelect label="Academic year" name="academicYear" value={filters.academicYear} options={(years??[]).map(item=>({id:item.id,title:item.name}))}/>
       <FilterSelect label="Term / semester" name="period" value={filters.period} options={(periods??[]).map(item=>({id:item.id,title:item.name}))}/>
       <FilterSelect label="Course" name="course" value={filters.course} options={(courses??[]).map(item=>({id:item.id,title:item.title}))}/>
@@ -483,21 +513,22 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
       <FilterSelect label="Completion status" name="completionStatus" value={filters.completionStatus} options={["assigned","started","completed","overdue","late","not_attempted"].map(item=>({id:item,title:item.replaceAll("_"," ")}))}/>
       <div className="flex items-end gap-3"><button className="button-secondary">Apply filters</button><Link className="link pb-3 text-sm" href="/dashboard">Clear</Link></div>
       <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">{filteredAttempts.filter(item=>selectedLearners.has(item.learner_id)).length} completed attempts match the activity/date filters · {filteredCompletionEvidence.filter(item=>selectedLearners.has(item.learnerId)).length} allocations match the completion filter · {selectedLearners.size} learners match all active filters.</p>
-    </form>
+    </form></details>}
 
-    <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
+    <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_.8fr]" id="classes">
       <div className="card"><div><p className="eyebrow">Your classes</p><h2 className="mt-2 text-2xl font-bold">Groups and active courses</h2></div>
         <div className="mt-6 grid gap-3">{visibleClasses.length ? visibleClasses.map(item => <Link href={`/teacher/classes/${item.id}`} key={item.id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-5 hover:bg-teal-50"><div><p className="font-bold">{item.name}</p><p className="text-sm text-slate-500">{item.enrolments?.[0]?.count ?? 0} learners · {related(item.courses)?.title} · {item.published?"published":"draft setup"}</p><p className="mt-1 text-xs text-slate-500">{(item.class_units??[]).filter(unit=>unit.active).map(unit=>related(unit.units)?.title).filter(Boolean).join(", ")||"No active units"}</p></div><span className="font-bold text-teal-700">View class →</span></Link>) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">No class matches these filters.</p>}</div>
         {role==="administrator"&&<CreateClassForm courses={courses ?? []} years={years ?? []}/>}
       </div>
-      <div className="grid gap-6">
+      {totalStudentCount>0&&<div className="grid gap-6">
         <div className="card"><h2 className="text-xl font-bold">Common misconceptions</h2><div className="mt-4 grid gap-3">{filteredMisconceptions.length ? filteredMisconceptions.slice(0,5).map((row, index) => <div key={index} className="rounded-xl bg-amber-50 p-4"><p className="font-semibold">{related(row.misconceptions)?.title}</p><p className="mt-1 text-sm text-amber-900">{related(related(row.misconceptions)?.skills)?.title} · seen {row.occurrence_count} times</p></div>) : <p className="text-slate-600">No misconception evidence recorded for the selected learners and curriculum scope.</p>}</div></div>
         <div className="card"><h2 className="text-xl font-bold">Gamification overview</h2><div className="mt-4 grid grid-cols-2 gap-3"><Metric label="Badges awarded" value={String(badges?.filter(item=>selectedLearners.has(item.learner_id)).length ?? 0)}/><Metric label="Net coins issued" value={String(coins?.filter(item=>selectedLearners.has(item.learner_id)).reduce((sum, item) => sum + Number(item.amount), 0) ?? 0)}/></div></div>
-      </div>
+      </div>}
     </section>
 
-    <section className="card mt-6">
-      <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Curriculum catalogue</p><h2 className="mt-2 text-2xl font-bold">Complete Units / Content Areas</h2></div><Link className="link" href={role==="administrator"?"/teacher/content":"/curriculum"}>{role==="administrator"?"Open curriculum configuration":"Preview learner curriculum"} →</Link></div>
+    <details className="card mt-6">
+      <summary className="cursor-pointer text-lg font-bold">Course catalogue and content preview</summary>
+      <div className="mt-5 flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Reference</p><h2 className="mt-2 text-2xl font-bold">Complete Units / Content Areas</h2></div><Link className="link" href={role==="administrator"?"/teacher/content":"/curriculum"}>{role==="administrator"?"Open curriculum configuration":"Preview learner curriculum"} →</Link></div>
       <div className="mt-5 grid gap-5 lg:grid-cols-2">{courses?.map(course => {
         const units = (course.units ?? []) as { id: string; code: string; title: string; kind: string; initial_teaching: boolean; status: string }[];
         return <article className="rounded-2xl border border-slate-200 p-5" key={course.id}>
@@ -507,7 +538,7 @@ async function TeacherDashboard({ id,role,filters }: { id: string;role:string;fi
           <ol className="mt-4 max-h-80 space-y-2 overflow-auto pr-2 text-sm">{units.sort((a,b) => Number(a.code)-Number(b.code)).map(unit => <li className="rounded-lg bg-slate-50 px-3 py-2" key={unit.id}><strong>{unit.code.match(/^\d+$/) ? `${unit.code}. ` : ""}{unit.title}</strong><span className="ml-2 text-slate-500">{unit.kind.replaceAll("_"," ")}{unit.initial_teaching ? " · initial suggestion" : ""}</span></li>)}</ol>
         </article>;
       })}</div>
-    </section>
+    </details>
   </main>;
 }
 

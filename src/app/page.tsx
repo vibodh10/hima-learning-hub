@@ -18,13 +18,14 @@ export default function Home() {
         <p className="eyebrow">Level 3 Computing & Digital</p>
         <h1 className="mt-5 max-w-3xl text-5xl font-bold leading-[1.04] tracking-[-.04em] text-slate-950 sm:text-7xl">Every learner’s next step, made <span className="text-teal-700">clear.</span></h1>
         <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600">Calm, focused learning practice for classwork, homework and revision, with progress grounded in each learner’s starting point.</p>
-        <div className="mt-9 flex flex-wrap gap-3"><Link href="/login?role=student" className="button">Student sign in <span aria-hidden>→</span></Link><Link href="/login?role=teacher" className="button-secondary">Teacher sign in</Link></div>
+        <div className="mt-9"><Link href="/login" className="button">Sign in <span aria-hidden>→</span></Link></div>
+        <p className="mt-4 text-sm text-slate-500">Your account opens the correct Student, Teacher or Administrator dashboard automatically.</p>
         <p className="mt-5 text-sm text-slate-500">Practice and progress only. Formal qualification assignments stay outside SCCB Digital Learning Hub.</p>
       </div>
       <div className="relative">
         <div className="absolute -inset-5 -rotate-3 rounded-[2rem] bg-amber-100" aria-hidden />
         <div className="card relative overflow-hidden p-0">
-          <div className="border-b border-slate-100 p-6"><p className="text-sm text-slate-500">This week</p><h2 className="mt-1 text-xl font-bold">Network security fundamentals</h2></div>
+          <div className="border-b border-slate-100 p-6"><p className="text-sm text-slate-500">Example student view</p><h2 className="mt-1 text-xl font-bold">Network security fundamentals</h2></div>
           <div className="grid gap-4 p-6">
             <div className="rounded-2xl bg-teal-50 p-5"><div className="flex items-center justify-between"><span className="font-semibold">Topic progress</span><strong className="text-2xl text-teal-800">72%</strong></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white"><div className="h-full w-[72%] rounded-full bg-teal-600" /></div></div>
             {["Remember · 5 min","Learn & worked example · 12 min","Core practice · 10 min"].map((item,index)=><div key={item} className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"><span className={`grid size-9 place-items-center rounded-full font-bold ${index===2?"bg-amber-100 text-amber-900":"bg-teal-700 text-white"}`}>{index===2?"→":"✓"}</span><span className="font-medium">{item}</span></div>)}
