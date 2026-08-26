@@ -15,20 +15,23 @@ const navigation: Record<Role, { href: string; label: string }[]> = {
     { href: "/curriculum", label: "My units" },
     { href: "/progress", label: "My progress" },
     { href: "/portfolio", label: "My work" },
-    { href: "/dashboard", label: "Feedback" },
-    { href: "/dashboard", label: "Catch up" },
+    { href: "/dashboard#recent-feedback-title", label: "Feedback" },
+    { href: "/dashboard#catch-up-title", label: "Catch up" },
+    { href: "/help", label: "Help" },
   ],
   teacher: [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard#classes", label: "My units" },
     { href: "/dashboard#classes", label: "Students" },
     { href: "/dashboard#classes", label: "Invitations" },
-    { href: "/dashboard#classes", label: "Evidence" },
+    { href: "/teacher/sample-report", label: "Evidence" },
+    { href: "/help", label: "Help" },
   ],
   administrator: [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/admin", label: "Administration" },
     { href: "/curriculum", label: "Course content" },
+    { href: "/help", label: "Help" },
   ],
 };
 
@@ -37,7 +40,7 @@ export function AppHeader({ name, role }: { name: string; role: Role }) {
     <div className="shell flex min-h-20 flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
       <Link href="/dashboard" className="flex items-center gap-3 font-bold"><Mark>S</Mark><span className="hidden sm:block">SCCB Digital Learning Hub</span></Link>
       <nav aria-label={`${roleLabels[role]} navigation`} className="order-3 flex w-full flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-sm font-semibold md:order-none md:w-auto md:border-0 md:pt-0">
-        {navigation[role].map(item=><Link className="text-slate-600 hover:text-teal-800" href={item.href} key={item.href}>{item.label}</Link>)}
+        {navigation[role].map(item=><Link className="text-slate-600 hover:text-teal-800" href={item.href} key={item.label}>{item.label}</Link>)}
       </nav>
       <div className="flex items-center gap-3">
         <div className="text-right"><p className="text-sm font-semibold">{name}</p><p className="mt-1 inline-flex rounded-full bg-teal-100 px-2.5 py-1 text-xs font-bold text-teal-900">{roleLabels[role]}</p></div>

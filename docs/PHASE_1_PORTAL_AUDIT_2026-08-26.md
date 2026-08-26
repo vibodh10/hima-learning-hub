@@ -30,6 +30,8 @@ Date: 26 August 2026
 - Allowed co-teachers recognised by row-level security to use the invitation workflow.
 - Added a plain-language four-step teacher introduction and genuine zero-data states.
 - Changed role-specific navigation so teacher and student destinations are never mixed.
+- Added a role-aware **How the portal works** guide so tutors and students can understand their complete workflow inside the application.
+- Added finished loading, recoverable error, not-found and zero catch-up states instead of framework defaults or blank sections.
 - Derived the student **My units** and **My progress** screens from active, published group assignments.
 - Added server-side checks to every static unit, topic, starting-point, practice-paper, project and practice route.
 - Added the same assigned-unit checks to progress, starting-point, worksheet and attempt mutations.
@@ -56,9 +58,10 @@ Both migrations were applied successfully to the linked production Supabase proj
 
 - TypeScript: passed.
 - ESLint: passed.
-- Vitest: 126 passed, 1 intentionally skipped.
-- Next.js production build: passed; 88 pages generated.
+- Vitest: 127 passed, 1 intentionally skipped.
+- Next.js production build: passed; 89 pages generated, including the role-aware help page.
 - Focused permissions, role-navigation and invitation workflow tests: 20 passed.
+- Live invitation confirmation page: opened successfully with the correct SCCB branding and secure single-use confirmation step.
 - Production teacher-account audit: none of the six requested tutor names currently exists, so no duplicate accounts were created.
 
 ## Information still required

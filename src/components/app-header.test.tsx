@@ -13,6 +13,9 @@ describe("role-specific application navigation", () => {
     expect(screen.getByRole("link", { name: "My units" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "My progress" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "My work" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/dashboard#recent-feedback-title");
+    expect(screen.getByRole("link", { name: "Catch up" })).toHaveAttribute("href", "/dashboard#catch-up-title");
+    expect(screen.getByRole("link", { name: "Help" })).toHaveAttribute("href", "/help");
     expect(screen.queryByRole("link", { name: "Students" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
   });
@@ -22,6 +25,8 @@ describe("role-specific application navigation", () => {
     expect(screen.getByText("Teacher mode")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "My units" })).toHaveAttribute("href", "/dashboard#classes");
     expect(screen.getByRole("link", { name: "Students" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Evidence" })).toHaveAttribute("href", "/teacher/sample-report");
+    expect(screen.getByRole("link", { name: "Help" })).toHaveAttribute("href", "/help");
     expect(screen.queryByRole("link", { name: "My progress" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "My work" })).not.toBeInTheDocument();
   });
