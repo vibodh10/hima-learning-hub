@@ -34,6 +34,7 @@ Date: 26 August 2026
 - Added server-side checks to every static unit, topic, starting-point, practice-paper, project and practice route.
 - Added the same assigned-unit checks to progress, starting-point, worksheet and attempt mutations.
 - Added database policies preventing direct browser inserts or updates for an unassigned unit.
+- Added an administrator-only tutor onboarding form for the six requested names. It accepts only a verified email, creates an authenticated teacher profile, sends a first-password setup link and safely resends setup for an existing active teacher without changing roles.
 
 ## Role separation
 
