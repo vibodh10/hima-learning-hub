@@ -22,7 +22,7 @@ export type ActionState = {
 
 export async function runTestModeAction(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Test Mode is restricted to teachers and administrators."};
+  if(!actor||!canCreateClass(actor.role))return{message:"Staff preview is restricted to teachers and administrators."};
   const parsed=z.object({
     event:z.enum(["activity_opened","answer_revealed","simulated_correct","simulated_incorrect",
       "simulated_percentage","simulated_pathway","target_achieved","badge_awarded",
@@ -32,13 +32,13 @@ export async function runTestModeAction(_:ActionState,formData:FormData):Promise
     pathway:z.enum(["Support","Core","Stretch","Mastery"]).optional(),
     detail:z.string().trim().max(300).optional(),
   }).safeParse(Object.fromEntries(formData));
-  if(!parsed.success)return{message:"Choose a valid Test Mode simulation."};
+  if(!parsed.success)return{message:"Choose a valid staff preview simulation."};
   const supabase=await createClient();
   let testData:unknown;
   if(parsed.data.event==="answer_revealed"){
     if(!parsed.data.activityId)return{message:"Choose an activity before revealing its expected answers."};
     const{data,error}=await supabase.rpc("test_mode_expected_answers",{activity_uuid:parsed.data.activityId});
-    if(error)return{message:"Expected answers could not be revealed in Test Mode."};
+    if(error)return{message:"Expected answers could not be revealed in staff preview."};
     testData=data;
   }
   const payload={
@@ -48,18 +48,18 @@ export async function runTestModeAction(_:ActionState,formData:FormData):Promise
   const{error}=await supabase.rpc("record_test_mode_event",{
     event_value:parsed.data.event,payload_value:payload,
   });
-  if(error)return{message:"The Test Mode event could not be recorded."};
-  return{ok:true,message:"Sandbox simulation recorded. No learner evidence was changed.",testData};
+  if(error)return{message:"The staff preview event could not be recorded."};
+  return{ok:true,message:"Staff preview recorded. No learner evidence was changed.",testData};
 }
 
 export async function resetTestMode(previousState:ActionState):Promise<ActionState>{
   void previousState;
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Test Mode is restricted to teachers and administrators."};
+  if(!actor||!canCreateClass(actor.role))return{message:"Staff preview is restricted to teachers and administrators."};
   const supabase=await createClient();
   const{data,error}=await supabase.rpc("reset_test_mode");
-  if(error)return{message:"The demo learner sandbox could not be reset."};
-  return{ok:true,message:`Demo learner reset. ${Number(data)} sandbox event${Number(data)===1?"":"s"} removed.`};
+  if(error)return{message:"The staff preview could not be cleared."};
+  return{ok:true,message:`Staff preview cleared. ${Number(data)} preview event${Number(data)===1?"":"s"} removed.`};
 }
 
 export async function markBadgeNotificationsSeen(awardIds:string[]):Promise<void>{

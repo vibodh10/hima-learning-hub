@@ -24,7 +24,7 @@ export function AchievementCelebration({
     {!reducedMotion&&<div className="confetti-layer" aria-hidden="true">{Array.from({length:celebrationEffect==="confetti"?48:28},(_,index)=><i key={index} style={{left:`${(index*37)%100}%`,background:`hsl(${index*47} 80% 55%)`,animationDelay:`${(index%7)*.08}s`}}/>)}</div>}
     <section className="relative z-10 w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl">
       <div className="mx-auto grid size-20 place-items-center rounded-full bg-amber-100 text-4xl" aria-hidden="true">🏆</div>
-      <p className="mt-5 text-sm font-bold uppercase tracking-widest text-teal-700">{preview?"Test Mode preview":"Achievement unlocked"}</p>
+      <p className="mt-5 text-sm font-bold uppercase tracking-widest text-teal-700">{preview?"Staff preview":"Achievement unlocked"}</p>
       <h2 className="mt-2 text-3xl font-bold" id="achievement-title">{title}</h2>
       <p className="mt-3 leading-7 text-slate-600">{reason}</p>
       {celebrationEffect==="confetti"&&<p className="mt-2 text-xs font-semibold text-teal-700">Equipped Confetti celebration applied.</p>}

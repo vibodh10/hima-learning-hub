@@ -100,19 +100,19 @@ npm run build
 The release gate covers unit tests, 27 independent database journeys,
 TypeScript, ESLint and a Next.js production build.
 
-## Safe Test Mode
+## Staff activity preview
 
 Sign in as a teacher or administrator, open any approved lesson and then open
-an activity. The activity page shows the banner **TEST MODE — results are not
-part of a real learner record.** Use it to reveal expected answers, simulate
+an activity. The activity page labels the controls **Staff preview** and explains
+that they do not create a student account or learner result. Use them to reveal expected answers, simulate
 scores and pathways, preview achievement feedback and confetti, simulate
-targets/coins/reward ownership, move to the next activity, or reset the
-fictional sandbox learner.
+targets/coins/reward ownership, move to the next activity, or clear the
+isolated preview.
 
-Test Mode writes only to `test_mode_sessions` and `test_mode_events`. It does
+Staff preview writes only to `test_mode_sessions` and `test_mode_events`. It does
 not create attempts, mastery, targets, interventions, streaks, badges, coin
 transactions, purchases, homework completion, or inspection evidence. Students
-never see Test Mode and server-side submission rejects locked activities.
+never see staff-preview controls and server-side submission rejects locked activities.
 
 For a manual journey check:
 

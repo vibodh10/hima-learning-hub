@@ -17,9 +17,9 @@ export function TestModePanel({
     questionId:string;question:string;answer:unknown;acceptableAnswers:unknown;explanation:string;
   }[]:[];
   return <aside className="mt-8 rounded-2xl border-2 border-fuchsia-500 bg-fuchsia-50 p-5 text-fuchsia-950">
-    <p className="text-sm font-black uppercase tracking-widest">Test Mode</p>
-    <h2 className="mt-1 text-xl font-bold">TEST MODE: results are not part of a real learner record.</h2>
-    <p className="mt-2 text-sm">All controls below write only to your isolated demo sandbox. They cannot change learner progress, pathways, homework, interventions, permanent coins, streaks, or inspection evidence.</p>
+    <p className="text-sm font-black uppercase tracking-widest">Staff preview</p>
+    <h2 className="mt-1 text-xl font-bold">Preview this activity without creating learner results</h2>
+    <p className="mt-2 text-sm">These controls write only to your isolated staff preview. They do not create a student account or change learner progress, pathways, homework, interventions, permanent coins, streaks, or inspection evidence.</p>
     <form action={action} className="mt-5 grid gap-3">
       <input type="hidden" name="activityId" value={activityId}/>
       <div className="flex flex-wrap gap-2">
@@ -44,10 +44,10 @@ export function TestModePanel({
     <div className="mt-5 flex flex-wrap gap-3">
       {nextHref&&<Link className="button" href={nextHref}>Next activity without submitting →</Link>}
       <button className="button-secondary" type="button" onClick={()=>setCelebrate(true)}>Preview Achievement Notification / Trigger Confetti</button>
-      <form action={resetAction}><button className="button-secondary" disabled={resetPending}>{resetPending?"Resetting…":"Reset Demo Learner"}</button></form>
+      <form action={resetAction}><button className="button-secondary" disabled={resetPending}>{resetPending?"Resetting…":"Clear preview activity"}</button></form>
     </div>
     {resetState.message&&<p className="mt-3 text-sm" role="status">{resetState.message}</p>}
-    {celebrate&&<AchievementCelebration title="Python Explorer" reason="Test Mode preview after completing the Python mastery check." onClose={()=>setCelebrate(false)} preview/>}
+    {celebrate&&<AchievementCelebration title="Python Explorer" reason="Staff preview after completing the Python mastery check." onClose={()=>setCelebrate(false)} preview/>}
   </aside>;
 }
 
