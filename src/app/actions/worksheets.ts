@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
 import { configuredUnits } from "@/lib/learning-catalog";
 import { createClient } from "@/lib/supabase/server";
+import { hasAssignedCurriculumUnit } from "@/lib/curriculum-access";
 
 export type WorksheetState = { ok?: boolean; message?: string; errors?: Record<string, string[]> };
 
@@ -40,6 +41,7 @@ export async function submitTopicWorksheet(_: WorksheetState, formData: FormData
   const unit = configuredUnits.find(item => item.code === parsed.data.unitCode);
   const topic = unit?.topics.find(item => item.code === parsed.data.topicCode);
   if (!unit || !topic) return { message: "This worksheet is not linked to the configured curriculum." };
+  if (!await hasAssignedCurriculumUnit(parsed.data.unitCode)) return { message: "This unit is not assigned to your student group." };
   const { unitCode, topicCode, mode, evidenceStage, confidence, ...responses } = parsed.data;
   if (![responses.mainTask, responses.practicalApplication, responses.knowledgeCheck, responses.todayCan, responses.exitTicket].some(Boolean)) {
     return { message: "Add your main-task, knowledge-check or reflection evidence before saving." };

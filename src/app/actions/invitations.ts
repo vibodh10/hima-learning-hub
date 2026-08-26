@@ -41,15 +41,17 @@ export async function inviteStudent(_: InvitationState, formData: FormData): Pro
 
   const actor = await requireRole("teacher", "administrator");
   const sessionClient = await createClient();
-  let classQuery = sessionClient
+  const classQuery = sessionClient
     .from("classes")
-    .select("id,name,organisation_id,teacher_id")
+    .select("id,name,organisation_id,teacher_id,published,class_units!inner(unit_id,active)")
     .eq("id", parsed.data.classId)
     .is("archived_at", null);
-  if (actor.role === "teacher") classQuery = classQuery.eq("teacher_id", actor.id);
   const { data: classData } = await classQuery.single();
   if (!classData || classData.organisation_id !== actor.organisation_id) {
     return { message: "You can only invite students to your own active class." };
+  }
+  if (!classData.published || !classData.class_units.some(unit => unit.active)) {
+    return { message: "Choose and publish at least one unit before inviting students." };
   }
 
   const origin = resolveAppOrigin({

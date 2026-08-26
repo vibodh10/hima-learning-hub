@@ -1,7 +1,9 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
 import { canCreateClass, canJoinClass, canManageCurriculumConfiguration, canManageGroupConfiguration, canSubmitPractice } from "@/lib/permissions";
@@ -80,30 +82,30 @@ const classInput = z.object({
   className: z.string().trim().min(2).max(80),
   courseId: databaseUuid,
   academicYearId: databaseUuid,
-  enrolmentCode: z.string().trim().min(6).max(24).regex(/^[a-zA-Z0-9-]+$/),
 });
 
 export async function createClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to create a class." };
+  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Teacher access is required to create a group." };
   const parsed = classInput.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { message: "Check the class name, course, academic year and enrolment code." };
+  if (!parsed.success) return { message: "Check the group name, programme and academic year." };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("create_class", {
+  const enrolmentCode = `SCCB-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+  const { data, error } = await supabase.rpc("create_class", {
     class_name: parsed.data.className, course_uuid: parsed.data.courseId,
-    academic_year_uuid: parsed.data.academicYearId, enrolment_code: parsed.data.enrolmentCode,
+    academic_year_uuid: parsed.data.academicYearId, enrolment_code: enrolmentCode,
   });
   if (error) {
     console.error("create_class RPC failed", { code: error.code, message: error.message });
-    return { message: "The class could not be created. Try a different enrolment code." };
+    return { message: "The group could not be created. Please try again." };
   }
   revalidatePath("/dashboard");
-  return { ok: true, message: "Class created. Share the enrolment code securely with your learners." };
+  redirect(`/teacher/classes/${String(data)}`);
 }
 
 export async function configureClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to configure classes." };
+  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Teacher access is required to configure a group." };
   const parsed = z.object({
     classId: databaseUuid,
     className: z.string().trim().min(2).max(80),

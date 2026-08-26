@@ -16,5 +16,5 @@ export function canManageCurriculumConfiguration(role: Role) {
   return role === "administrator";
 }
 export function canManageGroupConfiguration(role: Role) {
-  return role === "administrator";
+  return role === "teacher" || role === "administrator";
 }

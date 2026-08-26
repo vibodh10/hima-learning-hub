@@ -67,12 +67,15 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <RoleBanner role={actor.role}/>
     <Link className="link mt-6 inline-block" href="/dashboard">← Teacher dashboard</Link>
-    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Class overview</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title}</p></div><div className="flex flex-wrap items-center gap-3">{studentIds.length>0&&<><Link className="button-secondary" href={`/api/reports/classes/${id}`}>Class PDF</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Class CSV</Link></>}<p className="rounded-xl bg-slate-100 px-4 py-3 text-sm">Code hint: ends in <strong>{classData.enrolment_code_hint}</strong></p></div></div>
+    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Student group</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title}</p></div><div className="flex flex-wrap items-center gap-3">{studentIds.length>0&&<><Link className="button-secondary" href={`/api/reports/classes/${id}`}>Group PDF</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Group CSV</Link></>}</div></div>
 
     <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Students" value={String(studentIds.length)}/><Metric label="Activities completed" value={String(completedActivities)}/><Metric label="Latest average" value={average == null ? "Not available" : `${average}%`}/><Metric label="Homework attempts" value={String(homeworkAttempts)}/><Metric label="Skills requiring support" value={String(supportSkills)}/></section>
 
-    {!studentIds.length&&<section className="card mt-6 border-blue-200 bg-blue-50"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold">Invite your first student</h2><p className="mt-3 max-w-3xl text-slate-700">This class is ready, but nobody is enrolled. Send a secure invitation to a student&apos;s verified email address. Results and progress will stay at zero until genuine work is completed.</p></section>}
-    <StudentInvitationForm classId={id}/>
+    <ClassSettingsForm classData={classData} courses={courses ?? []} units={units ?? []} periods={periods ?? []} selectedUnitIds={selectedUnitIds}/>
+    {!studentIds.length&&<section className="card mt-6 border-blue-200 bg-blue-50"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold">Invite your first student</h2><p className="mt-3 max-w-3xl text-slate-700">Once your units are saved, send a secure invitation to the student&apos;s college email. Their programme and units are assigned automatically. Results remain at zero until genuine work is completed.</p></section>}
+    {selectedUnitIds.length>0&&classData.published
+      ? <StudentInvitationForm classId={id}/>
+      : <section className="card mt-6 border-amber-200 bg-amber-50"><p className="eyebrow">Invitation paused</p><h2 className="mt-2 text-xl font-bold">Save and make your units visible first</h2><p className="mt-2 text-sm text-amber-950">This prevents a student joining an empty group. Complete step 1 above, including “Make these units visible”, then the invitation form will appear.</p></section>}
 
     {journeyPosition ? <section className="card mt-6" aria-labelledby="journey-position-title">
       <div className="flex flex-wrap items-start justify-between gap-5">
@@ -99,7 +102,6 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     {actor.role==="administrator"&&<details className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
       <summary className="cursor-pointer text-lg font-bold text-slate-800">Advanced class administration</summary>
       <p className="mt-2 text-sm text-slate-600">Administrator-only setup, lifecycle and system configuration. Ordinary teachers are not asked to maintain these forms.</p>
-      <ClassSettingsForm classData={classData} courses={courses ?? []} units={units ?? []} periods={periods ?? []} selectedUnitIds={selectedUnitIds}/>
       <ClassLifecycleForms classId={id}/>
       <ExtendedClassLifecycleForms classId={id} teachers={teachers??[]} otherClasses={otherClasses??[]} learners={(classData.enrolments??[]).map(enrolment=>({
         id:enrolment.student_id,displayName:related(enrolment.user_profiles)?.display_name??"Learner",

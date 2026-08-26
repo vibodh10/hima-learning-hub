@@ -29,6 +29,7 @@ begin
 
   if to_regprocedure('public.can_access_learner(uuid)') is null
     or to_regprocedure('public.can_access_class(uuid)') is null
+    or to_regprocedure('public.student_has_assigned_unit_code(text)') is null
     or to_regprocedure('public.submit_activity(uuid,jsonb,integer)') is null then
     raise exception 'required access/submission function is missing';
   end if;

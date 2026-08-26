@@ -5,6 +5,7 @@ import {getSessionProfile} from "@/lib/auth";
 import {configuredUnits} from "@/lib/learning-catalog";
 import {createClient} from "@/lib/supabase/server";
 import {revalidatePath} from "next/cache";
+import {hasAssignedCurriculumUnit} from "@/lib/curriculum-access";
 
 const resultSchema=z.object({
  id:z.string().min(1).max(100), difficulty:z.number().int().min(1).max(4), correct:z.boolean(), hintsUsed:z.number().int().min(0).max(5), marks:z.number().int().min(1).max(20),awardedMarks:z.number().int().min(0).max(20),answer:z.string().max(20000).optional()
@@ -21,6 +22,7 @@ export async function saveAtomAttempt(input:AtomAttemptInput):Promise<{ok:boolea
  const parsed=attemptSchema.safeParse(input);if(!parsed.success)return{ok:false,message:"This question result could not be validated."};
  const data=parsed.data,unit=configuredUnits.find(item=>item.code===data.unitCode);
  if(!unit||(data.kind==="topic_practice"&&(!unit.topics.some(item=>item.code===data.topicCode)||data.paperMode!==null))||(data.kind==="practice_paper"&&(data.topicCode!==null||data.paperMode===null)))return{ok:false,message:"This result is not linked to the configured curriculum."};
+ if(!await hasAssignedCurriculumUnit(data.unitCode))return{ok:false,message:"This unit is not assigned to your student group."};
  const supabase=await createClient();
  const{error}=await supabase.from("learner_curriculum_attempts").insert({learner_id:actor.id,kind:data.kind,unit_code:data.unitCode,topic_code:data.topicCode,paper_mode:data.paperMode,selected_level:data.selectedLevel,percentage:data.percentage,mark:data.mark,max_mark:data.maxMark,hints_used:data.hintsUsed,active_seconds:data.activeSeconds,question_results:data.results});
  if(error)return{ok:false,message:"Saved on this device; account reporting will begin after the latest database migration is applied."};

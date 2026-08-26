@@ -5,6 +5,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { configuredUnits, type ExpertiseLevel } from "@/lib/learning-catalog";
 import type { TopicEvidence } from "@/lib/learning-progress";
 import { createClient } from "@/lib/supabase/server";
+import { hasAssignedCurriculumUnit } from "@/lib/curriculum-access";
 
 const payloadSchema = z.object({
   unitCode: z.string().regex(/^(1|2|4|6|8|9)$/),
@@ -40,6 +41,7 @@ export async function saveCurriculumProgress(input: {
   if (!parsed.success) return { ok: false, message: "The curriculum progress record was invalid." };
   const unit = configuredUnits.find(item => item.code === parsed.data.unitCode);
   if (!unit?.topics.some(item => item.code === parsed.data.topicCode)) return { ok: false, message: "This topic is not part of the configured curriculum." };
+  if (!await hasAssignedCurriculumUnit(parsed.data.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
   const evidence = parsed.data.evidence;
   if (evidence.masteryScore != null && (!evidence.lessonCompletedAt || evidence.practiceScore == null || (evidence.independentAttempts ?? 0) < 3)) {
     return { ok: false, message: "Independent mastery requires completed teaching and practice." };
@@ -71,6 +73,7 @@ export async function saveStartingPoint(input: { unitCode: string; level: Expert
   if (!actor || actor.role !== "student") return { ok: false, message: "Sign in as a student to sync the starting point." };
   const unit = configuredUnits.find(item => item.code === input.unitCode);
   if (!unit || !["Support","Core","Stretch","Challenge"].includes(input.level)) return { ok: false, message: "Invalid starting-point record." };
+  if (!await hasAssignedCurriculumUnit(input.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
   const supabase = await createClient();
   const rows = unit.topics.map(topic => ({
     learner_id: actor.id, unit_code: unit.code, topic_code: topic.code, selected_level: input.level,

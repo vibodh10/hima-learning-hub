@@ -10,20 +10,20 @@ describe("role-specific application navigation", () => {
   it("shows student identity and only student destinations", () => {
     render(<AppHeader name="Student One" role="student" />);
     expect(screen.getByText("Student mode")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "My course" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My units" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "My progress" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "My portfolio" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "My classes" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My work" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Students" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
   });
 
   it("shows teacher identity and no student-only destinations", () => {
     render(<AppHeader name="Teacher One" role="teacher" />);
     expect(screen.getByText("Teacher mode")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "My classes" })).toHaveAttribute("href", "/dashboard#classes");
-    expect(screen.getByRole("link", { name: "Course content" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My units" })).toHaveAttribute("href", "/dashboard#classes");
+    expect(screen.getByRole("link", { name: "Students" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "My progress" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "My portfolio" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "My work" })).not.toBeInTheDocument();
   });
 
   it("shows administrator identity and administration navigation", () => {

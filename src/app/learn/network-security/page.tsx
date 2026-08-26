@@ -1,11 +1,10 @@
 import { AppHeader } from "@/components/app-header";
-import { getSessionProfile } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireCurriculumUnitAccess } from "@/lib/curriculum-access";
 import { createClient } from "@/lib/supabase/server";
 import { PracticeForm, type PracticeQuestion } from "@/components/practice-form";
 
 export default async function LessonPage() {
-  const profile = await getSessionProfile(); if (!profile) redirect("/login");
+  const profile = await requireCurriculumUnitAccess("6");
   const supabase = await createClient();
   const activityId = "70000000-0000-0000-0000-000000000001";
   const { data: activity } = await supabase.from("activities")

@@ -20,14 +20,14 @@ export function JoinClassForm() {
 
 export function CreateClassForm({ courses, years }: { courses: { id: string; title: string }[]; years: { id: string; name: string }[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(createClass, {});
-  return <details className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-    <summary className="cursor-pointer font-bold text-teal-800">Create a new class</summary>
+  return <details className="mt-6 rounded-2xl border border-teal-200 bg-teal-50 p-5" open={!courses.length || !years.length}>
+    <summary className="cursor-pointer font-bold text-teal-900">Create a student group</summary>
+    <p className="mt-3 text-sm leading-6 text-slate-700">Choose the programme now. On the next screen, select the units you teach and invite your students.</p>
     <form action={action} className="mt-5 grid gap-4 md:grid-cols-2">
-      <Field label="Class name" name="className" placeholder="L3 Computing A" />
-      <Field label="Enrolment code" name="enrolmentCode" placeholder="SCCB-2026" />
-      <label className="grid gap-2 text-sm font-semibold">Course<select className="input" name="courseId" required>{courses.map(c=><option value={c.id} key={c.id}>{c.title}</option>)}</select></label>
+      <Field label="Group name" name="className" placeholder="BTEC IT · Group A" />
+      <label className="grid gap-2 text-sm font-semibold">Programme<select className="input" name="courseId" required>{courses.map(c=><option value={c.id} key={c.id}>{c.title}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Academic year<select className="input" name="academicYearId" required>{years.map(y=><option value={y.id} key={y.id}>{y.name}</option>)}</select></label>
-      <button className="button md:col-span-2" disabled={pending}>{pending ? "Creating…" : "Create class"}</button>
+      <button className="button self-end" disabled={pending || !courses.length || !years.length}>{pending ? "Creating…" : "Create group and choose units →"}</button>
       {state.message && <p role="status" className={`md:col-span-2 text-sm ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}
     </form>
   </details>;
@@ -53,14 +53,14 @@ export function ClassSettingsForm({
   const [state, action, pending] = useActionState<ActionState, FormData>(configureClass, {});
   const [courseId, setCourseId] = useState(classData.course_id);
   const visibleUnits = units.filter(unit => unit.course_id === courseId);
-  return <details className="card mt-6">
-    <summary className="cursor-pointer text-xl font-bold">Class setup and curriculum</summary>
-    <p className="mt-2 text-sm text-slate-600">All settings remain editable. Select every unit/content area available to this class and one current focus.</p>
+  return <details className="card mt-6 border-teal-200" open={!selectedUnitIds.length}>
+    <summary className="cursor-pointer text-xl font-bold">1. Choose the units you teach</summary>
+    <p className="mt-2 text-sm text-slate-600">Select only the units this student group should see. You can return here whenever your teaching allocation changes.</p>
     <form action={action} className="mt-5 grid gap-5">
       <input type="hidden" name="classId" value={classData.id}/>
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Class name" name="className" placeholder="Group 1" defaultValue={classData.name}/>
-        <label className="grid gap-2 text-sm font-semibold">Course
+        <label className="grid gap-2 text-sm font-semibold">Programme
           <select className="input" name="courseId" value={courseId} onChange={event => setCourseId(event.target.value)} required>
             {courses.map(course => <option value={course.id} key={course.id}>{course.title}</option>)}
           </select>
@@ -78,7 +78,7 @@ export function ClassSettingsForm({
         </label>
       </div>
       <fieldset>
-        <legend className="text-sm font-bold">Units / Content Areas</legend>
+        <legend className="text-sm font-bold">Units taught to this group</legend>
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           {visibleUnits.map(unit => <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm" key={unit.id}>
             <input className="mt-1" type="checkbox" name="unitIds" value={unit.id} defaultChecked={selectedUnitIds.includes(unit.id)}/>
@@ -86,7 +86,7 @@ export function ClassSettingsForm({
           </label>)}
         </div>
       </fieldset>
-      <label className="grid gap-2 text-sm font-semibold">Currently active unit/content area
+      <label className="grid gap-2 text-sm font-semibold">Unit students should start with
         <select className="input" name="activeUnitId" defaultValue={classData.active_unit_id ?? ""} required>
           <option value="" disabled>Select current focus</option>
           {visibleUnits.map(unit => <option value={unit.id} key={unit.id}>{unit.code.match(/^\d+$/) ? `${unit.code} · ` : ""}{unit.title}</option>)}
@@ -94,9 +94,9 @@ export function ClassSettingsForm({
       </label>
       <label className="flex items-center gap-3 text-sm font-semibold">
         <input type="checkbox" name="published" defaultChecked={classData.published}/>
-        Publish this class setup to enrolled students
+        Make these units visible to enrolled students
       </label>
-      <button className="button justify-self-start" disabled={pending}>{pending ? "Saving…" : "Save class setup"}</button>
+      <button className="button justify-self-start" disabled={pending}>{pending ? "Saving…" : "Save units and continue"}</button>
       {state.message && <p role="status" className={`text-sm ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}
     </form>
   </details>;

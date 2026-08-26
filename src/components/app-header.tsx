@@ -11,15 +11,19 @@ const roleLabels: Record<Role, string> = {
 
 const navigation: Record<Role, { href: string; label: string }[]> = {
   student: [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/curriculum", label: "My course" },
+    { href: "/dashboard", label: "Home" },
+    { href: "/curriculum", label: "My units" },
     { href: "/progress", label: "My progress" },
-    { href: "/portfolio", label: "My portfolio" },
+    { href: "/portfolio", label: "My work" },
+    { href: "/dashboard", label: "Feedback" },
+    { href: "/dashboard", label: "Catch up" },
   ],
   teacher: [
     { href: "/dashboard", label: "Dashboard" },
-    { href: "/dashboard#classes", label: "My classes" },
-    { href: "/curriculum", label: "Course content" },
+    { href: "/dashboard#classes", label: "My units" },
+    { href: "/dashboard#classes", label: "Students" },
+    { href: "/dashboard#classes", label: "Invitations" },
+    { href: "/dashboard#classes", label: "Evidence" },
   ],
   administrator: [
     { href: "/dashboard", label: "Dashboard" },

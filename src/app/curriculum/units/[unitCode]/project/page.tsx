@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ProjectJourney } from "@/components/learning-journey";
 import { configuredUnits, metaForUnit, unitByCode } from "@/lib/learning-catalog";
 import { loadCurriculumProgress } from "@/lib/curriculum-progress-server";
+import { requireCurriculumUnitAccess } from "@/lib/curriculum-access";
 
 export function generateStaticParams() {
   return configuredUnits.map(unit => ({ unitCode: unit.code }));
@@ -10,6 +11,7 @@ export function generateStaticParams() {
 
 export default async function ProjectPage({ params }: { params: Promise<{ unitCode: string }> }) {
   const { unitCode } = await params;
+  await requireCurriculumUnitAccess(unitCode);
   const unit = unitByCode(unitCode);
   if (!unit) notFound();
   const project = metaForUnit(unit.code).project;

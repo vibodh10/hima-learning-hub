@@ -22,9 +22,9 @@ describe("role permissions", () => {
     expect(canManageCurriculumConfiguration("teacher")).toBe(false);
     expect(canManageCurriculumConfiguration("administrator")).toBe(true);
   });
-  it("keeps group and routine-learning configuration in administrator mode", () => {
+  it("lets teaching staff configure their own groups while keeping students out", () => {
     expect(canManageGroupConfiguration("student")).toBe(false);
-    expect(canManageGroupConfiguration("teacher")).toBe(false);
+    expect(canManageGroupConfiguration("teacher")).toBe(true);
     expect(canManageGroupConfiguration("administrator")).toBe(true);
   });
 });
