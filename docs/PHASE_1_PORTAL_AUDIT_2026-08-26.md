@@ -31,6 +31,7 @@ Date: 26 August 2026
 - Added a plain-language four-step teacher introduction and genuine zero-data states.
 - Changed role-specific navigation so teacher and student destinations are never mixed.
 - Added a role-aware **How the portal works** guide so tutors and students can understand their complete workflow inside the application.
+- Added an administrator-specific help journey covering tutor access, tutor unit selection, student invitation and whole-portal oversight.
 - Added finished loading, recoverable error, not-found and zero catch-up states instead of framework defaults or blank sections.
 - Derived the student **My units** and **My progress** screens from active, published group assignments.
 - Added server-side checks to every static unit, topic, starting-point, practice-paper, project and practice route.
