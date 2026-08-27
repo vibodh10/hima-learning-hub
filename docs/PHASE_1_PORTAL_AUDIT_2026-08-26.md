@@ -37,6 +37,8 @@ Date: 26 August 2026
 - Added the same assigned-unit checks to progress, starting-point, worksheet and attempt mutations.
 - Added database policies preventing direct browser inserts or updates for an unassigned unit.
 - Added an administrator-only tutor onboarding form for the six requested names. It accepts only a verified email, creates an authenticated teacher profile, sends a first-password setup link and safely resends setup for an existing active teacher without changing roles.
+- Promoted the existing Hima portal-owner profile to administrator with explicit approval, enabling the staff-onboarding controls while retaining the teaching overview available to administrators.
+- Replaced the ambiguous single onboarding form with a six-tutor status roster showing **Access active** or **Login needed**, plus the known login email, before the secure create/resend action.
 
 ## Role separation
 
@@ -58,7 +60,7 @@ Both migrations were applied successfully to the linked production Supabase proj
 
 - TypeScript: passed.
 - ESLint: passed.
-- Vitest: 127 passed, 1 intentionally skipped.
+- Vitest: 128 passed, 1 intentionally skipped.
 - Next.js production build: passed; 89 pages generated, including the role-aware help page.
 - Focused permissions, role-navigation and invitation workflow tests: 20 passed.
 - Live invitation confirmation page: opened successfully with the correct SCCB branding and secure single-use confirmation step.

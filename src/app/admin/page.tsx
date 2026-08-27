@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "@/lib/auth";
+import { requestedTeacherNames } from "@/lib/requested-teachers";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { AdminSettingsForm } from "@/components/admin-settings-form";
@@ -17,11 +19,12 @@ import {
 export default async function AdminPage(){
   const actor=await requireRole("administrator");
   const supabase=await createClient();
+  const admin=createAdminClient();
   const[
     {data:profiles},{data:courses},{data:versions},{data:years},
     {data:classes},{data:audit},{data:retention},{data:badges},{data:deletionRequests},
     {data:periods},{data:calendarEvents},{data:achievementRules},{data:achievementLevels},{data:recognitionTemplates},{data:certificateReviews},
-    {data:attendanceConnection},{count:attendanceEventCount},
+    {data:attendanceConnection},{count:attendanceEventCount},{data:authDirectory},
   ]=await Promise.all([
     supabase.from("user_profiles").select("id,display_name,role,created_at,archived_at").order("display_name"),
     supabase.from("courses").select("id,title,qualification_type,qualification_level,active,archived_at").order("title"),
@@ -40,8 +43,14 @@ export default async function AdminPage(){
     supabase.from("certificate_eligibility_reviews").select("id,status,eligible_at,user_profiles!certificate_eligibility_reviews_learner_id_fkey(display_name),achievement_levels(title)").eq("status","pending_review").order("eligible_at"),
     supabase.from("attendance_provider_connections").select("provider_name,connection_status,last_import_at").maybeSingle(),
     supabase.from("attendance_events").select("id",{count:"exact",head:true}),
+    admin.auth.admin.listUsers({page:1,perPage:1000}),
   ]);
   const activeCourses=(courses??[]).filter(course=>course.active&&!course.archived_at);
+  const requestedTeacherAccounts=requestedTeacherNames.flatMap(name=>{
+    const profile=(profiles??[]).find(item=>item.display_name===name&&item.role==="teacher"&&!item.archived_at);
+    if(!profile)return[];
+    return[{name,email:authDirectory?.users.find(user=>user.id===profile.id)?.email??null}];
+  });
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <Link className="link" href="/dashboard">← Dashboard</Link>
     <div className="mt-7"><p className="eyebrow">Administrator</p><h1 className="mt-2 text-4xl font-bold">Curriculum, users and governance</h1><p className="mt-2 text-slate-600">Historical versions and evidence are archived, not overwritten.</p></div>
@@ -69,7 +78,7 @@ export default async function AdminPage(){
     </section>
     <section className="card mt-6"><p className="eyebrow">Academic calendar</p><h2 className="mt-2 text-2xl font-bold">Holidays and non-teaching periods</h2><p className="mt-2 text-sm text-slate-600">These organisation-wide dates pause every active group journey. Teachers do not pause or resume groups manually.</p><div className="mt-5"><AcademicCalendarForm years={(years??[]).filter(year=>!year.archived_at).map(year=>({id:year.id,name:year.name}))} periods={periods??[]}/></div><div className="mt-6 grid gap-3">{calendarEvents?.map(event=><details className="rounded-xl border border-slate-200 p-4" key={event.id}><summary className="cursor-pointer font-semibold">{event.title} · {event.kind.replaceAll("_"," ")} · {new Date(`${event.starts_on}T12:00:00Z`).toLocaleDateString("en-GB",{timeZone:"UTC"})}</summary><div className="mt-4"><AcademicCalendarForm years={(years??[]).filter(year=>!year.archived_at).map(year=>({id:year.id,name:year.name}))} periods={periods??[]} event={event}/></div></details>)}</div></section>
     <CurriculumVersionCreateForm courses={activeCourses.map(course=>({id:course.id,title:course.title}))}/>
-    <TeacherAccountSetupForm/>
+    <TeacherAccountSetupForm existingAccounts={requestedTeacherAccounts}/>
     <section className="card mt-6"><p className="eyebrow">Role-based access</p><h2 className="mt-2 text-2xl font-bold">Manage teachers and users</h2><p className="mt-2 text-sm text-slate-600">Archiving removes access while preserving historical evidence and audit records.</p><div className="mt-5 grid gap-4">{profiles?.map(profile=><ProfileManagementForm profile={profile} key={profile.id}/>)}</div></section>
     {Boolean(deletionRequests?.length)&&<section className="card mt-6"><p className="eyebrow text-red-700">Privacy requests</p><h2 className="mt-2 text-2xl font-bold">Pending learner-data deletions</h2><p className="mt-2 text-sm text-slate-600">Confirm only after checking authorisation and exporting any evidence that must lawfully be retained.</p><div className="mt-5 grid gap-4">{deletionRequests?.map(request=><LearnerDeletionExecuteForm request={request} key={request.id}/>)}</div></section>}
     <section className="mt-6"><AdminSettingsForm settings={retention}/></section>
