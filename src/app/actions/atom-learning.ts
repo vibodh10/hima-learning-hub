@@ -7,13 +7,16 @@ import {createClient} from "@/lib/supabase/server";
 import {revalidatePath} from "next/cache";
 import {hasAssignedCurriculumUnit} from "@/lib/curriculum-access";
 import {isConfiguredUnitCode} from "@/lib/curriculum-unit-code";
+import {gradeAtomAttempt} from "@/lib/atom-attempt-grading";
 
-const resultSchema=z.object({
- id:z.string().min(1).max(100), difficulty:z.number().int().min(1).max(4), correct:z.boolean(), hintsUsed:z.number().int().min(0).max(5), marks:z.number().int().min(1).max(20),awardedMarks:z.number().int().min(0).max(20),answer:z.string().max(20000).optional()
+const responseSchema=z.object({
+ id:z.string().min(1).max(160),
+ hintsUsed:z.number().int().min(0).max(5),
+ answer:z.string().max(20000),
 });
 const attemptSchema=z.object({
  kind:z.enum(["topic_practice","practice_paper"]),unitCode:z.string().refine(isConfiguredUnitCode),topicCode:z.string().min(1).max(20).nullable(),paperMode:z.enum(["knowledge","applied","assignment"]).nullable(),
- selectedLevel:z.enum(["Support","Core","Stretch","Challenge"]).nullable(),percentage:z.number().min(0).max(100),mark:z.number().int().min(0),maxMark:z.number().int().min(1),hintsUsed:z.number().int().min(0),activeSeconds:z.number().int().min(1).max(86400),results:z.array(resultSchema).min(1).max(100)
+ paperVersion:z.number().int().min(0).max(10000).nullable(),selectedLevel:z.enum(["Support","Core","Stretch","Challenge"]).nullable(),activeSeconds:z.number().int().min(1).max(86400),responses:z.array(responseSchema).min(1).max(100)
 });
 export type AtomAttemptInput=z.infer<typeof attemptSchema>;
 
@@ -24,8 +27,10 @@ export async function saveAtomAttempt(input:AtomAttemptInput):Promise<{ok:boolea
  const data=parsed.data,unit=configuredUnits.find(item=>item.code===data.unitCode);
  if(!unit||(data.kind==="topic_practice"&&(!unit.topics.some(item=>item.code===data.topicCode)||data.paperMode!==null))||(data.kind==="practice_paper"&&(data.topicCode!==null||data.paperMode===null)))return{ok:false,message:"This result is not linked to the configured curriculum."};
  if(!await hasAssignedCurriculumUnit(data.unitCode))return{ok:false,message:"This unit is not assigned to your student group."};
+ const grade=gradeAtomAttempt(unit,data);
+ if(!grade.ok)return{ok:false,message:"Complete the approved question set before saving this result."};
  const supabase=await createClient();
- const{error}=await supabase.from("learner_curriculum_attempts").insert({learner_id:actor.id,kind:data.kind,unit_code:data.unitCode,topic_code:data.topicCode,paper_mode:data.paperMode,selected_level:data.selectedLevel,percentage:data.percentage,mark:data.mark,max_mark:data.maxMark,hints_used:data.hintsUsed,active_seconds:data.activeSeconds,question_results:data.results});
+ const{error}=await supabase.from("learner_curriculum_attempts").insert({learner_id:actor.id,kind:data.kind,unit_code:data.unitCode,topic_code:data.topicCode,paper_mode:data.paperMode,selected_level:data.selectedLevel,percentage:grade.percentage,mark:grade.mark,max_mark:grade.maxMark,hints_used:grade.hintsUsed,active_seconds:data.activeSeconds,question_results:grade.results});
  if(error)return{ok:false,message:"Saved on this device; account reporting will begin after the latest database migration is applied."};
  return{ok:true,message:"Result added to your learner and teacher progress reports."};
 }

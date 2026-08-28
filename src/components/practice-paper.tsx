@@ -82,14 +82,9 @@ export function PracticePaper({ unit }: { unit: PearsonUnit }) {
     startSync(async () => {
       const response = await saveAtomAttempt({
         kind: "practice_paper", unitCode: unit.code, topicCode: null, paperMode: mode,
-        selectedLevel: null, percentage: requiresReview ? 0 : percent, mark: requiresReview ? 0 : earned, maxMark: marks, hintsUsed: 0,
+        paperVersion: version, selectedLevel: null,
         activeSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
-        results: questions.map(question => ({
-          id: question.id, difficulty: question.difficulty,
-          correct: requiresReview ? false : markQuestion(question, answers[question.id] ?? ""), hintsUsed: 0,
-          marks: question.marks, awardedMarks: requiresReview ? 0 : scoreQuestion(question, answers[question.id] ?? ""),
-          answer: answers[question.id] ?? "",
-        })),
+        responses: questions.map(question => ({ id: question.id, hintsUsed: 0, answer: answers[question.id] ?? "" })),
       });
       setSyncMessage(response.message);
     });
