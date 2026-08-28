@@ -23,6 +23,8 @@ import { matchCompletedAllocationIds } from "@/lib/class-report-model";
 import { formatWeeklyLearningDays } from "@/lib/weekly-schedule";
 import { hasCompleteUnitStartingPoint } from "@/lib/unit-starting-point";
 import { isConfiguredUnitCode } from "@/lib/curriculum-unit-code";
+import { classInvitationReadiness } from "@/lib/class-invitation-readiness";
+import { TeacherGroupCard } from "@/components/teacher-group-card";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -419,14 +421,14 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
 async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;filters:TeacherFilters }) {
   const supabase = await createClient();
   const now=await currentTimestamp();
-  const classesQuery=supabase.from("classes").select("id,name,course_id,academic_year_id,academic_period_id,weekly_learning_day,weekly_learning_days,published,enrolments(count),class_enrolments:enrolments(student_id),student_invitations(status),courses(title),class_units(unit_id,active,units(code,title))").is("archived_at", null);
+  const classesQuery=supabase.from("classes").select("id,name,course_id,academic_year_id,academic_period_id,active_unit_id,weekly_learning_day,weekly_learning_days,published,enrolments(count),class_enrolments:enrolments(student_id),student_invitations(status),courses(title),class_units(unit_id,active,archived_at,units(code,title,status,archived_at))").is("archived_at", null);
   const [
     { data: classes }, { data: courses }, { data: years }, { data: mastery },
     { data: misconceptions }, { data: badges }, { data: coins },
     {data:periods},{data:units},{data:topics},{data:skills},{data:attemptEvidence},
     {data:allocationEvidence},
     {data:assessmentEvidence},{data:progressComparisons},{data:targetEvidence},
-    {data:teacherActionEvidence},{data:routeEvidence},
+    {data:teacherActionEvidence},{data:routeEvidence},{data:journeyTemplates},
   ] = await Promise.all([
     classesQuery,
     supabase.from("courses").select("id,title,qualification_type,qualification_level,awarding_organisation,units(id,code,title,kind,initial_teaching,status)").eq("active", true).is("archived_at", null).order("title"),
@@ -446,6 +448,7 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
     supabase.from("targets").select("learner_id,status,target_date,review_on").is("archived_at",null),
     supabase.from("teacher_actions").select("learner_id,review_on,outcome").is("archived_at",null),
     supabase.from("learner_routes").select("learner_id,topic_id,route,status").eq("status","active"),
+    supabase.from("learning_journey_templates").select("unit_id").eq("status","approved").is("archived_at",null),
   ]);
   const classSignals=await Promise.all((classes??[]).map(async item=>{
     const[{data:attentionData},{data:achievementData},{data:journeyData}]=await Promise.all([
@@ -588,6 +591,25 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
   const visibleClasses=learnerEvidenceFilterActive
     ? baseVisibleClasses.filter(item=>(item.class_enrolments??[]).some(row=>selectedLearners.has(row.student_id)))
     : baseVisibleClasses;
+  const approvedJourneyUnitIds=new Set((journeyTemplates??[]).map(template=>template.unit_id));
+  const invitationReadinessByClass=new Map(visibleClasses.map(item=>{
+    const activeClassUnits=(item.class_units??[]).filter(unit=>unit.active&&!unit.archived_at);
+    const currentAssignment=activeClassUnits.find(unit=>unit.unit_id===item.active_unit_id);
+    const currentUnit=related(currentAssignment?.units);
+    const configuredUnitCode=currentUnit
+      && currentUnit.status==="approved"
+      && !currentUnit.archived_at
+      && unitByCode(currentUnit.code)
+      ? currentUnit.code
+      : null;
+    return [item.id,classInvitationReadiness({
+      published:item.published,
+      activeUnitId:item.active_unit_id,
+      activeClassUnitIds:activeClassUnits.map(unit=>unit.unit_id),
+      configuredUnitCode,
+      hasApprovedJourney:Boolean(item.active_unit_id&&approvedJourneyUnitIds.has(item.active_unit_id)),
+    })] as const;
+  }));
   const visibleClassIds=new Set(visibleClasses.map(item=>item.id));
   const visibleJourneySignals=groupJourneySignals.filter(item=>visibleClassIds.has(item.classId));
   const evidenceLearners=selectedLearners;
@@ -668,7 +690,16 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
     </section>
     <section className="card mt-6" id="groups" aria-labelledby="groups-title">
       <div><p className="eyebrow">My groups</p><h2 className="mt-2 text-2xl font-bold" id="groups-title">Choose a group</h2><p className="mt-2 text-sm text-slate-600">Open a group to see its students, progress and report. Unit setup is shown only to administrators.</p></div>
-      <div className="mt-6 grid gap-3">{visibleClasses.length ? visibleClasses.map(item => <Link href={`/teacher/classes/${item.id}`} key={item.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 p-5 hover:bg-teal-50"><div><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-slate-600">{item.enrolments?.[0]?.count ?? 0} student{item.enrolments?.[0]?.count===1?"":"s"}</p><p className="mt-1 text-xs text-slate-500">{formatWeeklyLearningDays(item.weekly_learning_days,item.weekly_learning_day)} · {(item.class_units??[]).filter(unit=>unit.active).map(unit=>related(unit.units)?.title).filter(Boolean).join(", ")||"Unit setup in progress"}</p></div><span className="font-bold text-teal-700">Open group →</span></Link>) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">{role==="administrator"?"No groups have been created yet.":"No group has been assigned to you yet. There is nothing for you to configure."}</p>}</div>
+      <div className="mt-6 grid gap-3">{visibleClasses.length ? visibleClasses.map(item => <TeacherGroupCard
+        id={item.id}
+        invitationReady={invitationReadinessByClass.get(item.id)?.ready===true}
+        key={item.id}
+        name={item.name}
+        schedule={formatWeeklyLearningDays(item.weekly_learning_days,item.weekly_learning_day)}
+        studentCount={item.enrolments?.[0]?.count ?? 0}
+        unitTitles={(item.class_units??[]).filter(unit=>unit.active&&!unit.archived_at)
+          .map(unit=>related(unit.units)?.title).filter((title):title is string=>Boolean(title))}
+      />) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">{role==="administrator"?"No groups have been created yet.":"No group has been assigned to you yet. There is nothing for you to configure."}</p>}</div>
       {role==="administrator"&&<details className="mt-5 rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer font-bold">Add a group</summary><p className="mt-2 text-sm text-slate-600">Administrator setup only. Teachers receive ready-to-use groups.</p><CreateClassForm courses={courses ?? []} years={years ?? []}/></details>}
     </section>
     <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="Live teaching totals"><Metric label="Students" value={String(overview.students)}/><Metric label="Active enrolments" value={String(overview.activeEnrolments)}/><Metric label="Completed assessments" value={String(overview.completedAssessments)}/><Metric label="Need attention" value={String(overview.needAttention)}/></section>
