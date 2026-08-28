@@ -2,6 +2,11 @@
 
 Audit date: 14 August 2026
 
+> Historical production record. The invitation lifecycle was deliberately changed
+> on 27 August 2026 so new learners are provisioned only after secure acceptance.
+> The hosted invitation and recovery journey must be re-tested before this document
+> is used as certification for the current build.
+
 ## Current decision
 
 **Production readiness checks pass. Real-student invitations may begin through
@@ -21,7 +26,7 @@ unopened.
 | Existing-user sign-in | User set a new password and signed in on the live site | Passed |
 | Authentic invitation | Hima invited a new Gmail alias from the teacher class page | Passed |
 | Invitation acceptance | Invitee accepted securely, set a password and signed in | Passed |
-| Automatic class assignment | `Final Invitation Test Student` appeared in `L3 Computing Integration Test` immediately after invitation | Passed |
+| Automatic class assignment | Historical eager-provisioning behaviour was observed; the replacement acceptance-gated flow requires a new hosted test | Re-test required |
 | Production demo access | Demo selector panel absent; both historical shared-password accounts banned and rejected | Passed |
 | Redirect integrity | Public auth redirects use the Railway origin rather than Railway's internal localhost origin | Passed |
 

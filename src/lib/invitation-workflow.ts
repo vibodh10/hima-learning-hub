@@ -9,12 +9,12 @@ export type InvitationInput = {
 
 export type ExistingAccountResolution =
   | { kind: "none" }
+  | { kind: "recoverable"; userId: string }
   | { kind: "connectable"; userId: string }
   | { kind: "blocked"; code: string };
 
 export type InvitationWorkflowResult =
   | { kind: "sent"; invitationId: string; userId: string }
-  | { kind: "sent_pending_association"; invitationId: string; userId: string }
   | { kind: "connected"; invitationId: string; userId: string }
   | { kind: "blocked"; invitationId?: string; code: string };
 
@@ -23,6 +23,9 @@ export type InvitationGateway = {
   resolveExisting(email: string): Promise<ExistingAccountResolution>;
   sendNewUserInvite(input: InvitationInput & { invitationId: string }): Promise<
     { userId: string } | { errorCode: string; accountMayExist?: boolean }
+  >;
+  sendExistingAccountRecovery(input: InvitationInput & { invitationId: string; userId: string }): Promise<
+    { ok: true } | { ok: false; errorCode: string }
   >;
   connect(input: InvitationInput & { invitationId: string; userId: string }): Promise<{ ok: true } | { ok: false; errorCode: string }>;
   mark(input: {
@@ -50,6 +53,9 @@ export async function runInvitationWorkflow(
   if (existing.kind === "connectable") {
     return connectExisting(input, invitationId, existing.userId, gateway);
   }
+  if (existing.kind === "recoverable") {
+    return recoverExisting(input, invitationId, existing.userId, gateway);
+  }
 
   const sent = await gateway.sendNewUserInvite({ ...input, invitationId });
   if ("errorCode" in sent) {
@@ -57,6 +63,9 @@ export async function runInvitationWorkflow(
       existing = await gateway.resolveExisting(input.email);
       if (existing.kind === "connectable") {
         return connectExisting(input, invitationId, existing.userId, gateway);
+      }
+      if (existing.kind === "recoverable") {
+        return recoverExisting(input, invitationId, existing.userId, gateway);
       }
     }
     await safelyMark(gateway, { invitationId, status: "failed", detailCode: sent.errorCode });
@@ -69,17 +78,32 @@ export async function runInvitationWorkflow(
     userId: sent.userId,
     detailCode: "email_requested",
   });
-  const connected = await gateway.connect({ ...input, invitationId, userId: sent.userId });
-  if (!connected.ok) {
+  return { kind: "sent", invitationId, userId: sent.userId };
+}
+
+async function recoverExisting(
+  input: InvitationInput,
+  invitationId: string,
+  userId: string,
+  gateway: InvitationGateway,
+): Promise<InvitationWorkflowResult> {
+  const sent = await gateway.sendExistingAccountRecovery({ ...input, invitationId, userId });
+  if (!sent.ok) {
     await safelyMark(gateway, {
       invitationId,
-      status: "sent",
-      userId: sent.userId,
-      detailCode: `association_pending:${connected.errorCode}`,
+      status: "failed",
+      userId,
+      detailCode: sent.errorCode,
     });
-    return { kind: "sent_pending_association", invitationId, userId: sent.userId };
+    return { kind: "blocked", invitationId, code: sent.errorCode };
   }
-  return { kind: "sent", invitationId, userId: sent.userId };
+  await safelyMark(gateway, {
+    invitationId,
+    status: "sent",
+    userId,
+    detailCode: "recovery_requested",
+  });
+  return { kind: "sent", invitationId, userId };
 }
 
 async function connectExisting(

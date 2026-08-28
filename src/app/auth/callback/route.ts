@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     if (!error) {
       const metadata = data.user?.user_metadata as Record<string, unknown> | undefined;
       if (metadata?.requested_role === "student" && metadata.invited_class_id) {
-        const finalized = await finalizeCurrentStudentInvitation();
+        const finalized = await finalizeCurrentStudentInvitation(url.searchParams.get("invitation"));
         if (finalized.kind !== "ready") {
           console.error("Student invitation callback association failed", { outcome: finalized.kind, code: "code" in finalized ? finalized.code : undefined });
           await supabase.auth.signOut();

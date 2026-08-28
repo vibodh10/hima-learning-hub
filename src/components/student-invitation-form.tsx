@@ -8,7 +8,7 @@ export function StudentInvitationForm({ classId }: { classId: string }) {
   return <section className="card mt-6 border-blue-200" id="invitations">
     <p className="eyebrow">2. Add your students</p>
     <h2 className="mt-2 text-2xl font-bold">Send a secure invitation</h2>
-    <p className="mt-2 text-sm leading-6 text-slate-600">Enter one student’s name and college email. Their secure link automatically joins them to this group and its selected units.</p>
+    <p className="mt-2 text-sm leading-6 text-slate-600">Enter one student’s name and college email. Their account and group access are created only after they accept the secure link.</p>
     <form action={action} className="mt-5 grid gap-4 md:grid-cols-2">
       <input type="hidden" name="classId" value={classId}/>
       <Field label="Student's full name" name="name" error={state.errors?.name?.[0]}/>

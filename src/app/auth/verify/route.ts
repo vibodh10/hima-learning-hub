@@ -8,6 +8,7 @@ const confirmation = z.object({
   tokenHash: z.string().min(20),
   type: z.enum(["recovery", "invite"]),
   next: z.string().startsWith("/").refine((value) => !value.startsWith("//")),
+  invitation: z.uuid().optional(),
 });
 
 export async function POST(request: Request) {
@@ -26,8 +27,8 @@ export async function POST(request: Request) {
     return NextResponse.redirect(publicAuthRedirect(request.url, "/login?error=expired-email-link"), 303);
   }
 
-  if (parsed.data.type === "invite") {
-    const finalized = await finalizeCurrentStudentInvitation();
+  if (parsed.data.type === "invite" || parsed.data.invitation) {
+    const finalized = await finalizeCurrentStudentInvitation(parsed.data.invitation);
     if (finalized.kind !== "ready") {
       console.error("Student invitation association failed", { outcome: finalized.kind, code: "code" in finalized ? finalized.code : undefined });
       await supabase.auth.signOut();

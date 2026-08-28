@@ -28,7 +28,7 @@ function weeks(rows: Array<[string, string, string]>): ConfiguredJourneyWeek[] {
   }));
 }
 
-export const configuredUnitJourneys: Record<"2" | "4" | "6", ConfiguredJourneyWeek[]> = {
+export const configuredUnitJourneys: Record<"2" | "4" | "6" | "10" | "14", ConfiguredJourneyWeek[]> = {
   "2": weeks([
     ["A1", "Database systems and starting point", "Establish prior understanding, then explain relational database purpose, structures and terminology."],
     ["A2", "SQL and relational data", "Retrieve and manipulate relational data using appropriate RDBMS tools and SQL."],
@@ -70,6 +70,34 @@ export const configuredUnitJourneys: Record<"2" | "4" | "6", ConfiguredJourneyWe
     ["C3–C5", "Progress Check 2: independent website task", "Complete a later comparable build and identify evidenced progress and remaining gaps."],
     ["C3–C5", "Professional review", "Evaluate the product against the client brief and justify prioritised refinements."],
     ["C3–C5", "Final website evidence", "Preserve the final website, tests and evaluation as after evidence without inventing an official assignment."],
+  ]),
+  "10": weeks([
+    ["A1", "Business information and starting point", "Establish prior knowledge, then investigate why organisations analyse data and the legal, ethical, security and capability constraints."],
+    ["A2", "Data types, storage and access", "Classify data and select secure warehouses, data marts, software and access processes for an organisational need."],
+    ["A3", "Big-data analysis", "Use specialist tools and OLAP concepts while checking volume, velocity, compatibility and data quality."],
+    ["A4", "Four levels of analytics", "Apply descriptive, diagnostic, predictive and prescriptive analytics to connected organisational decisions."],
+    ["B1", "Statistical techniques", "Use software to present data and calculate central tendency and dispersion accurately."],
+    ["B2", "Progress Check 1: probability", "Apply normal-distribution operations and a software-based t-test in a comparable dataset task."],
+    ["B3", "Regression and model fit", "Use scatter diagrams, regression equations, correlation and appropriate linear or non-linear models."],
+    ["C1", "Select a defensible dataset", "Frame a precise question and justify system, access, security, reliability and data-quality requirements."],
+    ["C2", "Prepare and analyse data", "Clean and format the dataset, apply suitable software techniques and check validity, accuracy and relevance."],
+    ["C2", "Progress Check 2: analytics investigation", "Complete a later comparable investigation and identify evidenced progress and remaining gaps."],
+    ["C2", "Audience-led reporting", "Present graphical and numerical outcomes with language, detail and recommendations suited to each audience."],
+    ["C2", "Final analytics evidence", "Preserve the final analysis, conclusions and recommendations as after evidence for teacher assessment."],
+  ]),
+  "14": weeks([
+    ["A1", "Service life cycle and starting point", "Establish prior knowledge, then apply service identification, design, management and continual improvement."],
+    ["A2–A3", "Organisation and service identification", "Analyse aims, functions, people, locations, diagrams and contextual factors to prioritise service needs."],
+    ["B1–B2", "Define service requirements", "Produce a service catalogue and test technical requirements against cost, risk, law, security and sustainability."],
+    ["B3–B4", "Design the IT service solution", "Design information, data, hardware, software, infrastructure and user-management components and compare alternatives."],
+    ["C1–C2", "Information and data requirements", "Analyse strategic, management and operational information and the data needed to generate it."],
+    ["D1", "Progress Check 1: software services", "Select and justify software-service options in a comparable organisational scenario."],
+    ["D2", "Hardware and connectivity", "Select integrated hardware and connectivity using user, organisation, technical and implementation evidence."],
+    ["D3", "Manage delivery and change", "Plan support, assets, incidents, metrics, acceptable use, SLAs and lawful external provision."],
+    ["B3–B4", "Integrated service design", "Synthesize all requirements into a complete solution with traceable design decisions."],
+    ["D3", "Progress Check 2: timed set-task rehearsal", "Complete a later comparable external-style task and diagnose evidenced strengths and gaps."],
+    ["B3–B4", "Alternatives and justification", "Evaluate credible alternatives, implementation impact, operational management and prioritised improvement."],
+    ["D3", "Final external-assessment readiness", "Complete a final original rehearsal covering all content areas without presenting it as Pearson's live task."],
   ]),
 };
 

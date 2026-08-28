@@ -5,6 +5,7 @@ import { PracticeForm, type PracticeQuestion } from "@/components/practice-form"
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { TestModePanel } from "@/components/test-mode-panel";
+import { ActivityPositionTracker } from "@/components/activity-position-tracker";
 
 type ActivityQuestionRow = { sort_order: number; questions: PracticeQuestion | PracticeQuestion[] | null };
 type ActivityState = { activity_id: string; state: string; status_detail: string };
@@ -41,6 +42,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ lesso
   const canAttempt=!activityState||["Available","Completed","Mastery Demonstrated","Additional Practice Required"].includes(activityState.state);
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
+    {actor.role==="student"&&<ActivityPositionTracker lessonId={lessonId} activityId={activityId}/>}
     <Link className="link" href={`/learn/${lessonId}`}>← Back to lesson</Link>
     <header className="mt-8 max-w-4xl">
       <p className="eyebrow">{topic?.title} · {formatStage(data.learning_stage)}</p>

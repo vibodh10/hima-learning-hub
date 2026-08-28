@@ -4,7 +4,7 @@ import { projectReady, topicKey, type LearningProgress } from "./learning-progre
 
 describe("configured Pearson learner journey", () => {
   it("provides every configured unit, clickable topic route and project", () => {
-    expect(configuredUnits.map(unit => unit.code)).toEqual(["1", "2", "4", "6", "8", "9"]);
+    expect(configuredUnits.map(unit => unit.code)).toEqual(["1", "2", "4", "6", "8", "9", "10", "14"]);
     for (const unit of configuredUnits) {
       expect(unit.topics.length).toBeGreaterThan(0);
       expect(metaForUnit(unit.code).project.deliverables.length).toBeGreaterThan(3);
@@ -27,12 +27,16 @@ describe("configured Pearson learner journey", () => {
     expect(lessons[3].example.steps.length).toBeGreaterThan(lessons[0].example.steps.length);
   });
 
-  it("uses the audited Pearson content-area codes for Units 1, 8 and 9", () => {
+  it("uses the audited Pearson content-area codes for every added unit", () => {
     expect(configuredUnits.find(unit => unit.code === "1")?.topics.map(topic => topic.code)).toEqual(["A1–A2", "A3", "A4", "A5", "B1–B3", "C1–C2", "D1–D2", "E1", "E2", "E3", "F1–F2"]);
     expect(configuredUnits.find(unit => unit.code === "8")?.topics.map(topic => topic.code)).toEqual(["A1", "A2", "B1–B3", "C1–C3", "C4–C6"]);
     expect(configuredUnits.find(unit => unit.code === "9")?.topics.map(topic => topic.code)).toEqual(["A1", "A2–A3", "B1", "B2–B3", "C1–C2", "D1"]);
+    expect(configuredUnits.find(unit => unit.code === "10")?.topics.map(topic => topic.code)).toEqual(["A1", "A2", "A3", "A4", "B1", "B2", "B3", "C1", "C2"]);
+    expect(configuredUnits.find(unit => unit.code === "14")?.topics.map(topic => topic.code)).toEqual(["A1", "A2–A3", "B1–B2", "B3–B4", "C1–C2", "D1", "D2", "D3"]);
     expect(metaForUnit("8").criteria).toContain("B.P3–B.P4, B.M2");
     expect(metaForUnit("9").criteria).toContain("D.P8–D.P9, D.M4, D.D4");
+    expect(metaForUnit("10").criteria).toContain("C.P4–C.P6, C.M4–C.M6, C.D3");
+    expect(metaForUnit("14").criteria).toContain("AO5 justified IT service solution design");
   });
 
   it("includes concrete code or technical examples where the subject requires them", () => {

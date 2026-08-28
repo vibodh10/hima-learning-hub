@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { AppHeader } from "@/components/app-header";
 import { PrintEvidenceButton } from "@/components/print-evidence-button";
 import { requireRole } from "@/lib/auth";
 import { topicByCode } from "@/lib/learning-catalog";
 import { createClient } from "@/lib/supabase/server";
 
-type Filters={unit?:string;topic?:string};
+type Filters={classId?:string;unit?:string;topic?:string};
 type Worksheet={id:string;unit_code:string;topic_code:string;attempt_number:number;mode:string;evidence_stage:string;responses:unknown;confidence:number;submitted_at:string};
 type Artifact={id:string;unit_code:string;topic_code:string|null;stage:string;title:string;source_type:string;source_id:string|null;version_number:number;evidence:unknown;recorded_at:string};
 
@@ -14,28 +15,36 @@ export default async function LearnerEvidencePage({params,searchParams}:{params:
   const actor=await requireRole("teacher","administrator");
   const {id}=await params;
   const filters=await searchParams;
+  const parsedClassId=z.string().uuid().safeParse(filters.classId);
+  if(!parsedClassId.success)notFound();
+  const classId=parsedClassId.data;
   const supabase=await createClient();
-  const [{data:learner},{data:enrolments},{data:artifactRows},{data:worksheetRows}]=await Promise.all([
+  const [{data:learner,error:learnerError},{data:enrolment,error:enrolmentError},{data:classUnits,error:classUnitsError}]=await Promise.all([
     supabase.from("user_profiles").select("id,display_name").eq("id",id).eq("role","student").single(),
-    supabase.from("enrolments").select("classes(id,name)").eq("student_id",id).is("archived_at",null),
-    supabase.from("learner_portfolio_artifacts").select("id,unit_code,topic_code,stage,title,source_type,source_id,version_number,evidence,recorded_at").eq("learner_id",id).order("recorded_at",{ascending:true}),
-    supabase.from("learner_topic_worksheets").select("id,unit_code,topic_code,attempt_number,mode,evidence_stage,responses,confidence,submitted_at").eq("learner_id",id).order("submitted_at",{ascending:true}),
+    supabase.from("enrolments").select("class_id,classes(id,name)").eq("student_id",id).eq("class_id",classId).is("archived_at",null).single(),
+    supabase.from("class_units").select("unit_id,units(code,archived_at)").eq("class_id",classId).eq("active",true).is("archived_at",null),
   ]);
-  if(!learner)notFound();
+  if(learnerError||enrolmentError||classUnitsError||!learner||!enrolment)notFound();
+  const selectedUnitCodes=[...new Set((classUnits??[]).flatMap(link=>{const unit=related(link.units);return unit&&!unit.archived_at?[unit.code]:[]}))];
+  const [{data:artifactRows,error:artifactError},{data:worksheetRows,error:worksheetError}]=selectedUnitCodes.length?await Promise.all([
+    supabase.from("learner_portfolio_artifacts").select("id,unit_code,topic_code,stage,title,source_type,source_id,version_number,evidence,recorded_at").eq("learner_id",id).in("unit_code",selectedUnitCodes).order("recorded_at",{ascending:true}),
+    supabase.from("learner_topic_worksheets").select("id,unit_code,topic_code,attempt_number,mode,evidence_stage,responses,confidence,submitted_at").eq("learner_id",id).in("unit_code",selectedUnitCodes).order("submitted_at",{ascending:true}),
+  ]):[{data:[],error:null},{data:[],error:null}];
+  if(artifactError||worksheetError)throw new Error("The learner evidence view could not be loaded.");
   const artifacts=(artifactRows??[]) as Artifact[];
   const worksheets=(worksheetRows??[]) as Worksheet[];
   const filteredArtifacts=artifacts.filter(item=>(!filters.unit||item.unit_code===filters.unit)&&(!filters.topic||item.topic_code===filters.topic));
   const filteredWorksheets=worksheets.filter(item=>(!filters.unit||item.unit_code===filters.unit)&&(!filters.topic||item.topic_code===filters.topic));
   const worksheetById=new Map(filteredWorksheets.map(item=>[item.id,item]));
-  const topics=[...new Map(artifacts.filter(item=>item.topic_code).map(item=>[`${item.unit_code}:${item.topic_code}`,{unit:item.unit_code,topic:item.topic_code!}])).values()];
+  const topics=[...new Map([...artifacts.map(item=>({unit_code:item.unit_code,topic_code:item.topic_code})),...worksheets.map(item=>({unit_code:item.unit_code,topic_code:item.topic_code}))].filter(item=>item.topic_code).map(item=>[`${item.unit_code}:${item.topic_code}`,{unit:item.unit_code,topic:item.topic_code!}])).values()];
   const visibleTopics=topics.filter(item=>(!filters.unit||item.unit===filters.unit)&&(!filters.topic||item.topic===filters.topic));
-  const groupNames=(enrolments??[]).map(item=>related(item.classes)?.name).filter(Boolean).join(", ")||"No current group";
+  const groupName=related(enrolment.classes)?.name??"Current group";
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
-    <div className="no-print"><Link className="link" href={`/teacher/learners/${id}`}>← Learner overview</Link></div>
-    <header className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Evidence View</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-3 text-slate-600">{groupNames} · genuine saved evidence shown in teaching-sequence order</p></div><PrintEvidenceButton/></header>
+    <div className="no-print"><Link className="link" href={`/teacher/learners/${id}?classId=${classId}`}>← Learner overview</Link></div>
+    <header className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">Evidence View</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-3 text-slate-600">{groupName} · genuine saved evidence from active selected units, shown in teaching-sequence order</p></div><PrintEvidenceButton/></header>
 
-    <form className="card no-print mt-7 grid gap-4 sm:grid-cols-3" method="get"><label className="grid gap-1 text-sm font-semibold">Unit<select className="input" name="unit" defaultValue={filters.unit??""}><option value="">All units</option>{[...new Set(topics.map(item=>item.unit))].map(unit=><option key={unit} value={unit}>Unit {unit}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Topic<select className="input" name="topic" defaultValue={filters.topic??""}><option value="">All topics</option>{topics.filter(item=>!filters.unit||item.unit===filters.unit).map(item=><option key={`${item.unit}:${item.topic}`} value={item.topic}>Unit {item.unit} · {item.topic} · {topicByCode(item.unit,item.topic)?.title??"Configured topic"}</option>)}</select></label><div className="flex items-end gap-3"><button className="button-secondary">Apply</button><Link className="link pb-3 text-sm" href={`/teacher/learners/${id}/evidence`}>Clear</Link></div></form>
+    <form className="card no-print mt-7 grid gap-4 sm:grid-cols-3" method="get"><input type="hidden" name="classId" value={classId}/><label className="grid gap-1 text-sm font-semibold">Unit<select className="input" name="unit" defaultValue={filters.unit??""}><option value="">All units</option>{[...new Set(topics.map(item=>item.unit))].map(unit=><option key={unit} value={unit}>Unit {unit}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Topic<select className="input" name="topic" defaultValue={filters.topic??""}><option value="">All topics</option>{topics.filter(item=>!filters.unit||item.unit===filters.unit).map(item=><option key={`${item.unit}:${item.topic}`} value={item.topic}>Unit {item.unit} · {item.topic} · {topicByCode(item.unit,item.topic)?.title??"Configured topic"}</option>)}</select></label><div className="flex items-end gap-3"><button className="button-secondary">Apply</button><Link className="link pb-3 text-sm" href={`/teacher/learners/${id}/evidence?classId=${classId}`}>Clear</Link></div></form>
 
     <section className="mt-8"><p className="eyebrow">Work over time</p><h2 className="mt-2 text-2xl font-bold">Before and after comparison</h2><div className="mt-5 grid gap-6">{visibleTopics.map(item=>{
       const topicWorks=filteredWorksheets.filter(work=>work.unit_code===item.unit&&work.topic_code===item.topic);

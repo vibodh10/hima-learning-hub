@@ -61,11 +61,11 @@ export function questionsFor(unit: PearsonUnit, topic: PearsonTopic): LearningQu
 }
 
 export function paperBlueprintsFor(unit: PearsonUnit):PaperBlueprint[]{
-  const external=unit.code==="1"||unit.code==="2";
+  const external=unit.code==="1"||unit.code==="2"||unit.code==="14";
   return [
     {mode:"knowledge",title:"Knowledge and terminology check",description:"Short questions from every topic to secure essential vocabulary and processes.",suggestedMinutes:Math.max(20,unit.topics.length*3),questionsPerTopic:2},
     {mode:"applied",title:unit.code==="2"?"Short practical set-task practice":external?"Applied assessment practice":"Applied vocational practice",description:practicalDescription(unit,"applied"),suggestedMinutes:["2","4","6"].includes(unit.code)?90:Math.max(35,unit.topics.length*6),questionsPerTopic:2},
-    {mode:"assignment",title:unit.code==="1"?"Synoptic exam rehearsal":unit.code==="2"?"Pearson-style 66-mark set-task rehearsal":"Assignment rehearsal",description:practicalDescription(unit,"assignment"),suggestedMinutes:unit.code==="2"?600:["4","6"].includes(unit.code)?180:Math.max(45,unit.topics.length*8),questionsPerTopic:1},
+    {mode:"assignment",title:unit.code==="1"?"Synoptic exam rehearsal":unit.code==="2"?"Pearson-style 66-mark set-task rehearsal":unit.code==="14"?"Pearson-style IT service set-task rehearsal":"Assignment rehearsal",description:practicalDescription(unit,"assignment"),suggestedMinutes:unit.code==="2"?600:unit.code==="14"?480:["4","6"].includes(unit.code)?180:Math.max(45,unit.topics.length*8),questionsPerTopic:1},
   ];
 }
 
@@ -90,6 +90,7 @@ function practicalDescription(unit:PearsonUnit,mode:PaperMode){
     :"A shorter hands-on database rehearsal using normalisation, table design, SQL/query logic, forms, validation and testing.";
   if(unit.code==="4")return "A practical programming brief requiring algorithms, Python code, debugging, validation, testing and optimisation, not theory-only answers.";
   if(unit.code==="6")return "A practical website brief requiring semantic HTML, responsive CSS, JavaScript, accessibility, debugging and browser testing.";
+  if(unit.code==="14")return "An original external set-task rehearsal requiring analysis of an organisation, a justified IT service solution, credible alternatives and service-management implications. It is not Pearson's live task.";
   return `A longer ${unit.code==="1"?"assessment":"vocational assignment"} rehearsal mapped to ${metaForUnit(unit.code).aims.join(", ")}.`;
 }
 

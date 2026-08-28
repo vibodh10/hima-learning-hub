@@ -105,8 +105,8 @@ Current flow:
 1. A teacher or administrator opens a class and submits a name and email.
 2. The server checks class ownership and organisation.
 3. Supabase Admin sends an invite with an auth callback URL.
-4. The application immediately creates/upserts the student profile and class
-   enrolment.
+4. The application records the Auth user against the durable invitation but defers
+   the student profile and class enrolment until secure acceptance.
 5. The email template is expected to open `/auth/confirm` with a token hash.
 6. The learner presses **Continue securely**, the server verifies the OTP,
    establishes the session and redirects to password setup.

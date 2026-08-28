@@ -1,82 +1,221 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
+import { buildClassReportPdf } from "@/lib/class-report-pdf";
+import {
+  classReportCsv,
+  projectClassReport,
+  type ClassReportAllocation,
+  type ClassReportAttempt,
+  type ClassReportComparison,
+} from "@/lib/class-report-model";
+import { canViewLearnerEvidence } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { csvCell } from "@/lib/report";
+
+type Row = Record<string, unknown>;
+const paramsSchema = z.object({ id: z.string().uuid() });
+const QUERY_LIMIT = 5000;
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const actor = await getSessionProfile();
-  if (!actor) return new Response("Authentication required.", { status: 401 });
-  if (!["teacher","administrator"].includes(actor.role)) return new Response("Not authorised.", { status: 403 });
-  const { id } = await context.params;
+  if (!actor) return privateResponse("Authentication required.", 401);
+  if (!canViewLearnerEvidence(actor.role)) return privateResponse("Not authorised.", 403);
+  const parsed = paramsSchema.safeParse(await context.params);
+  if (!parsed.success) return privateResponse("Class report not found.", 404);
+  const { id } = parsed.data;
   const supabase = await createClient();
-  const { data: classData } = await supabase.from("classes").select(
-    "id,name,courses(title),units:class_units(unit_id,units(title)),enrolments(student_id,user_profiles!enrolments_student_id_fkey(display_name))",
-  ).eq("id",id).single();
-  if (!classData) return new Response("Class not found or not authorised.", { status: 404 });
-  const learnerIds=(classData.enrolments??[]).map(row=>row.student_id);
-  const [{data:progress},{data:mastery},{data:comparisons},{data:misconceptions},{data:actions},{data:allocations},{data:attempts}]=learnerIds.length?await Promise.all([
-    supabase.from("topic_progress").select("learner_id,first_score,latest_score,current_pathway,topics(title)").in("learner_id",learnerIds),
-    supabase.from("skill_mastery").select("learner_id,mastery_score,current_pathway,skills(title)").in("learner_id",learnerIds),
-    supabase.from("skill_progress_comparisons").select("learner_id,improvement_points,status,skills(title)").in("learner_id",learnerIds),
-    supabase.from("learner_misconceptions").select("learner_id,occurrence_count,misconceptions(title)").in("learner_id",learnerIds),
-    supabase.from("teacher_actions").select("learner_id,action,reason,created_at").eq("class_id",id).is("archived_at",null),
-    supabase.from("activity_allocations").select("id,activity_id,deadline_at,activities(title,kind)").eq("class_id",id).is("archived_at",null),
-    supabase.from("attempts").select("learner_id,activity_id,percentage,completed_at").in("learner_id",learnerIds).not("completed_at","is",null),
-  ]):[{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]},{data:[]}];
-  const names=new Map((classData.enrolments??[]).map(row=>[row.student_id,related(row.user_profiles)?.display_name??"Learner"]));
-  const rows=learnerIds.map(learnerId=>{
-    const learnerProgress=(progress??[]).filter(row=>row.learner_id===learnerId);
-    const learnerMastery=(mastery??[]).filter(row=>row.learner_id===learnerId);
-    const learnerComparisons=(comparisons??[]).filter(row=>row.learner_id===learnerId);
-    const completed=new Set((attempts??[]).filter(row=>row.learner_id===learnerId).map(row=>row.activity_id));
-    const overdue=(allocations??[]).filter(row=>!completed.has(row.activity_id)&&row.deadline_at&&new Date(row.deadline_at)<new Date()).length;
-    return {
-      learner:names.get(learnerId)??"Learner",
-      starting:average(learnerProgress.map(row=>Number(row.first_score))),
-      latest:average(learnerProgress.map(row=>Number(row.latest_score))),
-      improvement:average(learnerComparisons.map(row=>Number(row.improvement_points)).filter(Number.isFinite)),
-      support:learnerMastery.filter(row=>row.current_pathway==="Support").length,
-      mastery:learnerMastery.filter(row=>row.current_pathway==="Mastery").length,
-      completed:completed.size,overdue,
-    };
-  });
-  const evidence={
-    name:classData.name,course:related(classData.courses)?.title??"Course",
-    units:(classData.units??[]).map(row=>related(row.units)?.title).filter(Boolean),
-    rows,misconceptions:misconceptions??[],actions:actions??[],
-    generatedAt:new Date().toISOString(),
-  };
-  const format=new URL(request.url).searchParams.get("format");
-  const safeName=classData.name.replace(/[^a-z0-9]+/gi,"-").toLowerCase();
-  if(format==="csv"){
-    const csv=[
-      ["Learner","Starting point","Latest progress","Improvement points","Support skills","Mastery skills","Activities completed","Overdue"],
-      ...rows.map(row=>[row.learner,row.starting??"",row.latest??"",row.improvement??"",row.support,row.mastery,row.completed,row.overdue]),
-    ].map(row=>row.map(csvCell).join(",")).join("\r\n");
-    return new Response(csv,{headers:{"content-type":"text/csv; charset=utf-8","content-disposition":`attachment; filename="${safeName}-class-progress.csv"`,"cache-control":"private, no-store"}});
+
+  const classResult = await supabase.from("classes").select(
+    "id,name,courses(title),units:class_units(unit_id,active,archived_at,units(id,code,title,archived_at)),enrolments(student_id,archived_at,user_profiles!enrolments_student_id_fkey(display_name))",
+  ).eq("id", id).is("archived_at", null).single();
+  if (classResult.error || !classResult.data) {
+    return privateResponse("Class not found or not authorised.", 404);
   }
-  const bytes=await buildClassPdf(evidence);
-  return new Response(bytes as BodyInit,{headers:{"content-type":"application/pdf","content-disposition":`attachment; filename="${safeName}-class-progress.pdf"`,"cache-control":"private, no-store"}});
+  const classData = classResult.data;
+  const activeEnrolments = rows(classData.enrolments).filter(enrolment => !enrolment.archived_at);
+  const learners = activeEnrolments.map(enrolment => ({
+    id: String(enrolment.student_id),
+    name: String(related(enrolment.user_profiles)?.display_name ?? "Learner"),
+  }));
+  const learnerIds = learners.map(learner => learner.id);
+  const selectedUnits = rows(classData.units).flatMap(link => {
+    const unit = related(link.units);
+    return link.active === true && !link.archived_at && unit && !unit.archived_at
+      ? [{ id: String(unit.id), code: String(unit.code), title: String(unit.title) }]
+      : [];
+  });
+  const unitIds = new Set(selectedUnits.map(unit => unit.id));
+
+  const [topicResult, actionResult] = await Promise.all([
+    selectedUnits.length
+      ? supabase.from("topics").select("id,unit_id").in("unit_id", [...unitIds])
+        .eq("status", "approved").is("archived_at", null).limit(QUERY_LIMIT)
+      : emptyResult(),
+    supabase.from("teacher_actions").select("learner_id,action,reason,created_at")
+      .eq("class_id", id).is("archived_at", null).order("created_at", { ascending: false }).limit(QUERY_LIMIT),
+  ]);
+  if (topicResult.error || actionResult.error) {
+    return privateResponse("The class evidence report could not be generated.", 500);
+  }
+  if (reachedQueryLimit(topicResult.data) || reachedQueryLimit(actionResult.data)) {
+    return privateResponse("The class evidence report is too large to export safely. Use a unit report instead.", 409);
+  }
+  const topicIds = new Set(rows(topicResult.data).map(topic => String(topic.id)));
+
+  const evidenceResults = learnerIds.length && topicIds.size
+    ? await Promise.all([
+      supabase.from("skill_progress_comparisons").select(
+        "learner_id,starting_percentage,latest_percentage,improvement_points,evidence,skills(topic_id),progress_result:latest_progress_result_id(created_at,assessment_instances(completed_at))",
+      ).in("learner_id", learnerIds).limit(QUERY_LIMIT),
+      supabase.from("skill_mastery").select("learner_id,current_pathway,skills(topic_id)")
+        .in("learner_id", learnerIds).limit(QUERY_LIMIT),
+      supabase.from("learner_misconceptions").select(
+        "learner_id,occurrence_count,misconceptions(title,skills(topic_id))",
+      ).in("learner_id", learnerIds).limit(QUERY_LIMIT),
+      supabase.from("activity_allocations").select(
+        "id,learner_id,activity_id,release_at,deadline_at,required,class_scope_source,activities(lessons(topics(unit_id)))",
+      ).eq("class_id", id).is("archived_at", null).limit(QUERY_LIMIT),
+    ])
+    : [emptyResult(), emptyResult(), emptyResult(), emptyResult()] as const;
+  if (evidenceResults.some(result => result.error)) {
+    return privateResponse("The class evidence report could not be generated.", 500);
+  }
+  if (evidenceResults.some(result => reachedQueryLimit(result.data))) {
+    return privateResponse("The class evidence report is too large to export safely. Use a unit report instead.", 409);
+  }
+  const [comparisonResult, masteryResult, misconceptionResult, classAllocationResult] = evidenceResults;
+  const allocationRows = rows(classAllocationResult.data)
+    .filter(allocation => unitIds.has(activityUnitId(allocation.activities)));
+  const activityIds = [...new Set(allocationRows.map(allocation => String(allocation.activity_id)))];
+  const attemptResult = learnerIds.length && activityIds.length
+    ? await supabase.from("attempts").select("learner_id,activity_id,allocation_id,completed_at")
+      .in("learner_id", learnerIds).in("activity_id", activityIds)
+      .not("completed_at", "is", null).limit(QUERY_LIMIT)
+    : emptyResult();
+  if (attemptResult.error) {
+    return privateResponse("The class evidence report could not be generated.", 500);
+  }
+  if (reachedQueryLimit(attemptResult.data)) {
+    return privateResponse("The class evidence report is too large to export safely. Use a unit report instead.", 409);
+  }
+
+  const report = projectClassReport({
+    className: String(classData.name),
+    courseTitle: String(related(classData.courses)?.title ?? "Course not recorded"),
+    units: selectedUnits.map(unit => `${unit.code}: ${unit.title}`),
+    generatedAt: new Date().toISOString(),
+    learners,
+    comparisons: rows(comparisonResult.data)
+      .filter(row => topicIds.has(String(related(row.skills)?.topic_id ?? "")))
+      .map(mapComparison),
+    mastery: rows(masteryResult.data)
+      .filter(row => topicIds.has(String(related(row.skills)?.topic_id ?? "")))
+      .map(row => ({ learnerId: String(row.learner_id), currentPathway: String(row.current_pathway) })),
+    allocations: allocationRows.map(mapAllocation),
+    attempts: rows(attemptResult.data).map(mapAttempt),
+    misconceptions: rows(misconceptionResult.data).flatMap(row => {
+      const misconception = related(row.misconceptions);
+      return topicIds.has(String(related(misconception?.skills)?.topic_id ?? ""))
+        ? [{
+          learnerId: String(row.learner_id),
+          title: String(misconception?.title ?? "Misconception not labelled"),
+          occurrenceCount: Number(row.occurrence_count ?? 0),
+        }]
+        : [];
+    }),
+    actions: rows(actionResult.data)
+      .filter(row => row.learner_id == null || learnerIds.includes(String(row.learner_id)))
+      .map(row => ({
+        action: String(row.action), reason: String(row.reason), createdAt: String(row.created_at),
+      })),
+  });
+
+  const safeName = String(classData.name).replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-|-$/g, "").toLowerCase() || "class";
+  if (new URL(request.url).searchParams.get("format") === "csv") {
+    return new Response(classReportCsv(report), {
+      headers: downloadHeaders("text/csv; charset=utf-8", `${safeName}-class-evidence.csv`),
+    });
+  }
+  const bytes = await buildClassReportPdf(report);
+  return new Response(bytes as BodyInit, {
+    headers: downloadHeaders("application/pdf", `${safeName}-class-evidence.pdf`),
+  });
 }
 
-type Report={name:string;course:string;units:(string|undefined)[];rows:{learner:string;starting:number|null;latest:number|null;improvement:number|null;support:number;mastery:number;completed:number;overdue:number}[];misconceptions:{occurrence_count:number;misconceptions:{title:string}[]|null}[];actions:{action:string;reason:string;created_at:string}[];generatedAt:string};
-async function buildClassPdf(data:Report){
-  const pdf=await PDFDocument.create();const regular=await pdf.embedFont(StandardFonts.Helvetica);const bold=await pdf.embedFont(StandardFonts.HelveticaBold);
-  let page=pdf.addPage([595,842]);let y=790;
-  const line=(text:string,size=10,strong=false)=>{for(const part of wrap(text,92)){if(y<55){page=pdf.addPage([595,842]);y=790}page.drawText(part,{x:48,y,size,font:strong?bold:regular,color:rgb(.08,.14,.17)});y-=size+6;}};
-  line("Class Progress Report",20,true);line(`Class: ${data.name}`,12,true);line(`Course: ${data.course}`);line(`Active units: ${data.units.join(", ")||"Not selected"}`);line(`Generated: ${new Date(data.generatedAt).toLocaleString("en-GB")}`,9);
-  y-=8;line("Learner progress from starting points",14,true);
-  if(data.rows.length)data.rows.forEach(row=>line(`${row.learner}: starting ${row.starting??"not recorded"}%, latest ${row.latest??"not recorded"}%, change ${row.improvement??"not calculated"} points; ${row.support} Support skills, ${row.mastery} Mastery skills; ${row.completed} activities completed, ${row.overdue} overdue.`));
-  else line("No active learners.");
-  y-=8;line("Common misconceptions",14,true);
-  if(data.misconceptions.length)data.misconceptions.slice(0,10).forEach(row=>line(`${related(row.misconceptions)?.title??"Misconception"}: ${row.occurrence_count} recorded occurrences.`));
-  else line("No tagged misconceptions recorded.");
-  y-=8;line("Teacher actions and interventions",14,true);
-  if(data.actions.length)data.actions.forEach(action=>line(`${new Date(action.created_at).toLocaleDateString("en-GB")} - ${action.action}: ${action.reason}`));
-  else line("No teacher actions recorded.");
-  y-=12;line("This factual report covers formative learning and progress evidence only. Formal qualification assignments and grades are outside SCCB Digital Learning Hub.",8);
-  return pdf.save();
+function mapComparison(row: Row): ClassReportComparison {
+  return {
+    learnerId: String(row.learner_id),
+    startingPercentage: Number(row.starting_percentage),
+    latestPercentage: nullableNumber(row.latest_percentage),
+    improvementPoints: nullableNumber(row.improvement_points),
+    evidence: row.evidence,
+    progressDate: progressDate(row.progress_result),
+  };
 }
-function average(values:number[]){return values.length?Math.round(values.reduce((sum,value)=>sum+value,0)/values.length*10)/10:null}
-function related<T>(value:T|T[]|null|undefined):T|undefined{return Array.isArray(value)?value[0]:value??undefined}
-function wrap(text:string,width:number){const words=text.replace(/[^\x20-\x7E]/g,"-").split(/\s+/);const lines:string[]=[];let current="";for(const word of words){if((current+" "+word).trim().length>width){lines.push(current);current=word}else current=(current+" "+word).trim()}if(current)lines.push(current);return lines}
+
+function mapAllocation(row: Row): ClassReportAllocation {
+  return {
+    id: String(row.id), learnerId: stringOrNull(row.learner_id),
+    activityId: String(row.activity_id), releaseAt: stringOrNull(row.release_at),
+    deadlineAt: stringOrNull(row.deadline_at), required: row.required === true,
+    classScopeSource: stringOrNull(row.class_scope_source),
+  };
+}
+
+function mapAttempt(row: Row): ClassReportAttempt {
+  return {
+    learnerId: String(row.learner_id), activityId: String(row.activity_id),
+    allocationId: stringOrNull(row.allocation_id), completedAt: String(row.completed_at),
+  };
+}
+
+function activityUnitId(value: unknown) {
+  const activity = related(value);
+  const lesson = related(activity?.lessons);
+  return String(related(lesson?.topics)?.unit_id ?? "");
+}
+
+function progressDate(value: unknown) {
+  const result = related(value);
+  return stringOrNull(related(result?.assessment_instances)?.completed_at) ?? stringOrNull(result?.created_at);
+}
+
+function emptyResult(): { data: Row[]; error: null } {
+  return { data: [], error: null };
+}
+
+function reachedQueryLimit(value: unknown) {
+  return Array.isArray(value) && value.length >= QUERY_LIMIT;
+}
+
+function rows(value: unknown): Row[] {
+  return Array.isArray(value) ? value as Row[] : [];
+}
+
+function related(value: unknown): Row | undefined {
+  return Array.isArray(value) ? value[0] as Row | undefined : value && typeof value === "object" ? value as Row : undefined;
+}
+
+function nullableNumber(value: unknown) {
+  return value == null ? null : Number(value);
+}
+
+function stringOrNull(value: unknown) {
+  return typeof value === "string" ? value : null;
+}
+
+function privateResponse(message: string, status: number) {
+  return new Response(message, {
+    status,
+    headers: { "cache-control": "private, no-store", "x-content-type-options": "nosniff" },
+  });
+}
+
+function downloadHeaders(contentType: string, filename: string) {
+  return {
+    "content-type": contentType,
+    "content-disposition": `attachment; filename="${filename}"`,
+    "cache-control": "private, no-store",
+    "x-content-type-options": "nosniff",
+  };
+}

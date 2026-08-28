@@ -13,6 +13,7 @@ export default async function ConfirmEmailPage({ searchParams }: ConfirmPageProp
   const tokenHash = first(params.token_hash);
   const type = first(params.type);
   const requestedNext = first(params.next);
+  const invitation = first(params.invitation);
   const validType = type === "recovery" || type === "invite";
   const next = requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
     ? requestedNext
@@ -38,6 +39,7 @@ export default async function ConfirmEmailPage({ searchParams }: ConfirmPageProp
             <input name="tokenHash" type="hidden" value={tokenHash} />
             <input name="type" type="hidden" value={type} />
             <input name="next" type="hidden" value={next} />
+            {invitation ? <input name="invitation" type="hidden" value={invitation} /> : null}
             <button className="button primary w-full" type="submit">Continue securely</button>
           </form>
         ) : null}

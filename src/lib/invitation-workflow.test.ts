@@ -15,6 +15,7 @@ function gateway(overrides: Partial<InvitationGateway> = {}): InvitationGateway 
     begin: vi.fn().mockResolvedValue({ invitationId: "invite-1" }),
     resolveExisting: vi.fn().mockResolvedValue({ kind: "none" }),
     sendNewUserInvite: vi.fn().mockResolvedValue({ userId: "user-1" }),
+    sendExistingAccountRecovery: vi.fn().mockResolvedValue({ ok: true }),
     connect: vi.fn().mockResolvedValue({ ok: true }),
     mark: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -22,14 +23,29 @@ function gateway(overrides: Partial<InvitationGateway> = {}): InvitationGateway 
 }
 
 describe("student invitation workflow", () => {
-  it("sends a new invitation and provisions the class association", async () => {
+  it("sends a new invitation without provisioning before acceptance", async () => {
     const adapter = gateway();
     await expect(runInvitationWorkflow(input, adapter)).resolves.toEqual({
       kind: "sent", invitationId: "invite-1", userId: "user-1",
     });
     expect(adapter.sendNewUserInvite).toHaveBeenCalledOnce();
-    expect(adapter.connect).toHaveBeenCalledWith(expect.objectContaining({
-      invitationId: "invite-1", userId: "user-1", classId: "class-1",
+    expect(adapter.connect).not.toHaveBeenCalled();
+  });
+
+  it("sends a recovery link for an invited Auth account that has no profile", async () => {
+    const adapter = gateway({
+      resolveExisting: vi.fn().mockResolvedValue({ kind: "recoverable", userId: "invited-1" }),
+    });
+    await expect(runInvitationWorkflow(input, adapter)).resolves.toEqual({
+      kind: "sent", invitationId: "invite-1", userId: "invited-1",
+    });
+    expect(adapter.sendNewUserInvite).not.toHaveBeenCalled();
+    expect(adapter.sendExistingAccountRecovery).toHaveBeenCalledWith(expect.objectContaining({
+      invitationId: "invite-1", userId: "invited-1",
+    }));
+    expect(adapter.connect).not.toHaveBeenCalled();
+    expect(adapter.mark).toHaveBeenLastCalledWith(expect.objectContaining({
+      status: "sent", detailCode: "recovery_requested",
     }));
   });
 
@@ -65,22 +81,23 @@ describe("student invitation workflow", () => {
     });
   });
 
-  it("keeps a delivered invitation recoverable when immediate association fails", async () => {
-    const adapter = gateway({ connect: vi.fn().mockResolvedValue({ ok: false, errorCode: "enrolment_failed" }) });
-    await expect(runInvitationWorkflow(input, adapter)).resolves.toEqual({
-      kind: "sent_pending_association", invitationId: "invite-1", userId: "user-1",
-    });
-    expect(adapter.mark).toHaveBeenLastCalledWith(expect.objectContaining({
-      status: "sent", detailCode: "association_pending:enrolment_failed",
-    }));
-  });
-
   it("reports delivery failures without creating a class association", async () => {
     const adapter = gateway({
       sendNewUserInvite: vi.fn().mockResolvedValue({ errorCode: "email_delivery_failed" }),
     });
     await expect(runInvitationWorkflow(input, adapter)).resolves.toEqual({
       kind: "blocked", invitationId: "invite-1", code: "email_delivery_failed",
+    });
+    expect(adapter.connect).not.toHaveBeenCalled();
+  });
+
+  it("reports recovery delivery failures without provisioning the account", async () => {
+    const adapter = gateway({
+      resolveExisting: vi.fn().mockResolvedValue({ kind: "recoverable", userId: "invited-1" }),
+      sendExistingAccountRecovery: vi.fn().mockResolvedValue({ ok: false, errorCode: "delivery_failed" }),
+    });
+    await expect(runInvitationWorkflow(input, adapter)).resolves.toEqual({
+      kind: "blocked", invitationId: "invite-1", code: "delivery_failed",
     });
     expect(adapter.connect).not.toHaveBeenCalled();
   });

@@ -18,7 +18,7 @@ export function ProfileManagementForm({profile}:{profile:{id:string;display_name
       <label className="flex items-center gap-2 pb-3 text-sm font-semibold"><input type="checkbox" name="archived" defaultChecked={Boolean(profile.archived_at)}/>Archived</label>
       <button className="button-secondary" disabled={pending}>{pending?"Saving...":"Save user"}</button>
     </div>
-    {profile.role==="student"&&<><div className="mt-3 flex gap-4 text-sm"><a className="link" href={`/api/reports/learners/${profile.id}`}>Export PDF</a><a className="link" href={`/api/reports/learners/${profile.id}?format=csv`}>Export CSV</a></div><LearnerDeletionRequestForm learnerId={profile.id}/></>}
+    {profile.role==="student"&&<><div className="mt-3 text-sm"><a className="link" href={`/teacher/learners/${profile.id}`}>Open learner record to choose a class and export evidence</a></div><LearnerDeletionRequestForm learnerId={profile.id}/></>}
     {state.message&&<p className={`mt-2 text-sm ${state.ok?"text-teal-800":"text-red-700"}`}>{state.message}</p>}
   </form>;
 }

@@ -10,7 +10,7 @@ export function TopicWorksheet({
   catchUp,
   evidenceStage,
 }: {
-  unitCode: "2" | "4" | "6";
+  unitCode: "2" | "4" | "6" | "10" | "14";
   topicCode: string;
   topicTitle: string;
   catchUp: boolean;
@@ -24,7 +24,7 @@ export function TopicWorksheet({
   return <section className="card" id="worksheet" aria-labelledby="worksheet-title">
     <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="eyebrow">{stageLabel}</p><h2 className="mt-2 text-2xl font-bold" id="worksheet-title">{topicTitle}</h2><p className="mt-2 text-sm text-slate-600">Your submission is retained as a new evidence version. Returning later never overwrites your earlier work.</p></div><span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-bold">Unit {unitCode} · {topicCode}</span></div>
     {evidenceStage!=="learning"&&<p className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">This is a teaching-sequence milestone. Submit your own work so it can be compared with separately preserved evidence from another stage.</p>}
-    {catchUp&&<div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"><p className="font-bold">Missed this lesson?</p><ol className="mt-3 grid gap-2"><li>1. Watch the short, captioned visual explainer above.</li><li>2. Complete the recap.</li><li>3. Complete this worksheet.</li><li>4. Complete the practical application.</li><li>5. Complete the knowledge check.</li><li>6. Record your reflection and exit ticket.</li></ol></div>}
+    {catchUp&&<div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"><p className="font-bold">Missed this lesson?</p><ol className="mt-3 grid gap-2"><li>1. Read the short guided explanation above at your own pace.</li><li>2. Complete the recap.</li><li>3. Complete this worksheet.</li><li>4. Complete the practical application.</li><li>5. Complete the knowledge check.</li><li>6. Record your reflection and exit ticket.</li></ol></div>}
     <form action={action} className="mt-6 grid gap-6">
       <input type="hidden" name="unitCode" value={unitCode}/><input type="hidden" name="topicCode" value={topicCode}/><input type="hidden" name="mode" value={catchUp?"catch_up":"standard"}/><input type="hidden" name="evidenceStage" value={evidenceStage}/>
       <WorksheetSection number="1" title="Recap — What do I already know?" name="recap" prompt="Record the terms, methods or examples you can recall before reviewing the lesson."/>

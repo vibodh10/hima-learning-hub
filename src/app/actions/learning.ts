@@ -112,12 +112,16 @@ export async function configureClass(_: ActionState, formData: FormData): Promis
     academicPeriodId: databaseUuid,
     courseId: databaseUuid,
     activeUnitId: databaseUuid,
-    weeklyLearningDay: z.coerce.number().int().min(1).max(7),
   }).safeParse(Object.fromEntries(formData));
   const unitIds = formData.getAll("unitIds").map(String);
-  if (!parsed.success || unitIds.length < 1 || !unitIds.every(id => databaseUuid.safeParse(id).success)
+  const parsedDays = z.array(z.coerce.number().int().min(1).max(7)).min(1).max(7)
+    .safeParse(formData.getAll("weeklyLearningDays"));
+  const weeklyLearningDays = parsedDays.success
+    ? [...new Set(parsedDays.data)].sort((left, right) => left - right)
+    : [];
+  if (!parsed.success || !parsedDays.success || unitIds.length < 1 || !unitIds.every(id => databaseUuid.safeParse(id).success)
     || !unitIds.includes(parsed.data.activeUnitId)) {
-    return { message: "Choose a period, course, at least one unit, an active unit, and the usual learning day." };
+    return { message: "Choose a period, course, at least one unit, an active unit, and every usual learning day." };
   }
   const supabase = await createClient();
   const [{ data: currentClass }, { data: period }] = await Promise.all([
@@ -131,7 +135,7 @@ export async function configureClass(_: ActionState, formData: FormData): Promis
     unit_uuids: unitIds, active_unit_uuid: parsed.data.activeUnitId,
     starts_value: currentClass?.starts_on ?? period.starts_on,
     ends_value: currentClass?.ends_on ?? period.ends_on,
-    weekday_value: parsed.data.weeklyLearningDay,
+    weekday_values: weeklyLearningDays,
     published_value: formData.get("published") === "on",
   });
   if (error) {
@@ -177,6 +181,32 @@ export async function joinClass(_: ActionState, formData: FormData): Promise<Act
   if (error) return { message: "That code was not recognised for your organisation." };
   revalidatePath("/dashboard");
   return { ok: true, message: "You have joined the class." };
+}
+
+export async function saveDatabaseActivityPosition(
+  lessonId: string,
+  activityId: string,
+): Promise<{ ok: boolean }> {
+  const actor = await getSessionProfile();
+  if (!actor || actor.role !== "student") return { ok: false };
+  const parsed = z.object({
+    lessonId: databaseUuid,
+    activityId: databaseUuid,
+  }).safeParse({ lessonId, activityId });
+  if (!parsed.success) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_learner_activity_position", {
+    lesson_uuid: parsed.data.lessonId,
+    activity_uuid: parsed.data.activityId,
+  });
+  if (error) {
+    console.error("record_learner_activity_position failed", {
+      code: error.code,
+      message: error.message,
+    });
+    return { ok: false };
+  }
+  return { ok: true };
 }
 
 export async function submitPractice(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -502,6 +532,26 @@ export async function recordTeacherAction(_: ActionState, formData: FormData): P
   if (error) return { message: "The teacher action could not be recorded." };
   revalidatePath(`/teacher/learners/${parsed.data.learnerId}`);
   return { ok: true, message: "Teacher action added to the learner evidence chain." };
+}
+
+export async function recordTeacherNote(_: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await getSessionProfile();
+  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can record learner notes." };
+  const parsed = z.object({
+    classId: databaseUuid,
+    learnerId: databaseUuid,
+    note: z.string().trim().min(5).max(2000),
+  }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { message: "Write a note of 5 to 2,000 characters." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("teacher_record_learner_note", {
+    learner_uuid: parsed.data.learnerId,
+    class_uuid: parsed.data.classId,
+    note_value: parsed.data.note,
+  });
+  if (error) return { message: "The note could not be recorded for this learner and class." };
+  revalidatePath(`/teacher/learners/${parsed.data.learnerId}`);
+  return { ok: true, message: "Private teacher note recorded against this class." };
 }
 
 export async function overridePathway(_: ActionState, formData: FormData): Promise<ActionState> {

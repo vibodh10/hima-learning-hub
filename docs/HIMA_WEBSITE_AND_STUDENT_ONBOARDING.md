@@ -27,8 +27,10 @@ Open student self-registration should remain disabled. Hima should invite each s
 2. Configure the email sender and customise the **Invite user** email template with Hima Learning Hub wording.
 3. Keep the intentional confirmation screen in the invitation template so email-security scanners cannot consume the link before the student clicks Continue:
    `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/update-password`
-4. Add the live website callback URL to Supabase's allowed redirect URLs:
-   `https://YOUR-DOMAIN/auth/callback?next=/update-password`
+4. Add the live website callback route to Supabase's allowed redirect URLs. The
+   portal appends a non-secret invitation identifier so acceptance can be bound to
+   the durable ledger record; allow the callback route's query variants, for example:
+   `https://YOUR-DOMAIN/auth/callback**`
 5. Set server-only `APP_URL=https://YOUR-DOMAIN` to the same public HTTPS origin. Do not use Railway's internal localhost address.
 6. Keep `SUPABASE_SERVICE_ROLE_KEY` only in the server's environment settings. Never place it in a variable beginning `NEXT_PUBLIC_`, in browser code, screenshots or emails.
 7. Confirm that the public `/register` page is used only for controlled teaching-staff requests. Students must not use it.
@@ -48,7 +50,15 @@ Open student self-registration should remain disabled. Hima should invite each s
 2. Follow the link to Hima Learning Hub.
 3. Press **Continue securely**, then set a password of at least ten characters.
 4. The portal opens the student's dashboard after the password is saved.
-5. The assigned class and units appear automatically. If immediate provisioning had a temporary failure, acceptance or the next sign-in retries it safely. The student does not need a public enrolment code.
+5. Secure acceptance creates or confirms the student profile and class enrolment;
+   the assigned class and units then appear automatically. A temporary finalisation
+   failure is retried on the next valid sign-in. The student does not need a public
+   enrolment code.
+
+Teachers can cancel or mark an unaccepted invitation as expired from the class
+ledger. Either state prevents subsequent application provisioning. **Send another
+access email** creates a fresh invite or recovery path without storing or displaying
+an Auth token.
 
 ## Before inviting real students
 

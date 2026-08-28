@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { canIgnoreLegacyInvitationMetadata } from "@/lib/invitation-finalization-policy";
+import {
+  canIgnoreLegacyInvitationMetadata,
+  invitationAcceptanceBlock,
+} from "@/lib/invitation-finalization-policy";
 
 describe("invitation finalization policy", () => {
   it.each(["student", "teacher", "administrator"] as const)(
@@ -22,5 +25,19 @@ describe("invitation finalization policy", () => {
 
   it("does not treat a missing profile as provisioned", () => {
     expect(canIgnoreLegacyInvitationMetadata(null, false)).toBe(false);
+  });
+
+  it.each(["sent", "accepted"])("allows a %s invitation to finalize", (status) => {
+    expect(invitationAcceptanceBlock(status)).toBeNull();
+  });
+
+  it.each([
+    ["cancelled", "invitation_cancelled"],
+    ["expired", "invitation_expired"],
+    ["pending", "invitation_not_sent"],
+    ["failed", "invitation_inactive"],
+    [null, "invitation_inactive"],
+  ])("blocks a %s invitation with %s", (status, code) => {
+    expect(invitationAcceptanceBlock(status)).toBe(code);
   });
 });

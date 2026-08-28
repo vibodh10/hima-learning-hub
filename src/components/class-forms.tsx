@@ -6,6 +6,7 @@ import {
   moveStudent, recordBulkTeacherAction, saveWeeklyPlan, setPathwayThresholds,
   startGroupLearningJourney, type ActionState,
 } from "@/app/actions/learning";
+import { ISO_WEEKDAYS, normaliseWeeklyLearningDays } from "@/lib/weekly-schedule";
 
 export function JoinClassForm() {
   const [state, action, pending] = useActionState<ActionState, FormData>(joinClass, {});
@@ -43,7 +44,7 @@ export function ClassSettingsForm({
   classData: {
     id: string; name: string; course_id: string; academic_period_id: string | null;
     active_unit_id: string | null; starts_on: string | null; ends_on: string | null;
-    weekly_learning_day: number | null; published: boolean;
+    weekly_learning_day: number | null; weekly_learning_days: number[] | null; published: boolean;
   };
   courses: { id: string; title: string }[];
   units: CurriculumUnit[];
@@ -53,7 +54,11 @@ export function ClassSettingsForm({
   const [state, action, pending] = useActionState<ActionState, FormData>(configureClass, {});
   const [courseId, setCourseId] = useState(classData.course_id);
   const visibleUnits = units.filter(unit => unit.course_id === courseId);
-  return <details className="card mt-6 border-teal-200" open={!selectedUnitIds.length}>
+  const selectedLearningDays = normaliseWeeklyLearningDays(
+    classData.weekly_learning_days,
+    classData.weekly_learning_day,
+  );
+  return <details className="card mt-6 border-teal-200" id="unit-settings" open={!selectedUnitIds.length}>
     <summary className="cursor-pointer text-xl font-bold">1. Choose the units you teach</summary>
     <p className="mt-2 text-sm text-slate-600">Select only the units this student group should see. You can return here whenever your teaching allocation changes.</p>
     <form action={action} className="mt-5 grid gap-5">
@@ -71,11 +76,21 @@ export function ClassSettingsForm({
             {periods.map(period => <option value={period.id} key={period.id}>{relatedYear(period.academic_years)} · {period.name} ({period.kind})</option>)}
           </select>
         </label>
-        <label className="grid gap-2 text-sm font-semibold">Usual weekly learning day
-          <select className="input" name="weeklyLearningDay" defaultValue={classData.weekly_learning_day ?? 1}>
-            {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map((day,index) => <option value={index+1} key={day}>{day}</option>)}
-          </select>
-        </label>
+        <fieldset className="rounded-xl border border-slate-200 p-4">
+          <legend className="px-1 text-sm font-semibold">Usual weekly learning days</legend>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {ISO_WEEKDAYS.map(day => <label className="flex items-center gap-2 text-sm" key={day.value}>
+              <input
+                type="checkbox"
+                name="weeklyLearningDays"
+                value={day.value}
+                defaultChecked={selectedLearningDays.includes(day.value)}
+              />
+              {day.label}
+            </label>)}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">Select every regular teaching day. The earliest selected day anchors the once-per-week learning journey.</p>
+        </fieldset>
       </div>
       <fieldset>
         <legend className="text-sm font-bold">Units taught to this group</legend>
@@ -113,9 +128,9 @@ export function StartGroupJourneyForm({
   return <form action={action} className="card mt-6 grid gap-4 md:grid-cols-[1fr_auto]">
     <input type="hidden" name="classId" value={classId}/>
     <div className="md:col-span-2">
-      <p className="eyebrow">Configured curriculum</p>
-      <h2 className="mt-2 text-2xl font-bold">Start learning journey</h2>
-      <p className="mt-2 text-sm text-slate-600">Choose the unit once. The portal starts Teaching Week 1 and pauses for configured holidays and closures.</p>
+      <p className="eyebrow">Journey recovery</p>
+      <h2 className="mt-2 text-2xl font-bold">Restore journey tracking</h2>
+      <p className="mt-2 text-sm text-slate-600">This class already has students but no active journey. Choose an approved unit journey to restore Teaching Week tracking; configured holidays and closures remain excluded.</p>
     </div>
     <label className="grid gap-2 text-sm font-semibold">Unit journey
       <select className="input" name="templateId" required defaultValue="">
@@ -126,7 +141,7 @@ export function StartGroupJourneyForm({
       </select>
     </label>
     <button className="button self-end" disabled={pending || !templates.length}>
-      {pending ? "Starting…" : "Start learning journey"}
+      {pending ? "Restoring…" : "Restore journey tracking"}
     </button>
     {!templates.length && <p className="text-sm text-amber-900 md:col-span-2">No approved shared journey is available for this class’s active units.</p>}
     {state.message && <p role="status" className={`text-sm md:col-span-2 ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}

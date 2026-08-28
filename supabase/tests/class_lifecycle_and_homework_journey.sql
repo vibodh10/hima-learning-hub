@@ -40,6 +40,8 @@ begin
   end if;
   if not exists(select 1 from public.activity_allocations
       where learner_id='90000000-0000-0000-0000-000000000002'
+        and class_id='a0000000-0000-0000-0000-000000000001'
+        and class_scope_source='explicit'
         and allocation_mode='auto' and expected_minutes=15 and required) then
     raise exception 'learner-specific adaptive homework allocation failed';
   end if;

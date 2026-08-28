@@ -8,10 +8,20 @@ import { CreateClassForm, JoinClassForm } from "@/components/class-forms";
 import { NewBadgeNotifications } from "@/components/achievement-celebration";
 import { summariseActivityProgress } from "@/lib/activity-progress";
 import { selectNextTarget } from "@/lib/target-priority";
-import { topicByCode } from "@/lib/learning-catalog";
+import { topicByCode, unitByCode } from "@/lib/learning-catalog";
+import { latestIncompleteCurriculumPosition } from "@/lib/learning-progress";
 import { evidenceStageForMilestone, journeyWeekFor, nextJourneyMilestone } from "@/lib/unit-journeys";
 import { scopedTeacherAttention, selectTeacherDashboardLearners } from "@/lib/teacher-dashboard-filters";
 import { summariseTeacherOverview } from "@/lib/dashboard-summary";
+import { selectStudentNextAction } from "@/lib/student-next-action";
+import { selectTeacherNextAction } from "@/lib/teacher-next-action";
+import {
+  latestSavedLearningResume,
+  selectDatabaseActivityContinuation,
+} from "@/lib/database-learning-continuation";
+import { matchCompletedAllocationIds } from "@/lib/class-report-model";
+import { formatWeeklyLearningDays } from "@/lib/weekly-schedule";
+import { hasCompleteUnitStartingPoint } from "@/lib/unit-starting-point";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -52,12 +62,14 @@ export default async function DashboardPage({searchParams}:{searchParams:Promise
 
 async function StudentDashboard({ id, name }: { id: string; name: string }) {
   const supabase = await createClient();
+  const now=await currentTimestamp();
   const [
     { data: progress }, { data: targets }, { data: enrolments }, { data: pilot },
     { data: mastery }, { data: badges }, { data: coins }, { data: retrieval },
     { data: streak }, { data: attempts }, { data: assessments },
     { data: comparisons }, { data: routes }, { data: courseStartingActivities }, { data: recentFeedback },
     { data: journeyWorksheets }, { data: curriculumProgressRows }, { data: curriculumAttempts },
+    { data: savedDatabasePosition },
   ] = await Promise.all([
     supabase.from("topic_progress").select("latest_score,best_score,current_pathway,topics(title)").eq("learner_id", id).limit(4),
     supabase.from("targets").select("id,target_text,target_date,status,reason,evidence,success_measure,unit_id,topic_id,skill_id,linked_activity_id,approved_by,approved_at,teacher_note,skills(title),activities:linked_activity_id(lesson_id)").eq("learner_id", id).in("status", ["proposed","approved","active","extended"]).order("target_date").limit(20),
@@ -68,15 +80,16 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     supabase.from("coin_transactions").select("amount").eq("learner_id", id).in("transaction_status",["posted","refunded"]),
     supabase.from("retrieval_schedules").select("scheduled_for,status,topics(title),review_activity_id").eq("learner_id", id).in("status", ["scheduled", "available"]).order("scheduled_for").limit(1),
     supabase.from("practice_streaks").select("current_count,best_count").eq("learner_id", id).maybeSingle(),
-    supabase.from("attempts").select("activity_id,completed_at").eq("learner_id", id).not("completed_at", "is", null),
+    supabase.from("attempts").select("activity_id,allocation_id,completed_at").eq("learner_id", id).not("completed_at", "is", null),
     supabase.from("assessment_instances").select("id,kind,completed_at,activities(title)").eq("learner_id", id).order("completed_at", { ascending: false }),
     supabase.from("skill_progress_comparisons").select("starting_percentage,latest_percentage,improvement_points,status,evidence,skills(title)").eq("learner_id", id).order("updated_at", { ascending: false }),
     supabase.from("learner_routes").select("route,status,retention_due_on,topics(title)").eq("learner_id", id).eq("status", "active"),
     supabase.from("activities").select("id,title,estimated_minutes,lesson_id,lessons(id,title,status,topics(units(course_id)))").eq("assessment_kind","course_starting_point").eq("status","approved"),
     supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_at,attempt_answers(feedback,questions(question_text),attempts(activities(title)))").eq("learner_id",id).not("reviewed_at","is",null).order("reviewed_at",{ascending:false}).limit(3),
     supabase.from("learner_topic_worksheets").select("id,unit_code,topic_code,evidence_stage,submitted_at").eq("learner_id",id).order("submitted_at",{ascending:true}),
-    supabase.from("learner_curriculum_progress").select("unit_code,topic_code,practice_score,mastery_score,independent_attempts,evidence").eq("learner_id",id),
+    supabase.from("learner_curriculum_progress").select("unit_code,topic_code,topic_started_at,lesson_completed_at,current_section,practice_score,mastery_score,independent_attempts,evidence,updated_at").eq("learner_id",id),
     supabase.from("learner_curriculum_attempts").select("id,kind,unit_code,topic_code,percentage,completed_at").eq("learner_id",id).order("completed_at",{ascending:false}).limit(100),
+    supabase.from("learner_activity_positions").select("lesson_id,activity_id,last_opened_at,activities(id,title,lesson_id,lessons(id,title,topics(unit_id,units(id,code,title))))").eq("learner_id",id).maybeSingle(),
   ]);
 
   const course = related(enrolments?.[0]?.classes);
@@ -127,10 +140,21 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       .is("archived_at",null).order("starts_on").limit(8)
     : {data:[]};
   const { data: allocations } = classId ? await supabase.from("activity_allocations")
-    .select("id,release_at,deadline_at,required,allocated_pathway,activities(id,lesson_id,title,learning_stage,estimated_minutes)")
-    .or(`learner_id.eq.${id},class_id.eq.${classId}`).is("archived_at", null).order("deadline_at") : { data: [] };
+    .select("id,learner_id,activity_id,release_at,deadline_at,required,allocated_pathway,class_scope_source,activities(id,lesson_id,title,learning_stage,estimated_minutes)")
+    .eq("class_id",classId).or(`learner_id.is.null,learner_id.eq.${id}`)
+    .is("archived_at", null).order("deadline_at") : { data: [] };
   const coinBalance = coins?.reduce((sum, transaction) => sum + Number(transaction.amount), 0) ?? 0;
-  const completedIds = new Set((attempts ?? []).map(attempt => attempt.activity_id));
+  const completedAllocationIds=matchCompletedAllocationIds(
+    (allocations??[]).map(item=>({
+      id:item.id,learnerId:item.learner_id,activityId:item.activity_id,
+      releaseAt:item.release_at,deadlineAt:item.deadline_at,required:item.required,
+      classScopeSource:item.class_scope_source,
+    })),
+    (attempts??[]).map(attempt=>({
+      learnerId:id,activityId:attempt.activity_id,
+      allocationId:attempt.allocation_id,completedAt:String(attempt.completed_at),
+    })),
+  );
   const allPilotActivities = ((pilot?.activities ?? []) as { id: string; title: string; learning_stage: string | null;assessment_kind:string|null; estimated_minutes: number; required: boolean }[]);
   const hasOfficialRetention=allPilotActivities.some(activity=>activity.assessment_kind==="retention_check");
   const pilotActivities = allPilotActivities
@@ -149,6 +173,36 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
   const activeUnit=((course?.class_units??[]) as {active:boolean;units:{id:string;code:string;title:string}|{id:string;code:string;title:string}[]|null}[])
     .map(item=>related(item.units)).find(unit=>unit?.id===activeUnitId);
   const activeUnitCode=activeUnit?.code;
+  const activeCatalogUnit=activeUnitCode?unitByCode(activeUnitCode):undefined;
+  const activeUnitStartingPointComplete=activeCatalogUnit
+    ? hasCompleteUnitStartingPoint(
+      curriculumProgressRows??[],
+      activeCatalogUnit.code,
+      activeCatalogUnit.topics.map(topic=>topic.code),
+    )
+    : false;
+  const savedDatabaseActivity=related(savedDatabasePosition?.activities);
+  const savedDatabaseLesson=related(savedDatabaseActivity?.lessons);
+  const savedDatabaseTopic=related(savedDatabaseLesson?.topics);
+  const savedDatabaseUnit=related(savedDatabaseTopic?.units);
+  const databasePositionInScope=Boolean(
+    savedDatabaseActivity?.id&&savedDatabaseLesson?.id&&savedDatabaseUnit?.id&&
+    assignedUnitIds.has(savedDatabaseUnit.id),
+  );
+  const [{data:savedLessonActivities},{data:savedActivityStates}]=databasePositionInScope
+    ? await Promise.all([
+      supabase.from("activities").select("id,title").eq("lesson_id",savedDatabaseLesson!.id)
+        .eq("status","approved").is("archived_at",null),
+      supabase.rpc("learner_activity_states",{lesson_uuid:savedDatabaseLesson!.id,learner_uuid:id}),
+    ])
+    : [{data:[]},{data:[]}];
+  const savedDatabaseContinuation=databasePositionInScope
+    ? selectDatabaseActivityContinuation({
+      savedActivityId:savedDatabasePosition!.activity_id,
+      activities:savedLessonActivities??[],
+      states:(savedActivityStates??[]) as ActivityState[],
+    })
+    : null;
   const currentJourneyWeek=activeUnitCode&&journeyPosition
     ? journeyWeekFor(activeUnitCode,Number(journeyPosition.teaching_week))
     : undefined;
@@ -178,6 +232,94 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     weakest?.current_pathway === "Stretch" ? "challenge_practice" :
     weakest?.current_pathway === "Mastery" ? "mastery_check" : "guided_practice";
   const recommendedActivity = pilotActivities.find(activity => activity.learning_stage === recommendedStage);
+  const recommendedUnit4Activity=activeUnitCode==="4"?recommendedActivity:undefined;
+  const linkedTargetActivityId=nextTarget?.linked_activity_id??recommendedUnit4Activity?.id;
+  const linkedTargetLessonId=related(nextTarget?.activities)?.lesson_id??(recommendedUnit4Activity?pilotLessonId:null);
+  const savedCurriculumPosition=latestIncompleteCurriculumPosition(curriculumProgressRows??[]);
+  const savedCurriculumTopic=savedCurriculumPosition?topicByCode(savedCurriculumPosition.unitCode,savedCurriculumPosition.topicCode):undefined;
+  const savedCurriculumUnit=savedCurriculumPosition?unitByCode(savedCurriculumPosition.unitCode):undefined;
+  const savedModuleNumber=savedCurriculumUnit&&savedCurriculumTopic
+    ? savedCurriculumUnit.topics.findIndex(item=>item.code===savedCurriculumTopic.code)+1
+    : null;
+  const savedSection=savedCurriculumPosition?.section??"lesson:1";
+  const savedCurriculumHref=savedCurriculumPosition
+    ? savedSection==="practice"
+      ? `/curriculum/units/${savedCurriculumPosition.unitCode}/topics/${encodeURIComponent(savedCurriculumPosition.topicCode)}/practice`
+      : `/curriculum/units/${savedCurriculumPosition.unitCode}/topics/${encodeURIComponent(savedCurriculumPosition.topicCode)}`
+    : null;
+  const curriculumResume=savedCurriculumPosition&&savedCurriculumTopic&&savedCurriculumHref?{
+    title:`Continue Module ${savedModuleNumber}: ${savedCurriculumTopic.title}`,
+    detail:savedSection==="practice"
+      ? "Resume the adaptive questions from your saved module position."
+      : `Resume ${savedSection.startsWith("lesson:")?`lesson card ${savedSection.slice(7)}`:"this module"} from your saved account position.`,
+    href:savedCurriculumHref,
+    updatedAt:savedCurriculumPosition.updatedAt,
+  }:undefined;
+  const databaseResume=savedDatabaseContinuation&&savedDatabaseLesson?{
+    title:`Continue ${savedDatabaseLesson.title}`,
+    detail:savedDatabaseContinuation.activityId===savedDatabasePosition?.activity_id
+      ? savedDatabaseContinuation.state==="Additional Practice Required"
+        ? `${savedDatabaseContinuation.activityTitle} needs another attempt before you move on.`
+        : `Resume ${savedDatabaseContinuation.activityTitle}, the database activity you last opened.`
+      : `Your last activity is complete. Continue with ${savedDatabaseContinuation.activityTitle}, the next available step.`,
+    href:`/learn/${savedDatabaseLesson.id}/activities/${savedDatabaseContinuation.activityId}`,
+    updatedAt:savedDatabasePosition!.last_opened_at,
+  }:undefined;
+  const savedResume=latestSavedLearningResume(curriculumResume,databaseResume);
+  const studentNextAction=selectStudentNextAction({
+    startingPoint: activeCatalogUnit&&!activeUnitStartingPointComplete
+      ? {
+        title:`Unit ${activeCatalogUnit.code} starting point`,
+        detail:`Complete the independent starting point for ${activeCatalogUnit.title}. It changes the support and challenge inside the class topic; it does not move you away from your group’s teaching week.`,
+        href:`/curriculum/units/${activeCatalogUnit.code}/starting-point`,
+      }
+      : !assessments?.some(item=>item.kind==="course_starting_point")&&courseStartActivity&&courseStartLesson
+        ? {
+        title:courseStartLesson.title,
+        detail:"Create your permanent course baseline. This records prior knowledge but does not change your assigned unit or class teaching week.",
+        href:`/learn/${courseStartLesson.id}/activities/${courseStartActivity.id}`,
+      }
+      : undefined,
+    catchUps:catchUps.map(item=>{
+      const topic=topicByCode(item.unit_code,item.topic_code);
+      return{
+        title:`Unit ${item.unit_code} · ${topic?.title??item.topic_code}`,
+        href:`/curriculum/units/${item.unit_code}/topics/${encodeURIComponent(item.topic_code)}?catchup=1#worksheet`,
+        status:item.status,
+      };
+    }),
+    allocations:(allocations??[]).flatMap(item=>{
+      const activity=related(item.activities);
+      return activity?.id&&activity.lesson_id?[{
+        title:activity.title,
+        href:`/learn/${activity.lesson_id}/activities/${activity.id}`,
+        completed:completedAllocationIds.has(item.id),
+        deadlineAt:item.deadline_at,
+      }]:[];
+    }),
+    resume:savedResume,
+    journey:currentJourneyWeek&&activeUnitCode?{
+      title:currentJourneyWeek.title,
+      detail:currentJourneyWeek.focus,
+      href:`/curriculum/units/${activeUnitCode}/topics/${encodeURIComponent(currentJourneyWeek.topicCode)}?stage=${evidenceStageForMilestone(currentJourneyWeek.milestone)}#worksheet`,
+    }:undefined,
+    target:linkedTargetActivityId&&linkedTargetLessonId?{
+      title:nextTarget?.target_text??recommendedUnit4Activity?.title??"Targeted practice",
+      detail:nextTarget?.reason??"Use this practice to strengthen the skill your recent evidence identified.",
+      href:`/learn/${linkedTargetLessonId}/activities/${linkedTargetActivityId}`,
+    }:undefined,
+    unit:activeUnit?{
+      title:`Unit ${activeUnit.code} — ${activeUnit.title}`,
+      detail:"Open your assigned unit to choose the next available topic and continue from your saved position.",
+      href:/^(1|2|4|6|8|9)$/.test(activeUnit.code)?`/curriculum/units/${activeUnit.code}`:"/curriculum",
+    }:undefined,
+    lesson:pilot&&activeUnitCode==="4"?{
+      title:pilot.title,
+      detail:related(pilot.topics)?.title??"Continue the approved lesson and practice sequence.",
+      href:`/learn/${pilotLessonId}`,
+    }:undefined,
+    now,
+  });
 
   return <main className="shell py-10">
     {unseenBadges.length>0&&<NewBadgeNotifications awards={unseenBadges}/>}
@@ -187,6 +329,15 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       <h1 className="mt-2 text-4xl font-bold">Good to see you, {name.split(" ")[0]}.</h1>
       <p className="mt-2 text-slate-600">{related(course.courses)?.title ?? "Your course"} is ready. Start with the next action shown below.</p>
     </div>
+
+    {studentNextAction?<section className="card mt-8 border-teal-200 bg-teal-50" aria-labelledby="continue-learning-title">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-3xl"><p className="eyebrow">{studentNextAction.eyebrow}</p><h2 className="mt-2 text-3xl font-bold" id="continue-learning-title">{studentNextAction.title}</h2><p className="mt-3 leading-7 text-slate-700">{studentNextAction.detail}</p></div>
+        {studentNextAction.meta&&<span className="rounded-full bg-white px-3 py-2 text-sm font-bold text-teal-900">{studentNextAction.meta}</span>}
+      </div>
+      <Link className="button mt-6 min-w-40 text-center" href={studentNextAction.href}>{studentNextAction.label} →</Link>
+      <p className="mt-3 text-xs text-slate-600">Your completed work and saved lesson, module or activity position are stored with your account.</p>
+    </section>:<section className="card mt-8 border-blue-200 bg-blue-50" aria-labelledby="learning-preparation-title"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold" id="learning-preparation-title">Your teacher is preparing your learning</h2><p className="mt-3 text-slate-700">Your account and course are active, but no starting point, allocated activity, active journey or published lesson is available yet.</p><Link className="link mt-4 inline-block" href="/curriculum">View my assigned units →</Link></section>}
 
     {journeyPosition&&<section className="card mt-8" aria-labelledby="my-computing-journey-title">
       <div className="flex flex-wrap items-start justify-between gap-5"><div><p className="eyebrow">My Computing Journey</p><h2 className="mt-2 text-3xl font-bold" id="my-computing-journey-title">{activeUnit?`Unit ${activeUnit.code} — ${activeUnit.title}`:journeyPosition.journey_title}</h2><p className="mt-2 text-lg font-semibold text-teal-800">Teaching Week {journeyPosition.teaching_week} of {journeyPosition.total_teaching_weeks}</p></div><span className={`rounded-full px-4 py-2 text-sm font-bold ${journeyPosition.position_status==="paused"?"bg-sky-100 text-sky-900":journeyPosition.position_status==="completed"?"bg-teal-100 text-teal-900":"bg-emerald-100 text-emerald-900"}`}>{journeyPosition.position_status==="paused"?"Paused for college break":journeyPosition.position_status==="completed"?"Journey complete":"In progress"}</span></div>
@@ -208,31 +359,21 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       <Metric label="Practice streak" value={streak ? `${streak.current_count} learning days` : "Not started"}/>
     </section>
 
-    {!assessments?.some(item=>item.kind==="course_starting_point")&&courseStartActivity&&courseStartLesson&&<section className="card mt-6 border-blue-200 bg-blue-50"><p className="eyebrow">Begin here</p><h2 className="mt-2 text-2xl font-bold">{courseStartLesson.title}</h2><p className="mt-2 text-slate-700">Record your broad digital knowledge, problem solving, prior experience, confidence, support needs and aspirations. This baseline is permanent and is not a grade.</p><Link className="button mt-4" href={`/learn/${courseStartLesson.id}/activities/${courseStartActivity.id}`}>Open course starting point →</Link></section>}
-
     {course&&<section className="card mt-6"><p className="eyebrow">Assigned curriculum</p><h2 className="mt-2 text-2xl font-bold">Your Units / Content Areas</h2><div className="mt-4 flex flex-wrap gap-2">{((course.class_units??[]) as {active:boolean;units:{id:string;code:string;title:string;kind:string}|{id:string;code:string;title:string;kind:string}[]|null}[]).filter(item=>item.active).map((item,index)=>{const unit=related(item.units);return unit?.code.match(/^(1|2|4|6|8|9)$/)?<Link className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold hover:bg-teal-100" href={`/curriculum/units/${unit.code}`} key={index}>{`Unit ${unit.code}: `}{unit.title} →</Link>:<span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold" key={index}>{unit?.code.match(/^\d+$/)?`Unit ${unit.code}: `:""}{unit?.title}</span>})}</div><p className="mt-3 text-sm text-slate-500">Open any active unit to choose a topic, complete its lesson and work towards the Challenge project.</p></section>}
 
-    <section className="mt-8 grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
-      <div className="card">
-        <p className="eyebrow">Continue learning</p>
-        <h2 className="mt-3 text-2xl font-bold">{pilot?.title ?? "Python foundations: input, processing and output"}</h2>
-        <p className="mt-3 leading-7 text-slate-600">{related(pilot?.topics)?.title ?? "Learn the topic, then move from guided practice to independent mastery."}</p>
-        <Link className="button mt-6" href={`/learn/${pilotLessonId}`}>Open the Python lesson →</Link>
-      </div>
-      <div className="card">
+    <section className="card mt-6">
         <h2 className="text-xl font-bold">Your next target</h2>
         <p className="mt-4 leading-7 text-slate-600">{nextTarget?.target_text ?? "Complete an activity in your active unit to generate an evidence-based, skill-specific target."}</p>
         {nextTarget&&<div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm"><p><strong>Skill:</strong> {related(nextTarget.skills)?.title??"Active-unit priority"}</p><p className="mt-1"><strong>Reason:</strong> {nextTarget.reason}</p><p className="mt-1"><strong>Evidence:</strong> {targetEvidence(nextTarget.evidence)}</p><p className="mt-1"><strong>Success:</strong> {nextTarget.success_measure??"Meet the percentage stated in the target."}</p><p className="mt-1"><strong>Deadline:</strong> {new Date(nextTarget.target_date).toLocaleDateString("en-GB")}</p></div>}
         {weakest && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-950"><strong>Revisit:</strong> {related(weakest.skills)?.title} · {Math.round(Number(weakest.mastery_score))}% mastery</p>}
-        {(nextTarget?.linked_activity_id||recommendedActivity) && <Link className="link mt-4 inline-block text-sm" href={`/learn/${related(nextTarget?.activities)?.lesson_id??pilotLessonId}/activities/${nextTarget?.linked_activity_id??recommendedActivity?.id}`}>Open linked practice →</Link>}
-      </div>
+        {linkedTargetActivityId&&linkedTargetLessonId&&<Link className="link mt-4 inline-block text-sm" href={`/learn/${linkedTargetLessonId}/activities/${linkedTargetActivityId}`}>Open linked practice →</Link>}
     </section>
 
     {allocations?.length ? <section className="card mt-6">
-      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">Allocated learning</p><h2 className="mt-2 text-2xl font-bold">Due homework and classwork</h2></div><span className="text-sm text-slate-500">{allocations.filter(item => !completedIds.has(related(item.activities)?.id ?? "")).length} outstanding</span></div>
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">Allocated learning</p><h2 className="mt-2 text-2xl font-bold">Due homework and classwork</h2></div><span className="text-sm text-slate-500">{allocations.filter(item => !completedAllocationIds.has(item.id)).length} outstanding</span></div>
       <div className="mt-5 grid gap-3">{allocations.map(item => {
         const activity = related(item.activities);
-        const completed = completedIds.has(activity?.id ?? "");
+        const completed = completedAllocationIds.has(item.id);
         const overdue = !completed && item.deadline_at && new Date(item.deadline_at) < new Date();
         return <Link key={item.id} href={`/learn/${activity?.lesson_id}/activities/${activity?.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 hover:bg-teal-50"><div><p className="font-semibold">{activity?.title}</p><p className="mt-1 text-sm text-slate-500">{item.allocated_pathway} · {item.required ? "required" : "optional"} · due {item.deadline_at ? new Date(item.deadline_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : "when ready"}</p></div><span className={`rounded-full px-3 py-1 text-sm font-bold ${completed ? "bg-teal-100 text-teal-900" : overdue ? "bg-red-100 text-red-900" : "bg-amber-100 text-amber-950"}`}>{completed ? "Completed" : overdue ? "Overdue" : "Upcoming"}</span></Link>;
       })}</div>
@@ -276,7 +417,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
 async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;filters:TeacherFilters }) {
   const supabase = await createClient();
   const now=await currentTimestamp();
-  const classesQuery=supabase.from("classes").select("id,name,course_id,academic_year_id,academic_period_id,published,enrolments(count),class_enrolments:enrolments(student_id),courses(title),class_units(unit_id,active,units(code,title))").is("archived_at", null);
+  const classesQuery=supabase.from("classes").select("id,name,course_id,academic_year_id,academic_period_id,weekly_learning_day,weekly_learning_days,published,enrolments(count),class_enrolments:enrolments(student_id),student_invitations(status),courses(title),class_units(unit_id,active,units(code,title))").is("archived_at", null);
   const [
     { data: classes }, { data: courses }, { data: years }, { data: mastery },
     { data: misconceptions }, { data: badges }, { data: coins },
@@ -296,8 +437,8 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
     supabase.from("units").select("id,course_id,code,title").is("archived_at",null).order("sort_order"),
     supabase.from("topics").select("id,unit_id,title").is("archived_at",null).order("sort_order"),
     supabase.from("skills").select("id,topic_id,title").is("archived_at",null).order("sort_order"),
-    supabase.from("attempts").select("learner_id,activity_id,started_at,completed_at,activities(kind,lessons(topics(id,unit_id)))").order("started_at",{ascending:false}).limit(1000),
-    supabase.from("activity_allocations").select("id,class_id,learner_id,activity_id,release_at,deadline_at,activities(kind,lessons(topics(id,unit_id)))").is("archived_at",null).limit(1000),
+    supabase.from("attempts").select("learner_id,activity_id,allocation_id,started_at,completed_at,activities(kind,lessons(topics(id,unit_id)))").order("started_at",{ascending:false}).limit(1000),
+    supabase.from("activity_allocations").select("id,class_id,learner_id,activity_id,release_at,deadline_at,required,class_scope_source,activities(kind,lessons(topics(id,unit_id)))").not("class_id","is",null).is("archived_at",null).limit(1000),
     supabase.from("assessment_instances").select("learner_id,kind,completed_at,activities(lessons(topics(id,unit_id)))").not("completed_at","is",null),
     supabase.from("skill_progress_comparisons").select("learner_id,skill_id,improvement_points,status"),
     supabase.from("targets").select("learner_id,status,target_date,review_on").is("archived_at",null),
@@ -336,26 +477,56 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
   const totalStudentCount=overview.students;
   const groupJourneySignals=classSignals.flatMap(item=>item.journey?[item.journey]:[]);
   const latestAttemptByLearnerActivity=new Map<string,{started_at:string;completed_at:string|null}>();
+  const completedAttemptByAllocation=new Map<string,{started_at:string;completed_at:string|null}>();
   for(const attempt of attemptEvidence??[]){
     const key=`${attempt.learner_id}:${attempt.activity_id}`;
     if(!latestAttemptByLearnerActivity.has(key)) latestAttemptByLearnerActivity.set(key,attempt);
+    if(attempt.allocation_id&&attempt.completed_at&&!completedAttemptByAllocation.has(attempt.allocation_id)){
+      completedAttemptByAllocation.set(attempt.allocation_id,attempt);
+    }
   }
   const classById=new Map((classes??[]).map(item=>[item.id,item]));
+  const completedByClassLearner=new Map<string,Set<string>>();
+  for(const classRow of classes??[]){
+    for(const enrolment of classRow.class_enrolments??[]){
+      const learnerId=enrolment.student_id;
+      const applicable=(allocationEvidence??[]).filter(allocation=>
+        allocation.class_id===classRow.id&&
+        (allocation.learner_id==null||allocation.learner_id===learnerId));
+      completedByClassLearner.set(`${classRow.id}:${learnerId}`,matchCompletedAllocationIds(
+        applicable.map(allocation=>({
+          id:allocation.id,learnerId:allocation.learner_id,
+          activityId:allocation.activity_id,releaseAt:allocation.release_at,
+          deadlineAt:allocation.deadline_at,required:allocation.required,
+          classScopeSource:allocation.class_scope_source,
+        })),
+        (attemptEvidence??[]).filter(attempt=>
+          attempt.learner_id===learnerId&&attempt.completed_at!=null).map(attempt=>({
+          learnerId,activityId:attempt.activity_id,
+          allocationId:attempt.allocation_id,completedAt:String(attempt.completed_at),
+        })),
+      ));
+    }
+  }
   const completionEvidence=(allocationEvidence??[]).flatMap(allocation=>{
     const learners=allocation.learner_id
       ? [allocation.learner_id]
       : (classById.get(allocation.class_id ?? "")?.class_enrolments??[]).map(row=>row.student_id);
     return learners.map(learnerId=>{
       const attempt=latestAttemptByLearnerActivity.get(`${learnerId}:${allocation.activity_id}`);
+      const completed=completedByClassLearner
+        .get(`${allocation.class_id}:${learnerId}`)?.has(allocation.id)??false;
+      const completionAttempt=completedAttemptByAllocation.get(allocation.id)??attempt;
       const deadline=allocation.deadline_at?new Date(allocation.deadline_at).getTime():null;
-      const completedAt=attempt?.completed_at?new Date(attempt.completed_at).getTime():null;
-      const status=completedAt
-        ? deadline&&completedAt>deadline?"late":"completed"
+      const completedAt=completed&&completionAttempt?.completed_at
+        ?new Date(completionAttempt.completed_at).getTime():null;
+      const status=completed
+        ? deadline&&completedAt!=null&&completedAt>deadline?"late":"completed"
         : attempt?"started"
         : deadline&&deadline<now?"overdue":"not_attempted";
       return{classId:allocation.class_id,learnerId,activityId:allocation.activity_id,status,
         kind:related(allocation.activities)?.kind,topicId:activityTopicId(allocation.activities),
-        evidenceAt:attempt?.completed_at??allocation.release_at};
+        evidenceAt:completionAttempt?.completed_at??allocation.release_at};
     });
   });
   const baseVisibleClasses=(classes??[]).filter(item=>
@@ -464,21 +635,37 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
   const upcomingCheckpoints=visibleJourneySignals.map(signal=>({
     ...signal,milestone:nextJourneyMilestone(signal.unitCode,signal.teachingWeek),
   })).filter(item=>item.milestone);
+  const teacherNextAction=selectTeacherNextAction({
+    classes:(classes??[]).map(item=>({
+      id:item.id,
+      name:item.name,
+      published:item.published,
+      activeUnitCount:(item.class_units??[]).filter(unit=>unit.active).length,
+      studentCount:item.enrolments?.[0]?.count??0,
+      pendingInvitationCount:(item.student_invitations??[]).filter(invitation=>["pending","sent"].includes(invitation.status)).length,
+    })),
+    attention:allAttention.map(item=>({
+      learnerId:item.learner_id,
+      displayName:item.display_name,
+      status:item.attention_status,
+      reason:item.attention_reason,
+    })),
+  });
 
   return <main className="shell py-10">
     <RoleBanner role={role}/>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">{role==="administrator"?"Teaching administration":"Teacher dashboard"}</p><h1 className="mt-2 text-4xl font-bold">{role==="administrator"?"Teaching overview":"Welcome to your teaching hub"}</h1><p className="mt-2 max-w-3xl text-slate-600">Choose your units, invite your students, then use this page to see who needs you and what to do next.</p></div><div className="flex flex-wrap gap-3"><Link className="button-secondary" href="/teacher/sample-report">Preview evidence report</Link>{role==="administrator"&&<Link className="button" href="/teacher/content">Manage curriculum</Link>}</div></div>
-    <ol className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4" aria-label="Teacher getting-started steps">
-      <TeacherStep number="1" title="Choose programme" detail="Create a BTEC or T Level student group." href="#classes" action="Create a group"/>
-      <TeacherStep number="2" title="Choose your units" detail="Open the group and select only the units you teach." href="#classes" action="Open my groups"/>
-      <TeacherStep number="3" title="Invite students" detail="Send each student a secure link from the group page." href="#classes" action="Choose a group"/>
-      <TeacherStep number="4" title="Monitor learning" detail="Starting points, work, feedback and catch-up appear here." href="#classes" action="View my groups"/>
-    </ol>
+    <section className={`card mt-8 ${teacherNextAction.kind==="attention"?"border-amber-200 bg-amber-50":"border-teal-200 bg-teal-50"}`} aria-labelledby="teacher-next-action-title">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-3xl"><p className="eyebrow">{teacherNextAction.eyebrow}</p><h2 className="mt-2 text-3xl font-bold" id="teacher-next-action-title">{teacherNextAction.title}</h2><p className="mt-3 leading-7 text-slate-700">{teacherNextAction.detail}</p></div>
+        {teacherNextAction.meta&&<span className="rounded-full bg-white px-3 py-2 text-sm font-bold text-slate-900">{teacherNextAction.meta}</span>}
+      </div>
+      <Link className="button mt-6 min-w-40 text-center" href={teacherNextAction.href}>{teacherNextAction.label} →</Link>
+      <p className="mt-3 text-xs text-slate-600">Programme → units → secure invitations → learner activity → evidence and intervention.</p>
+    </section>
     <section className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="Live teaching totals"><Metric label="Students" value={String(overview.students)}/><Metric label="Active enrolments" value={String(overview.activeEnrolments)}/><Metric label="Completed assessments" value={String(overview.completedAssessments)}/><Metric label="Need attention" value={String(overview.needAttention)}/></section>
 
-    {totalStudentCount===0&&<section className="card mt-6 border-blue-200 bg-blue-50" aria-labelledby="no-students-title"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold" id="no-students-title">Students: 0</h2><p className="mt-3 max-w-3xl leading-7 text-slate-700">No students have joined yet, so starting points, work and progress correctly show zero. {classes?.length?"Open your group and send the first secure student invitation.":"Create your first group below, then choose the units you teach."}</p>{classes?.[0]&&<Link className="button mt-5" href={`/teacher/classes/${classes[0].id}#invitations`}>Invite students to {classes[0].name} →</Link>}</section>}
-
-    {totalStudentCount>0&&<section className="card mt-6 overflow-x-auto"><div><p className="eyebrow">Priority list</p><h2 className="mt-2 text-2xl font-bold">Who needs me?</h2><p className="mt-2 text-sm text-slate-600">Based on recorded catch-up, intervention, outstanding work and current learning evidence.</p></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><PriorityCount label="Intervention Required" value={attention.filter(item=>item.attention_status==="intervention_required").length} status="intervention_required"/><PriorityCount label="Action Required" value={attention.filter(item=>item.attention_status==="action_required").length} status="action_required"/><PriorityCount label="Catch-up Required" value={attention.filter(item=>item.attention_status==="catch_up_required").length} status="catch_up_required"/><PriorityCount label="On Track" value={attention.filter(item=>item.attention_status==="on_track").length} status="on_track"/><PriorityCount label="Exceeding" value={attention.filter(item=>item.attention_status==="exceeding").length} status="exceeding"/></div><table className="mt-6 w-full min-w-[1050px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-600"><th className="pb-3">Student</th><th className="pb-3">Group</th><th className="pb-3">Current</th><th className="pb-3">Progress</th><th className="pb-3">Achievement</th><th className="pb-3">Catch-up / outstanding</th><th className="pb-3">Status and reason</th></tr></thead><tbody>{attention.slice(0,20).map(item=><tr className="border-b border-slate-100" key={`${item.classId}:${item.learner_id}`}><td className="py-4 font-semibold"><Link className="link" href={`/teacher/learners/${item.learner_id}`}>{item.display_name}</Link></td><td>{item.className}</td><td>{item.current_score==null?"Not recorded":`${item.current_score}%`}</td><td>{item.progress_points==null?"Not comparable":`${Number(item.progress_points)>=0?"+":""}${item.progress_points} pp`}</td><td><strong>{item.ap_total} AP · {item.achievement_level??"Building"}</strong><p className="mt-1 text-xs text-slate-500">{item.next_level?`${item.points_to_next} AP to ${item.next_level}`:"Highest configured level"}{item.certificate_status?" · certificate review eligible":""}</p></td><td className="capitalize">{item.catch_up_status.replaceAll("_"," ")}{item.outstanding_count?` · ${item.outstanding_count} outstanding`:""}</td><td><PriorityBadge status={item.attention_status}/><p className="mt-1 max-w-xs text-slate-500">{item.attention_reason}</p></td></tr>)}</tbody></table>{!attention.length&&<p className="mt-5 rounded-xl bg-slate-50 p-5 text-slate-600">No students match the current filters. <Link className="link" href="/dashboard">Clear filters</Link></p>}</section>}
+    {totalStudentCount>0&&<section className="card mt-6 overflow-x-auto"><div><p className="eyebrow">Priority list</p><h2 className="mt-2 text-2xl font-bold">Who needs me?</h2><p className="mt-2 text-sm text-slate-600">Based on recorded catch-up, intervention, outstanding work and current learning evidence.</p></div><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><PriorityCount label="Intervention Required" value={attention.filter(item=>item.attention_status==="intervention_required").length} status="intervention_required"/><PriorityCount label="Action Required" value={attention.filter(item=>item.attention_status==="action_required").length} status="action_required"/><PriorityCount label="Catch-up Required" value={attention.filter(item=>item.attention_status==="catch_up_required").length} status="catch_up_required"/><PriorityCount label="On Track" value={attention.filter(item=>item.attention_status==="on_track").length} status="on_track"/><PriorityCount label="Exceeding" value={attention.filter(item=>item.attention_status==="exceeding").length} status="exceeding"/></div><table className="mt-6 w-full min-w-[1050px] text-left text-sm"><thead><tr className="border-b border-slate-200 text-slate-600"><th className="pb-3">Student</th><th className="pb-3">Group</th><th className="pb-3">Current</th><th className="pb-3">Progress</th><th className="pb-3">Achievement</th><th className="pb-3">Catch-up / outstanding</th><th className="pb-3">Status and reason</th></tr></thead><tbody>{attention.slice(0,20).map(item=><tr className="border-b border-slate-100" key={`${item.classId}:${item.learner_id}`}><td className="py-4 font-semibold"><Link className="link" href={`/teacher/learners/${item.learner_id}?classId=${item.classId}`}>{item.display_name}</Link></td><td>{item.className}</td><td>{item.current_score==null?"Not recorded":`${item.current_score}%`}</td><td>{item.progress_points==null?"Not comparable":`${Number(item.progress_points)>=0?"+":""}${item.progress_points} pp`}</td><td><strong>{item.ap_total} AP · {item.achievement_level??"Building"}</strong><p className="mt-1 text-xs text-slate-500">{item.next_level?`${item.points_to_next} AP to ${item.next_level}`:"Highest configured level"}{item.certificate_status?" · certificate review eligible":""}</p></td><td className="capitalize">{item.catch_up_status.replaceAll("_"," ")}{item.outstanding_count?` · ${item.outstanding_count} outstanding`:""}</td><td><PriorityBadge status={item.attention_status}/><p className="mt-1 max-w-xs text-slate-500">{item.attention_reason}</p></td></tr>)}</tbody></table>{!attention.length&&<p className="mt-5 rounded-xl bg-slate-50 p-5 text-slate-600">No students match the current filters. <Link className="link" href="/dashboard">Clear filters</Link></p>}</section>}
 
     {totalStudentCount>0&&<section className="card mt-6"><p className="eyebrow">Teaching-sequence milestones</p><h2 className="mt-2 text-2xl font-bold">Upcoming progress checks</h2><p className="mt-2 text-sm text-slate-600">Derived from each group&apos;s teaching-week clock. College holidays and closures do not consume a teaching week.</p><div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{upcomingCheckpoints.map(item=><article className="rounded-xl border border-slate-200 p-4" key={item.classId}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">{item.className}</h3><p className="mt-1 text-sm text-slate-600">Unit {item.unitCode} · now Teaching Week {item.teachingWeek}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-900">{journeyMilestoneLabel(item.milestone!.milestone)}</span></div><p className="mt-3 text-sm"><strong>Teaching Week {item.milestone!.week}:</strong> {item.milestone!.title}</p>{item.positionStatus==="paused"&&<p className="mt-3 rounded-lg bg-sky-50 p-3 text-xs text-sky-950">Timer paused for a non-teaching period; resumes {formatJourneyDate(item.nextTeachingOn)}.</p>}<Link className="link mt-3 inline-block text-sm" href={`/teacher/classes/${item.classId}`}>Open group evidence →</Link></article>)}{!upcomingCheckpoints.length&&<p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No active group journey has a further checkpoint in the current filters.</p>}</div></section>}
 
@@ -522,7 +709,7 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
 
     <section className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_.8fr]" id="classes">
       <div className="card"><div><p className="eyebrow">My units and groups</p><h2 className="mt-2 text-2xl font-bold">Choose a group to continue</h2><p className="mt-2 text-sm text-slate-600">Inside a group you can select units, invite students and view genuine learning evidence.</p></div>
-        <div className="mt-6 grid gap-3">{visibleClasses.length ? visibleClasses.map(item => <Link href={`/teacher/classes/${item.id}`} key={item.id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-5 hover:bg-teal-50"><div><p className="font-bold">{item.name}</p><p className="text-sm text-slate-500">{item.enrolments?.[0]?.count ?? 0} learners · {related(item.courses)?.title} · {item.published?"published":"draft setup"}</p><p className="mt-1 text-xs text-slate-500">{(item.class_units??[]).filter(unit=>unit.active).map(unit=>related(unit.units)?.title).filter(Boolean).join(", ")||"No active units"}</p></div><span className="font-bold text-teal-700">View class →</span></Link>) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">No class matches these filters.</p>}</div>
+        <div className="mt-6 grid gap-3">{visibleClasses.length ? visibleClasses.map(item => <Link href={`/teacher/classes/${item.id}`} key={item.id} className="flex items-center justify-between rounded-2xl border border-slate-200 p-5 hover:bg-teal-50"><div><p className="font-bold">{item.name}</p><p className="text-sm text-slate-500">{item.enrolments?.[0]?.count ?? 0} learners · {related(item.courses)?.title} · {item.published?"published":"draft setup"}</p><p className="mt-1 text-xs text-slate-500">{formatWeeklyLearningDays(item.weekly_learning_days,item.weekly_learning_day)} · {(item.class_units??[]).filter(unit=>unit.active).map(unit=>related(unit.units)?.title).filter(Boolean).join(", ")||"No active units"}</p></div><span className="font-bold text-teal-700">View class →</span></Link>) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">No class matches these filters.</p>}</div>
         <CreateClassForm courses={courses ?? []} years={years ?? []}/>
       </div>
       {totalStudentCount>0&&<div className="grid gap-6">
@@ -548,7 +735,6 @@ async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;f
 }
 
 function Metric({ label, value,description }: { label: string; value: string;description?:string }) { return <div className="card"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold">{value}</p>{description&&<p className="mt-2 text-xs leading-5 text-slate-500">{description}</p>}</div>; }
-function TeacherStep({number,title,detail,href,action}:{number:string;title:string;detail:string;href:string;action:string}){return <li className="card border-teal-100"><span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-teal-800 font-bold text-white">{number}</span><h2 className="mt-4 text-lg font-bold">{title}</h2><p className="mt-2 min-h-12 text-sm leading-6 text-slate-600">{detail}</p><Link className="link mt-4 inline-block text-sm" href={href}>{action} →</Link></li>}
 function JourneyFact({label,value}:{label:string;value:string}) { return <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-semibold text-slate-900">{value}</p></div>; }
 function journeyMilestoneLabel(value:string){return value==="starting_point"?"Starting Point":value==="progress_check_1"?"Progress Check 1":value==="progress_check_2"?"Progress Check 2":value==="final"?"Final / Summative":"Weekly Learning";}
 function PriorityBadge({status}:{status:string}){const values:Record<string,[string,string]>={intervention_required:["Intervention Required","bg-red-100 text-red-900"],action_required:["Action Required","bg-orange-100 text-orange-950"],catch_up_required:["Catch-up Required","bg-amber-100 text-amber-950"],on_track:["On Track","bg-emerald-100 text-emerald-900"],exceeding:["Exceeding","bg-blue-100 text-blue-900"]};const [label,colour]=values[status]??[status.replaceAll("_"," "),"bg-slate-100 text-slate-900"];return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${colour}`}>{label}</span>}

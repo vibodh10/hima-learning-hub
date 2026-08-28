@@ -1,6 +1,9 @@
 import "server-only";
 import { z } from "zod";
-import { canIgnoreLegacyInvitationMetadata } from "@/lib/invitation-finalization-policy";
+import {
+  canIgnoreLegacyInvitationMetadata,
+  invitationAcceptanceBlock,
+} from "@/lib/invitation-finalization-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -16,20 +19,22 @@ const uuid = z.uuid();
  * called after either OTP verification or a successful sign-in so a transient
  * provisioning failure cannot strand an invited student.
  */
-export async function finalizeCurrentStudentInvitation(): Promise<InvitationFinalizationResult> {
+export async function finalizeCurrentStudentInvitation(
+  preferredInvitationId?: unknown,
+): Promise<InvitationFinalizationResult> {
   const session = await createClient();
   const { data: { user }, error: userError } = await session.auth.getUser();
   if (userError || !user?.email) return { kind: "failed", code: "missing_session" };
 
   const admin = createAdminClient();
   const metadata = user.user_metadata as Record<string, unknown>;
-  const metadataInvitationId = validUuid(metadata.invitation_id);
+  const metadataInvitationId = validUuid(preferredInvitationId) ?? validUuid(metadata.invitation_id);
   const metadataClassId = validUuid(metadata.invited_class_id);
   const metadataOrganisationId = validUuid(metadata.invited_organisation_id);
   const metadataName = typeof metadata.display_name === "string" ? metadata.display_name.trim() : "";
 
   const invitationQuery = admin.from("student_invitations")
-    .select("id,class_id,organisation_id,email_normalized,display_name,status")
+    .select("id,class_id,organisation_id,email_normalized,display_name,status,auth_user_id")
     .limit(1);
   const { data: invitation } = metadataInvitationId
     ? await invitationQuery.eq("id", metadataInvitationId).maybeSingle()
@@ -40,6 +45,14 @@ export async function finalizeCurrentStudentInvitation(): Promise<InvitationFina
     .eq("id", user.id)
     .maybeSingle();
   if (profileReadError) return { kind: "failed", code: "profile_lookup_failed" };
+
+  if (invitation) {
+    const acceptanceBlock = invitationAcceptanceBlock(invitation.status);
+    if (acceptanceBlock) return { kind: "failed", code: acceptanceBlock };
+    if (invitation.auth_user_id && invitation.auth_user_id !== user.id) {
+      return { kind: "failed", code: "invitation_account_mismatch" };
+    }
+  }
 
   if (canIgnoreLegacyInvitationMetadata(existingProfile, Boolean(invitation))) {
     return { kind: "ready" };

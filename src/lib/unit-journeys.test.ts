@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { configuredUnitJourneys, evidenceStageForMilestone, nextJourneyMilestone, validateConfiguredUnitJourneys } from "./unit-journeys";
 
-describe("preconfigured Unit 2, 4 and 6 teaching journeys", () => {
+describe("preconfigured class-aligned teaching journeys", () => {
   it("maps every teaching week to a real configured topic", () => {
+    expect(Object.keys(configuredUnitJourneys)).toEqual(["2", "4", "6", "10", "14"]);
     expect(validateConfiguredUnitJourneys()).toBe(true);
   });
 

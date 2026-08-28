@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { canViewLearnerEvidence } from "@/lib/permissions";
@@ -8,57 +9,111 @@ import {
   academicEvidenceLabel, conciseCurrentJudgement, evidenceCounts, groupByTopic, hasValidComparableProgress,
   isPriorExperienceSkill, reportTargetStatus,
 } from "@/lib/learner-report-model";
+import {
+  activityRecordInScope,
+  feedbackRecordInScope,
+  skillRecordInScope,
+  targetRecordInScope,
+  topicRecordInScope,
+  type LearnerReportScope,
+} from "@/lib/learner-report-scope";
 
 type Row = Record<string, unknown>;
+const idSchema = z.string().uuid();
+const QUERY_LIMIT = 5000;
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const actor = await getSessionProfile();
-  if (!actor) return new Response("Authentication required.", { status: 401 });
-  if (!canViewLearnerEvidence(actor.role)) return new Response("Not authorised.", { status: 403 });
-  const { id } = await context.params;
+  if (!actor) return privateResponse("Authentication required.", 401);
+  if (!canViewLearnerEvidence(actor.role)) return privateResponse("Not authorised.", 403);
+  const parsedId = idSchema.safeParse((await context.params).id);
+  const parsedClassId = idSchema.safeParse(new URL(request.url).searchParams.get("classId"));
+  if (!parsedId.success) return privateResponse("Learner report not found.", 404);
+  if (!parsedClassId.success) return privateResponse("Choose a class before exporting this learner report.", 400);
+  const id = parsedId.data;
+  const classId = parsedClassId.data;
   const supabase = await createClient();
+
+  const [learnerResult, enrolmentResult] = await Promise.all([
+    supabase.from("user_profiles").select("id,display_name")
+      .eq("id", id).eq("role", "student").single(),
+    supabase.from("enrolments").select(
+      "enrolled_at,class_id,classes(id,name,course_id,courses(id,title),teachers:teacher_id(display_name))",
+    ).eq("student_id", id).eq("class_id", classId).is("archived_at", null).single(),
+  ]);
+  if (learnerResult.error || enrolmentResult.error || !learnerResult.data || !enrolmentResult.data) {
+    return privateResponse("Learner or class not found or not authorised.", 404);
+  }
+  const learner = learnerResult.data;
+  const enrolmentRow = enrolmentResult.data as unknown as Row;
+  const classInfo = related(enrolmentRow.classes);
+  const course = related(classInfo?.courses);
+  const courseId = String(classInfo?.course_id ?? "");
+  if (!classInfo || !courseId) return privateResponse("Learner or class not found or not authorised.", 404);
+
+  const [classUnitResult, curriculumSkillResult] = await Promise.all([
+    supabase.from("class_units").select("unit_id,units(id,code,title,archived_at)")
+      .eq("class_id", classId).eq("active", true).is("archived_at", null).limit(QUERY_LIMIT),
+    supabase.from("skills")
+      .select("id,title,sort_order,topics!inner(id,title,units!inner(id,code,title,course_id))")
+      .eq("status", "approved").is("archived_at", null)
+      .eq("topics.units.course_id", courseId).order("sort_order").limit(QUERY_LIMIT),
+  ]);
+  if (classUnitResult.error || curriculumSkillResult.error) {
+    return privateResponse("The learner evidence report could not be generated.", 500);
+  }
+  if (reachedQueryLimit(classUnitResult.data) || reachedQueryLimit(curriculumSkillResult.data)) {
+    return privateResponse("The learner evidence report is too large to export safely. Use unit reports instead.", 409);
+  }
+  const selectedUnits = rows(classUnitResult.data).flatMap(link => {
+    const unit = related(link.units);
+    return unit && !unit.archived_at
+      ? [{ id: String(unit.id), code: String(unit.code) }]
+      : [];
+  });
+  const scope: LearnerReportScope = {
+    classId,
+    courseId,
+    unitIds: new Set(selectedUnits.map(unit => unit.id)),
+    unitCodes: new Set(selectedUnits.map(unit => unit.code)),
+  };
+  const evidenceResults = await Promise.all([
+    supabase.from("attempts").select("id,activity_id,percentage,attempt_number,completed_at,pathway,hints_used,teacher_override_by,teacher_override_reason,activities(title,learning_stage,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))").eq("learner_id", id).not("completed_at", "is", null).order("completed_at").limit(QUERY_LIMIT),
+    supabase.from("targets").select("id,class_id,course_id,unit_id,target_text,status,starts_on,target_date,review_on,reason,evidence,success_measure,current_progress,review_result,final_outcome,next_action,approved_by,units(id,code,title,course_id),topics(id,title,units(id,code,title,course_id)),skills(id,title,topics(id,title,units(id,code,title,course_id))),activities:linked_activity_id(title),teachers:approved_by(display_name)").eq("learner_id", id).is("archived_at", null).order("target_date").limit(QUERY_LIMIT),
+    supabase.from("skill_progress_comparisons").select("skill_id,starting_percentage,latest_percentage,improvement_points,status,evidence,skills(id,title,topics(id,title,units(id,code,title,course_id))),starting_result:starting_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title))),progress_result:latest_progress_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title)))").eq("learner_id", id).limit(QUERY_LIMIT),
+    supabase.from("skill_mastery").select("skill_id,mastery_score,current_pathway,attempts_count,hints_used,repeated_error_count,retrieval_score,skills(id,title,topics(id,title,units(id,code,title,course_id)))").eq("learner_id", id).limit(QUERY_LIMIT),
+    supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_mark,reviewed_at,reviewed_by,attempt_answers(answer,mark,max_mark,feedback,answered_at,attempts(id,activity_id,percentage,attempt_number,completed_at,hints_used,activities(title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))),questions(question_text,skills(id,title,topics(id,title,units(id,code,title,course_id)))))").eq("learner_id", id).order("created_at").limit(QUERY_LIMIT),
+    supabase.from("learner_misconceptions").select("occurrence_count,first_seen_at,last_seen_at,resolved_at,misconceptions(title,reteach_guidance,skills(id,title,topics(id,title,units(id,code,title,course_id))))").eq("learner_id", id).order("occurrence_count", { ascending: false }).limit(QUERY_LIMIT),
+    supabase.from("teacher_actions").select("id,class_id,action,reason,review_on,outcome,metadata,created_at").eq("learner_id", id).eq("class_id", classId).is("archived_at", null).order("created_at").limit(QUERY_LIMIT),
+    supabase.from("progress_snapshots").select("id,class_id,created_at,learner_reflection,next_priorities,snapshot_data,academic_periods(name),creators:created_by(display_name)").eq("learner_id", id).eq("class_id", classId).order("created_at").limit(QUERY_LIMIT),
+    supabase.from("retrieval_schedules").select("id,scheduled_for,status,completed_at,topics(id,title,units(id,code,title,course_id))").eq("learner_id", id).order("scheduled_for").limit(QUERY_LIMIT),
+    supabase.from("badge_awards").select("id,reason,awarded_at,badge_definitions(title)").eq("learner_id", id).order("awarded_at").limit(QUERY_LIMIT),
+    supabase.from("coin_transactions").select("id,amount,description,created_at,transaction_status").eq("learner_id", id).order("created_at").limit(QUERY_LIMIT),
+    supabase.from("assessment_instances").select("id,kind,completed_at,prior_experience,support_needs,aspirations,activities(title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))").eq("learner_id", id).order("completed_at").limit(QUERY_LIMIT),
+    supabase.from("activity_unlock_overrides").select("id,reason,expires_at,created_at,revoked_at,activities(title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id)))),teachers:teacher_id(display_name)").eq("learner_id", id).order("created_at").limit(QUERY_LIMIT),
+    scope.unitCodes.size ? supabase.from("learner_curriculum_attempts").select("id,kind,unit_code,topic_code,paper_mode,selected_level,percentage,mark,max_mark,hints_used,active_seconds,question_results,completed_at,teacher_mark,teacher_feedback,reviewed_at").eq("learner_id", id).in("unit_code", [...scope.unitCodes]).order("completed_at", { ascending: false }).limit(QUERY_LIMIT) : emptyResult(),
+    supabase.rpc("learner_achievement_summary",{learner_uuid:id}),
+    scope.unitCodes.size ? supabase.from("learner_portfolio_artifacts").select("id,unit_code,topic_code,stage,title,source_type,source_id,version_number,evidence,recorded_at").eq("learner_id", id).in("unit_code", [...scope.unitCodes]).order("recorded_at", { ascending: true }).limit(QUERY_LIMIT) : emptyResult(),
+    scope.unitCodes.size ? supabase.from("learner_topic_worksheets").select("id,unit_code,topic_code,attempt_number,mode,evidence_stage,responses,confidence,submitted_at").eq("learner_id", id).in("unit_code", [...scope.unitCodes]).order("submitted_at", { ascending: true }).limit(QUERY_LIMIT) : emptyResult(),
+    scope.unitCodes.size ? supabase.from("learner_catch_up_records").select("id,unit_code,topic_code,source,opened_teaching_week,opened_at,completed_at").eq("learner_id", id).in("unit_code", [...scope.unitCodes]).order("opened_at", { ascending: false }).limit(QUERY_LIMIT) : emptyResult(),
+    supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id", id).eq("class_id", classId).order("recognised_at", { ascending: false }).limit(QUERY_LIMIT),
+    supabase.from("attendance_events").select("id,session_on,attendance_status,provider_name,imported_at").eq("learner_id", id).eq("class_id", classId).order("session_on", { ascending: false }).limit(QUERY_LIMIT),
+    supabase.from("certificate_eligibility_reviews").select("id,status,eligible_at,reviewed_at,review_note,achievement_levels(title,threshold_points)").eq("learner_id", id).order("eligible_at", { ascending: false }).limit(QUERY_LIMIT),
+  ]);
+  if (evidenceResults.some(result => result.error)) {
+    return privateResponse("The learner evidence report could not be generated.", 500);
+  }
+  if (evidenceResults.some(result => reachedQueryLimit(result.data))) {
+    return privateResponse("The learner evidence report is too large to export safely. Use unit reports instead.", 409);
+  }
   const [
-    { data: learner }, { data: enrolment }, { data: attempts }, { data: targets },
+    { data: attempts }, { data: targets },
     { data: comparisons }, { data: mastery }, { data: feedback }, { data: misconceptions },
     { data: teacherActions }, { data: snapshots }, { data: retrieval }, { data: badges },
     { data: coins }, { data: assessments }, { data: overrides }, { data: curriculumAttempts }, { data: achievementRows },
     { data: portfolioArtifacts }, { data: worksheets }, { data: catchUpRecords },
     { data: recognitions }, { data: attendanceEvents }, { data: certificateReviews },
-  ] = await Promise.all([
-    supabase.from("user_profiles").select("id,display_name").eq("id", id).eq("role", "student").single(),
-    supabase.from("enrolments").select("enrolled_at,classes(id,name,course_id,courses(id,title),teachers:teacher_id(display_name))").eq("student_id", id).is("archived_at", null).limit(1).maybeSingle(),
-    supabase.from("attempts").select("id,activity_id,percentage,attempt_number,completed_at,pathway,hints_used,teacher_override_by,teacher_override_reason,activities(title,learning_stage,assessment_kind,lessons(topics(id,title,units(id,code,title))))").eq("learner_id", id).not("completed_at", "is", null).order("completed_at"),
-    supabase.from("targets").select("id,target_text,status,starts_on,target_date,review_on,reason,evidence,success_measure,current_progress,review_result,final_outcome,next_action,approved_by,units(code,title),topics(id,title,units(id,code,title)),skills(id,title),activities:linked_activity_id(title),teachers:approved_by(display_name)").eq("learner_id", id).is("archived_at", null).order("target_date"),
-    supabase.from("skill_progress_comparisons").select("skill_id,starting_percentage,latest_percentage,improvement_points,status,evidence,skills(id,title,topics(id,title,units(id,code,title))),starting_result:starting_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title))),progress_result:latest_progress_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title)))").eq("learner_id", id),
-    supabase.from("skill_mastery").select("skill_id,mastery_score,current_pathway,attempts_count,hints_used,repeated_error_count,retrieval_score,skills(id,title,topics(id,title,units(id,code,title)))").eq("learner_id", id),
-    supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_mark,reviewed_at,reviewed_by,attempt_answers(answer,mark,max_mark,feedback,answered_at,attempts(id,activity_id,percentage,attempt_number,completed_at,hints_used,activities(title,lessons(topics(id,title,units(id,code,title))))),questions(question_text,skills(id,title,topics(id,title,units(id,code,title)))))").eq("learner_id", id).order("created_at"),
-    supabase.from("learner_misconceptions").select("occurrence_count,first_seen_at,last_seen_at,resolved_at,misconceptions(title,reteach_guidance,skills(id,title,topics(id,title,units(id,code,title))))").eq("learner_id", id).order("occurrence_count", { ascending: false }),
-    supabase.from("teacher_actions").select("id,action,reason,review_on,outcome,metadata,created_at").eq("learner_id", id).is("archived_at", null).order("created_at"),
-    supabase.from("progress_snapshots").select("id,created_at,learner_reflection,next_priorities,snapshot_data,academic_periods(name),creators:created_by(display_name)").eq("learner_id", id).order("created_at"),
-    supabase.from("retrieval_schedules").select("id,scheduled_for,status,completed_at,topics(id,title,units(id,code,title)))").eq("learner_id", id).order("scheduled_for"),
-    supabase.from("badge_awards").select("id,reason,awarded_at,badge_definitions(title)").eq("learner_id", id).order("awarded_at"),
-    supabase.from("coin_transactions").select("id,amount,description,created_at,transaction_status").eq("learner_id", id).order("created_at"),
-    supabase.from("assessment_instances").select("id,kind,completed_at,prior_experience,support_needs,aspirations,activities(title,lessons(topics(id,title,units(id,code,title))))").eq("learner_id", id).order("completed_at"),
-    supabase.from("activity_unlock_overrides").select("id,reason,expires_at,created_at,revoked_at,activities(title,lessons(topics(id,title,units(id,code,title)))),teachers:teacher_id(display_name)").eq("learner_id", id).order("created_at"),
-    supabase.from("learner_curriculum_attempts").select("id,kind,unit_code,topic_code,paper_mode,selected_level,percentage,mark,max_mark,hints_used,active_seconds,question_results,completed_at,teacher_mark,teacher_feedback,reviewed_at").eq("learner_id",id).order("completed_at",{ascending:false}).limit(200),
-    supabase.rpc("learner_achievement_summary",{learner_uuid:id}),
-    supabase.from("learner_portfolio_artifacts").select("id,unit_code,topic_code,stage,title,source_type,source_id,version_number,evidence,recorded_at").eq("learner_id", id).order("recorded_at", { ascending: true }),
-    supabase.from("learner_topic_worksheets").select("id,unit_code,topic_code,attempt_number,mode,evidence_stage,responses,confidence,submitted_at").eq("learner_id", id).order("submitted_at", { ascending: true }),
-    supabase.from("learner_catch_up_records").select("id,unit_code,topic_code,source,opened_teaching_week,opened_at,completed_at").eq("learner_id", id).order("opened_at", { ascending: false }),
-    supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id", id).order("recognised_at", { ascending: false }),
-    supabase.from("attendance_events").select("id,session_on,attendance_status,provider_name,imported_at").eq("learner_id", id).order("session_on", { ascending: false }).limit(200),
-    supabase.from("certificate_eligibility_reviews").select("id,status,eligible_at,reviewed_at,review_note,achievement_levels(title,threshold_points)").eq("learner_id", id).order("eligible_at", { ascending: false }),
-  ]);
-  if (!learner) return new Response("Learner not found or not authorised.", { status: 404 });
-
-  const enrolmentRow = enrolment as unknown as Row | null;
-  const classInfo = related(enrolmentRow?.classes);
-  const course = related(classInfo?.courses);
-  const courseId = String(classInfo?.course_id ?? "");
-  const { data: curriculumSkills } = courseId ? await supabase.from("skills")
-    .select("id,title,sort_order,topics!inner(id,title,units!inner(id,code,title,course_id))")
-    .eq("status", "approved").is("archived_at", null)
-    .eq("topics.units.course_id", courseId).order("sort_order") : { data: [] };
+  ] = evidenceResults;
 
   const evidence: ReportEvidence = {
     learnerName: learner.display_name,
@@ -67,20 +122,22 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     teacherName: actor.display_name,
     enrolledAt: stringOrNull(enrolmentRow?.enrolled_at),
     exportedAt: new Date().toISOString(),
-    skills: rows(curriculumSkills),
-    comparisons: rows(comparisons),
-    mastery: rows(mastery),
-    attempts: rows(attempts),
-    targets: rows(targets),
-    feedback: rows(feedback),
-    misconceptions: rows(misconceptions),
+    skills: rows(curriculumSkillResult.data).filter(row => skillRecordInScope(scope, row)),
+    comparisons: rows(comparisons).filter(row => skillRecordInScope(scope, row.skills)),
+    mastery: rows(mastery).filter(row => skillRecordInScope(scope, row.skills)),
+    attempts: rows(attempts).filter(row => activityRecordInScope(scope, row.activities)),
+    targets: rows(targets).filter(row => targetRecordInScope(scope, row)),
+    feedback: rows(feedback).filter(row => feedbackRecordInScope(scope, row)),
+    misconceptions: rows(misconceptions).filter(row =>
+      skillRecordInScope(scope, related(row.misconceptions)?.skills)),
     teacherActions: rows(teacherActions),
     snapshots: rows(snapshots),
-    retrieval: rows(retrieval),
+    retrieval: rows(retrieval).filter(row => topicRecordInScope(scope, row.topics)),
     badges: rows(badges),
     coins: rows(coins),
-    assessments: rows(assessments),
-    overrides: rows(overrides),
+    assessments: rows(assessments).filter(row =>
+      row.kind === "course_starting_point" || activityRecordInScope(scope, row.activities)),
+    overrides: rows(overrides).filter(row => activityRecordInScope(scope, row.activities)),
     curriculumAttempts: rows(curriculumAttempts),
     achievement: rows(achievementRows)[0],
     portfolioArtifacts: rows(portfolioArtifacts),
@@ -90,7 +147,8 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     attendanceEvents: rows(attendanceEvents),
     certificateReviews: rows(certificateReviews),
   };
-  const safeName = learner.display_name.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  const safeName = learner.display_name.replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-|-$/g, "").toLowerCase() || "learner";
   if (new URL(request.url).searchParams.get("format") === "csv") {
     const csv = learnerJourneyCsv({
       learnerName: evidence.learnerName,
@@ -99,18 +157,14 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       generatedAt: evidence.exportedAt,
       rows: buildCsvRows(evidence),
     });
-    return new Response(csv, { headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="${safeName}-progress-evidence.csv"`,
-      "cache-control": "private, no-store",
-    } });
+    return new Response(csv, {
+      headers: downloadHeaders("text/csv; charset=utf-8", `${safeName}-progress-evidence.csv`),
+    });
   }
   const bytes = await buildConciseLearnerReportPdf(evidence);
-  return new Response(bytes as BodyInit, { headers: {
-    "content-type": "application/pdf",
-    "content-disposition": `attachment; filename="${safeName}-learner-progress-evidence.pdf"`,
-    "cache-control": "private, no-store",
-  } });
+  return new Response(bytes as BodyInit, {
+    headers: downloadHeaders("application/pdf", `${safeName}-learner-progress-evidence.pdf`),
+  });
 }
 
 export type ReportEvidence = {
@@ -361,6 +415,30 @@ export async function buildDetailedLearnerReportPdf(data: ReportEvidence) {
   pdf.setSubject("Starting point, curriculum progress, feedback, learner response, targets and review evidence");
   pdf.setAuthor("SCCB Digital Learning Hub"); pdf.setCreator("SCCB Digital Learning Hub"); pdf.setCreationDate(asAt);
   return pdf.save();
+}
+
+function reachedQueryLimit(value: unknown) {
+  return Array.isArray(value) && value.length >= QUERY_LIMIT;
+}
+
+function emptyResult(): { data: Row[]; error: null } {
+  return { data: [], error: null };
+}
+
+function privateResponse(message: string, status: number) {
+  return new Response(message, {
+    status,
+    headers: { "cache-control": "private, no-store", "x-content-type-options": "nosniff" },
+  });
+}
+
+function downloadHeaders(contentType: string, filename: string) {
+  return {
+    "content-type": contentType,
+    "content-disposition": `attachment; filename="${filename}"`,
+    "cache-control": "private, no-store",
+    "x-content-type-options": "nosniff",
+  };
 }
 
 function feedbackForSkill(items: Row[], skillId: string) {

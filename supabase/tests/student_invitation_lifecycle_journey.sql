@@ -10,14 +10,14 @@ declare resolution record;
 begin
   select * into resolution
   from public.resolve_invitable_auth_user('learner@northbridge.example');
-  if not resolution.account_exists or not resolution.permitted
+  if not resolution.account_exists or not resolution.profile_exists or not resolution.permitted
     or resolution.user_id<>'90000000-0000-0000-0000-000000000002' then
     raise exception 'the exact existing learner was not resolved safely';
   end if;
 
   select * into resolution
   from public.resolve_invitable_auth_user('missing@example.test');
-  if resolution.account_exists or not resolution.permitted or resolution.user_id is not null then
+  if resolution.account_exists or resolution.profile_exists or not resolution.permitted or resolution.user_id is not null then
     raise exception 'an unknown email returned an unsafe account resolution';
   end if;
 end $$;

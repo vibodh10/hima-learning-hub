@@ -7,7 +7,7 @@ import { CurriculumAttemptReviewForm } from "@/components/curriculum-attempt-rev
 import { ActivityLockOverrideForm } from "@/components/safe-learning-admin-forms";
 import {
   BulkApproveTargetsForm, CoinCorrectionForm, CreateTargetForm, FormativeResponseReviewForm,
-  PathwayOverrideForm, SnapshotForm, TargetReviewForm, TeacherActionForm, WorkbookDecisionForm,
+  PathwayOverrideForm, SnapshotForm, TargetReviewForm, TeacherActionForm, TeacherNoteForm, WorkbookDecisionForm,
 } from "@/components/learner-teacher-controls";
 import { configuredUnits } from "@/lib/learning-catalog";
 import { RecognitionForm } from "@/components/recognition-form";
@@ -15,58 +15,115 @@ import {
   conciseCurrentJudgement, evidenceCounts, groupByTopic, hasValidComparableProgress,
   isPriorExperienceSkill, learnerReflectionLabel, reportTargetStatus, topicAssessmentStatus,
 } from "@/lib/learner-report-model";
+import {
+  activityRecordInScope,
+  feedbackRecordInScope,
+  selectReportEnrolment,
+  skillRecordInScope,
+  targetRecordInScope,
+  topicRecordInScope,
+  type LearnerReportScope,
+} from "@/lib/learner-report-scope";
 
-export default async function LearnerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LearnerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ classId?: string }>;
+}) {
   const actor = await requireRole("teacher", "administrator");
   const { id } = await params;
+  const requestedClassId = (await searchParams).classId;
   const supabase = await createClient();
-  const [
-    { data: learner }, { data: enrolments }, { data: attempts }, { data: targets },
-    { data: notes }, { data: mastery }, { data: misconceptions }, { data: badges },
-    { data: coins }, { data: retrieval }, { data: comparisons },
-    { data: teacherActions }, { data: snapshots }, { data: periods },
-    { data: formativeReviews }, { data: approvedActivities }, { data: assessmentInstances },
-    { data: overrides }, { data: workbookProgress }, { data: workbookDecisions }, { data: workbookBackground }, { data: curriculumAttempts },
-  ] = await Promise.all([
+  const evidenceResults = await Promise.all([
     supabase.from("user_profiles").select("id,display_name").eq("id", id).eq("role", "student").single(),
     supabase.from("enrolments").select("enrolled_at,classes(id,name,course_id,courses(id,title),teachers:teacher_id(display_name))").eq("student_id", id).is("archived_at", null),
-    supabase.from("attempts").select("id,activity_id,percentage,attempt_number,completed_at,pathway,hints_used,teacher_override_by,teacher_override_reason,activities(title,learning_stage,assessment_kind,lessons(topics(id,title,units(id,code,title))))").eq("learner_id", id).not("completed_at", "is", null).order("completed_at", { ascending: true }).limit(200),
-    supabase.from("targets").select("id,target_text,status,starts_on,target_date,review_on,reason,evidence,success_measure,current_progress,review_result,final_outcome,next_action,teacher_note,approved_by,approved_at,units(code,title),topics(id,title,units(id,code,title)),skills(id,title),activities:linked_activity_id(title),teachers:approved_by(display_name)").eq("learner_id", id).is("archived_at", null).order("target_date"),
-    supabase.from("teacher_notes").select("note,created_at").eq("learner_id", id).is("archived_at", null).order("created_at", { ascending: false }),
-    supabase.from("skill_mastery").select("skill_id,mastery_score,current_pathway,attempts_count,hints_used,repeated_error_count,retrieval_score,skills(id,title,topics(id,title,units(id,code,title)))").eq("learner_id", id),
-    supabase.from("learner_misconceptions").select("occurrence_count,first_seen_at,last_seen_at,resolved_at,misconceptions(title,reteach_guidance,skills(id,title,topics(id,title,units(id,code,title))))").eq("learner_id", id).order("occurrence_count", { ascending: false }),
+    supabase.from("attempts").select("id,activity_id,percentage,attempt_number,completed_at,pathway,hints_used,teacher_override_by,teacher_override_reason,activities(title,learning_stage,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))").eq("learner_id", id).not("completed_at", "is", null).order("completed_at", { ascending: true }).limit(200),
+    supabase.from("targets").select("id,class_id,course_id,unit_id,target_text,status,starts_on,target_date,review_on,reason,evidence,success_measure,current_progress,review_result,final_outcome,next_action,teacher_note,approved_by,approved_at,units(id,code,title,course_id),topics(id,title,units(id,code,title,course_id)),skills(id,title,topics(id,title,units(id,code,title,course_id))),activities:linked_activity_id(title),teachers:approved_by(display_name)").eq("learner_id", id).is("archived_at", null).order("target_date"),
+    supabase.from("teacher_notes").select("id,class_id,note,created_at").eq("learner_id", id).is("archived_at", null).order("created_at", { ascending: false }),
+    supabase.from("skill_mastery").select("skill_id,mastery_score,current_pathway,attempts_count,hints_used,repeated_error_count,retrieval_score,skills(id,title,topics(id,title,units(id,code,title,course_id)))").eq("learner_id", id),
+    supabase.from("learner_misconceptions").select("occurrence_count,first_seen_at,last_seen_at,resolved_at,misconceptions(title,reteach_guidance,skills(id,title,topics(id,title,units(id,code,title,course_id))))").eq("learner_id", id).order("occurrence_count", { ascending: false }),
     supabase.from("badge_awards").select("id,reason,awarded_at,badge_definitions(title)").eq("learner_id", id).order("awarded_at", { ascending: false }),
     supabase.from("coin_transactions").select("id,amount,description,created_at,transaction_status,balance_before,balance_after").eq("learner_id", id).order("created_at", { ascending: false }),
-    supabase.from("retrieval_schedules").select("id,scheduled_for,status,completed_at,topics(id,title,units(id,code,title))").eq("learner_id", id).order("scheduled_for", { ascending: false }),
-    supabase.from("skill_progress_comparisons").select("skill_id,starting_percentage,latest_percentage,improvement_points,status,evidence,skills(id,title,topics(id,title,units(id,code,title))),starting_result:starting_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title))),progress_result:latest_progress_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title)))").eq("learner_id", id),
-    supabase.from("teacher_actions").select("id,action,reason,review_on,outcome,metadata,created_at").eq("learner_id", id).is("archived_at", null).order("created_at", { ascending: false }),
-    supabase.from("progress_snapshots").select("id,created_at,learner_reflection,next_priorities,snapshot_data,academic_periods(name),creators:created_by(display_name)").eq("learner_id", id).order("created_at", { ascending: false }),
+    supabase.from("retrieval_schedules").select("id,scheduled_for,status,completed_at,topics(id,title,units(id,code,title,course_id))").eq("learner_id", id).order("scheduled_for", { ascending: false }),
+    supabase.from("skill_progress_comparisons").select("skill_id,starting_percentage,latest_percentage,improvement_points,status,evidence,skills(id,title,topics(id,title,units(id,code,title,course_id))),starting_result:starting_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title))),progress_result:latest_progress_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title)))").eq("learner_id", id),
+    supabase.from("teacher_actions").select("id,class_id,action,reason,review_on,outcome,metadata,created_at").eq("learner_id", id).is("archived_at", null).order("created_at", { ascending: false }),
+    supabase.from("progress_snapshots").select("id,class_id,created_at,learner_reflection,next_priorities,snapshot_data,academic_periods(name),creators:created_by(display_name)").eq("learner_id", id).order("created_at", { ascending: false }),
     supabase.from("academic_periods").select("id,name").is("archived_at", null).order("starts_on"),
-    supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_mark,reviewed_at,reviewed_by,attempt_answers(answer,mark,max_mark,feedback,answered_at,attempts(id,activity_id,percentage,attempt_number,completed_at,hints_used,activities(title,lessons(topics(id,title,units(id,code,title))))),questions(question_text,skills(id,title,topics(id,title,units(id,code,title)))))").eq("learner_id", id).order("created_at"),
-    supabase.from("activities").select("id,title").eq("status", "approved").is("archived_at", null).order("title").limit(100),
-    supabase.from("assessment_instances").select("id,kind,completed_at,prior_experience,support_needs,aspirations,activities(title,lessons(topics(id,title,units(id,code,title))))").eq("learner_id", id).order("completed_at"),
-    supabase.from("activity_unlock_overrides").select("id,reason,expires_at,created_at,revoked_at,activities(title,lessons(topics(id,title,units(id,code,title)))),teachers:teacher_id(display_name)").eq("learner_id", id).order("created_at", { ascending: false }),
+    supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_mark,reviewed_at,reviewed_by,attempt_answers(answer,mark,max_mark,feedback,answered_at,attempts(id,activity_id,percentage,attempt_number,completed_at,hints_used,activities(title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))),questions(question_text,skills(id,title,topics(id,title,units(id,code,title,course_id)))))").eq("learner_id", id).order("created_at"),
+    supabase.from("activities").select("id,title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id)))").eq("status", "approved").is("archived_at", null).order("title").limit(1000),
+    supabase.from("assessment_instances").select("id,kind,completed_at,prior_experience,support_needs,aspirations,activities(title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))").eq("learner_id", id).order("completed_at"),
+    supabase.from("activity_unlock_overrides").select("id,reason,expires_at,created_at,revoked_at,activities(title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id)))),teachers:teacher_id(display_name)").eq("learner_id", id).order("created_at", { ascending: false }),
     supabase.from("learner_curriculum_progress").select("unit_code,topic_code,selected_level,practice_score,hints_used,mastery_score,independent_attempts,retrieval_due_at,fast_track_reason,evidence").eq("learner_id", id),
     supabase.from("workbook_teacher_decisions").select("id,unit_code,topic_code,decision_type,original_route,new_route,reason,review_on,created_at,teachers:teacher_id(display_name)").eq("learner_id", id).order("created_at", { ascending: false }),
     supabase.from("learner_workbook_background").select("experience,support_needs,updated_at").eq("learner_id", id).maybeSingle(),
     supabase.from("learner_curriculum_attempts").select("id,kind,unit_code,topic_code,paper_mode,selected_level,percentage,mark,max_mark,hints_used,active_seconds,question_results,completed_at,teacher_mark,teacher_feedback,reviewed_at").eq("learner_id",id).order("completed_at",{ascending:false}).limit(100),
   ]);
+  if(evidenceResults.some(result=>result.error))throw new Error("The learner record could not be loaded safely.");
+  const [
+    { data: learner }, { data: enrolments }, { data: allAttempts }, { data: allTargets },
+    { data: notes }, { data: allMastery }, { data: allMisconceptions }, { data: badges },
+    { data: coins }, { data: allRetrieval }, { data: allComparisons },
+    { data: allTeacherActions }, { data: allSnapshots }, { data: periods },
+    { data: allFormativeReviews }, { data: allApprovedActivities }, { data: allAssessmentInstances },
+    { data: allOverrides }, { data: allWorkbookProgress }, { data: allWorkbookDecisions }, { data: workbookBackground }, { data: allCurriculumAttempts },
+  ] = evidenceResults;
   if (!learner) notFound();
 
   const now = new Date();
-  const classInfo = related(enrolments?.[0]?.classes);
+  const enrolmentChoices = (enrolments ?? []).flatMap(enrolment => {
+    const linkedClass = related(enrolment.classes);
+    return linkedClass ? [{ classId: linkedClass.id, enrolment, linkedClass }] : [];
+  });
+  const selectedEnrolment = requestedClassId
+    ? selectReportEnrolment(enrolmentChoices, requestedClassId)
+    : enrolmentChoices[0] ?? null;
+  if (requestedClassId && !selectedEnrolment) notFound();
+  const classInfo = selectedEnrolment?.linkedClass;
   const courseInfo = related(classInfo?.courses);
   const teacherName = actor.display_name;
-  const { data: curriculumSkills } = classInfo?.course_id ? await supabase.from("skills")
-    .select("id,title,sort_order,topics!inner(id,title,units!inner(id,code,title,course_id))")
-    .eq("status", "approved").is("archived_at", null)
-    .eq("topics.units.course_id", classInfo.course_id).order("sort_order") : { data: [] };
-  const {data:recognitionTemplates}=classInfo?await supabase.from("recognition_templates")
-    .select("id,title,category").eq("enabled",true).order("category"): {data:[]};
-  const[{data:achievementRows},{data:recognitions}]=await Promise.all([
+  const [{data:allCurriculumSkills,error:curriculumError},{data:recognitionTemplates,error:templateError},{data:classUnits,error:classUnitError}]=classInfo?await Promise.all([
+    supabase.from("skills")
+      .select("id,title,sort_order,topics!inner(id,title,units!inner(id,code,title,course_id))")
+      .eq("status", "approved").is("archived_at", null)
+      .eq("topics.units.course_id", classInfo.course_id).order("sort_order"),
+    supabase.from("recognition_templates").select("id,title,category").eq("enabled",true).order("category"),
+    supabase.from("class_units").select("unit_id,units(id,code,archived_at)")
+      .eq("class_id",classInfo.id).eq("active",true).is("archived_at",null),
+  ]):[{data:[],error:null},{data:[],error:null},{data:[],error:null}];
+  if(curriculumError||templateError||classUnitError)throw new Error("The learner programme scope could not be loaded safely.");
+  const selectedUnits=(classUnits??[]).flatMap(link=>{const unit=related(link.units);return unit&&!unit.archived_at?[{id:unit.id,code:unit.code}]:[];});
+  const scope:LearnerReportScope={
+    classId:String(classInfo?.id??""),
+    courseId:String(classInfo?.course_id??""),
+    unitIds:new Set(selectedUnits.map(unit=>unit.id)),
+    unitCodes:new Set(selectedUnits.map(unit=>unit.code)),
+  };
+  const curriculumSkills=(allCurriculumSkills??[]).filter(item=>skillRecordInScope(scope,item));
+  const attempts=(allAttempts??[]).filter(item=>activityRecordInScope(scope,item.activities));
+  const targets=(allTargets??[]).filter(item=>targetRecordInScope(scope,item));
+  const mastery=(allMastery??[]).filter(item=>skillRecordInScope(scope,item.skills));
+  const misconceptions=(allMisconceptions??[]).filter(item=>skillRecordInScope(scope,related(item.misconceptions)?.skills));
+  const retrieval=(allRetrieval??[]).filter(item=>topicRecordInScope(scope,item.topics));
+  const comparisons=(allComparisons??[]).filter(item=>skillRecordInScope(scope,item.skills));
+  const teacherActions=(allTeacherActions??[]).filter(item=>item.class_id===classInfo?.id);
+  const snapshots=(allSnapshots??[]).filter(item=>item.class_id===classInfo?.id);
+  const classNotes=(notes??[]).filter(item=>item.class_id===classInfo?.id);
+  const historicalUnscopedNotes=(notes??[]).filter(item=>item.class_id==null);
+  const formativeReviews=(allFormativeReviews??[]).filter(item=>feedbackRecordInScope(scope,item));
+  const approvedActivities=(allApprovedActivities??[]).filter(item=>activityRecordInScope(scope,item));
+  const assessmentInstances=(allAssessmentInstances??[]).filter(item=>
+    item.kind==="course_starting_point"||activityRecordInScope(scope,item.activities));
+  const overrides=(allOverrides??[]).filter(item=>activityRecordInScope(scope,item.activities));
+  const workbookProgress=(allWorkbookProgress??[]).filter(item=>scope.unitCodes.has(item.unit_code));
+  const workbookDecisions=(allWorkbookDecisions??[]).filter(item=>scope.unitCodes.has(item.unit_code));
+  const curriculumAttempts=(allCurriculumAttempts??[]).filter(item=>scope.unitCodes.has(item.unit_code));
+  const[{data:achievementRows,error:achievementError},{data:recognitions,error:recognitionError}]=await Promise.all([
     supabase.rpc("learner_achievement_summary",{learner_uuid:id}),
-    supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id",id).order("recognised_at",{ascending:false}),
+    classInfo?supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id",id).eq("class_id",classInfo.id).order("recognised_at",{ascending:false}):Promise.resolve({data:[],error:null}),
   ]);
+  if(achievementError||recognitionError)throw new Error("The learner achievement context could not be loaded safely.");
   const achievement=achievementRows?.[0];
 
   const academicSkills = (curriculumSkills ?? []).filter(skill =>
@@ -114,14 +171,16 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <Link className="link" href={classInfo ? `/teacher/classes/${classInfo.id}` : "/dashboard"}>← {classInfo?.name ?? "Teacher dashboard"}</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
-      <div><p className="eyebrow">Individual learner report</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-2 text-slate-600">{courseInfo?.title ?? "Course not recorded"}</p></div>
-      <div className="flex flex-wrap gap-3"><Link className="button-secondary" href={`/teacher/learners/${id}/evidence`}>Evidence View</Link><a className="button-secondary" href={`/api/reports/learners/${id}?format=csv`}>Export CSV</a><a className="button" href={`/api/reports/learners/${id}`}>Export PDF</a></div>
+      <div><p className="eyebrow">Learner evidence record</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-2 text-slate-600">{courseInfo?.title ?? "Course not recorded"}</p></div>
+      <div className="flex flex-wrap gap-3">{classInfo?<><Link className="button-secondary" href={`/teacher/learners/${id}/evidence?classId=${classInfo.id}`}>Evidence View</Link><a className="button-secondary" href={`/api/reports/learners/${id}?classId=${classInfo.id}&format=csv`}>Export CSV</a><a className="button" href={`/api/reports/learners/${id}?classId=${classInfo.id}`}>Export PDF</a></>:<span className="text-sm text-slate-500">No active class is available for evidence review.</span>}</div>
     </div>
+
+    {enrolmentChoices.length>1&&<nav aria-label="Choose learner class" className="card mt-6"><p className="text-sm font-bold">Report programme</p><div className="mt-3 flex flex-wrap gap-2">{enrolmentChoices.map(choice=><Link className={choice.classId===classInfo?.id?"button":"button-secondary"} href={`/teacher/learners/${id}?classId=${choice.classId}`} key={choice.classId}>{choice.linkedClass.name}</Link>)}</div></nav>}
 
     <section className="card mt-8"><p className="eyebrow">1. Learner overview</p><h2 className="mt-2 text-2xl font-bold">At a glance</h2>
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Summary label="Learner" value={learner.display_name}/><Summary label="Course" value={courseInfo?.title ?? "Not recorded"}/>
-        <Summary label="Teacher" value={teacherName}/><Summary label="Enrolment date" value={formatDate(enrolments?.[0]?.enrolled_at)}/>
+        <Summary label="Teacher" value={teacherName}/><Summary label="Enrolment date" value={formatDate(selectedEnrolment?.enrolment.enrolled_at)}/>
         <Summary label="Report date" value={now.toLocaleDateString("en-GB")}/>
         <Summary label="Starting-point status" value={overviewStartingStatus(topicGroups)}/>
         <Summary label="Current progress status" value={topicGroups.some(group => group.items.some(item => item.valid)) ? "Comparable progress evidence is available." : "No comparable progress-point assessment has been completed yet."}/>
@@ -208,15 +267,17 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
         <div className="mt-5 grid gap-6">
           <AdditionalBlock title="Full assessment history">{assessmentInstances?.length ? assessmentInstances.map(item => <p key={item.id}>{formatDate(item.completed_at)} · {item.kind.replaceAll("_", " ")} · {related(item.activities)?.title}</p>) : <Empty text="No formal assessment history recorded."/>}</AdditionalBlock>
           <AdditionalBlock title="Course starting point and learner background">{backgroundComparisons.length ? backgroundComparisons.map(item => <p key={item.skill_id}>{related(item.skills)?.title}: {item.starting_percentage}% recorded response <span className="text-slate-500">{isPriorExperienceSkill(related(item.skills)?.title ?? "") ? "(self-reported, not academic mastery)" : "(course-level starting point, excluded from unit mastery)"}</span></p>) : <Empty text="Course starting point and learner background not yet recorded."/>}</AdditionalBlock>
-          <AdditionalBlock title="Achievement and recognition"><p>{achievement?.ap_total??0} AP · {achievement?.current_level_title??"Building toward Bronze"} · {badges?.length??0} badges. Cosmetic coin balance: {coinBalance}.</p>{recognitions?.map(item=><p key={item.id}>{formatDate(item.recognised_at)} · {item.title}: {item.message}</p>)}{badges?.map(item => <p key={item.id}>{formatDate(item.awarded_at)} · {related(item.badge_definitions)?.title}</p>)}</AdditionalBlock>
-          <AdditionalBlock title="Coin ledger">{coins?.slice(0, 20).map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.description} · {Number(item.amount) > 0 ? "+" : ""}{item.amount}</p>)}</AdditionalBlock>
+          <AdditionalBlock title="Organisation-wide achievement and class recognition"><p>{achievement?.ap_total??0} AP · {achievement?.current_level_title??"Building toward Bronze"} · {badges?.length??0} badges. Cosmetic coin balance: {coinBalance}. Achievement totals and badges span the learner&apos;s organisation; recognitions below are for this class.</p>{recognitions?.map(item=><p key={item.id}>{formatDate(item.recognised_at)} · {item.title}: {item.message}</p>)}{badges?.map(item => <p key={item.id}>{formatDate(item.awarded_at)} · {related(item.badge_definitions)?.title}</p>)}</AdditionalBlock>
+          <AdditionalBlock title="Organisation-wide coin ledger">{coins?.slice(0, 20).map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.description} · {Number(item.amount) > 0 ? "+" : ""}{item.amount}</p>)}</AdditionalBlock>
           <AdditionalBlock title="Audit and teacher actions">{teacherActions?.length ? teacherActions.map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.action}: {item.reason}{item.outcome ? ` · ${item.outcome}` : ""}</p>) : <Empty text="No teacher actions recorded."/>}</AdditionalBlock>
           <AdditionalBlock title="Exceptional-access records">{overrides?.length ? overrides.map(item => <p key={item.id}>{formatDate(item.created_at)} · {related(item.activities)?.title} · {item.reason}</p>) : <Empty text="No exceptional-access records."/>}</AdditionalBlock>
           <AdditionalBlock title="Term snapshots">{snapshots?.length ? snapshots.map(item => <p key={item.id}>{formatDate(item.created_at)} · {related(item.academic_periods)?.name} · {item.next_priorities ?? "No next priority recorded"}</p>) : <Empty text="No term snapshots recorded."/>}</AdditionalBlock>
-          <AdditionalBlock title="Misconceptions and teacher notes">{misconceptions?.map((item, index) => <p key={index}>{related(item.misconceptions)?.title} · {item.occurrence_count} occurrence(s)</p>)}{notes?.map((item, index) => <p key={`note-${index}`}>{formatDate(item.created_at)} · {item.note}</p>)}</AdditionalBlock>
+          <AdditionalBlock title="Selected-unit misconceptions">{misconceptions?.length ? misconceptions.map((item, index) => <p key={index}>{related(item.misconceptions)?.title} · {item.occurrence_count} occurrence(s)</p>) : <Empty text="No selected-unit misconception evidence recorded."/>}</AdditionalBlock>
+          <AdditionalBlock title="Private teacher notes for this class">{classNotes.length ? classNotes.map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.note}</p>) : <Empty text="No private note has been recorded for this learner in the selected class."/>}{classInfo ? <TeacherNoteForm learnerId={id} classId={classInfo.id}/> : null}</AdditionalBlock>
+          {historicalUnscopedNotes.length ? <AdditionalBlock title="Historical notes without a class boundary">{historicalUnscopedNotes.map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.note} <span className="text-slate-500">(historical teacher-owned note; excluded from class-scoped evidence)</span></p>)}</AdditionalBlock> : null}
           <AdditionalBlock title="Adaptive workbook evidence">{workbookBackground && <p><strong>Self-reported background (not mastery):</strong> {workbookBackground.experience || "No experience supplied"} · Support needs: {workbookBackground.support_needs || "None supplied"}</p>}{workbookProgress?.length ? workbookProgress.map((item, index) => <p key={`${item.unit_code}-${item.topic_code}-${index}`}>Unit {item.unit_code} · {item.topic_code} · {item.selected_level} · {item.independent_attempts ?? 0} independent mastery attempts · {item.mastery_score == null ? "not mastered" : `${item.mastery_score}%`}{item.fast_track_reason ? ` · Fast-track reason: ${item.fast_track_reason}` : ""}{item.retrieval_due_at ? ` · Retrieval ${formatDate(item.retrieval_due_at)}` : ""}</p>) : <Empty text="No adaptive workbook evidence has been recorded yet."/>}{workbookDecisions?.map(item => <p key={item.id}>{formatDate(item.created_at)} · {item.decision_type.replaceAll("_"," ")} · Unit {item.unit_code}{item.topic_code ? ` / ${item.topic_code}` : ""} · {item.reason}{item.original_route ? ` · ${item.original_route} → ${item.new_route}` : ""}</p>)}</AdditionalBlock>
           <AdditionalBlock title="Teacher tools">
-            <WorkbookDecisionForm learnerId={id} units={configuredUnits.map(unit => ({ code: unit.code, title: unit.title, topics: unit.topics.map(topic => ({ code: topic.code, title: topic.title })) }))}/>
+            <WorkbookDecisionForm learnerId={id} units={configuredUnits.filter(unit=>scope.unitCodes.has(unit.code)).map(unit => ({ code: unit.code, title: unit.title, topics: unit.topics.map(topic => ({ code: topic.code, title: topic.title })) }))}/>
             {classInfo && <TeacherActionForm learnerId={id} classId={classInfo.id}/>}
             {actor.role==="administrator"&&classInfo&&<SnapshotForm learnerId={id} classId={classInfo.id} periods={periods ?? []}/>}
             {actor.role==="administrator"&&<CoinCorrectionForm learnerId={id}/>}

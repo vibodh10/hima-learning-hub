@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import {
   adjustCoins, bulkApproveTargets, createProgressSnapshot, createTeacherTarget, overridePathway, recordTeacherAction,
+  recordTeacherNote,
   reviewFormativeResponse,
   updateTarget, type ActionState,
 } from "@/app/actions/learning";
@@ -38,6 +39,20 @@ export function TeacherActionForm({ learnerId, classId }: { learnerId: string; c
     <label className="grid gap-1 text-sm font-semibold">Evidence-based reason<textarea className="input min-h-20" name="reason" required/></label>
     <label className="grid gap-1 text-sm font-semibold">Outcome, if already known<textarea className="input min-h-16" name="outcome"/></label>
     <button className="button-secondary justify-self-start" disabled={pending}>{pending?"Recording…":"Record teacher action"}</button><Feedback state={state}/>
+  </form>;
+}
+
+export function TeacherNoteForm({ learnerId, classId }: { learnerId: string; classId: string }) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(recordTeacherNote, {});
+  return <form action={action} className="mt-4 grid gap-3">
+    <input type="hidden" name="learnerId" value={learnerId}/>
+    <input type="hidden" name="classId" value={classId}/>
+    <label className="grid gap-1 text-sm font-semibold">Private class note
+      <textarea className="input min-h-20" name="note" minLength={5} maxLength={2000} required placeholder="Record a factual observation or follow-up context. Do not use this as assessed evidence unless the underlying learner work is stored."/>
+    </label>
+    <p className="text-xs text-slate-500">Visible only to you and same-organisation administrators. The selected class is recorded automatically.</p>
+    <button className="button-secondary justify-self-start" disabled={pending}>{pending ? "Recording…" : "Record class note"}</button>
+    <Feedback state={state}/>
   </form>;
 }
 

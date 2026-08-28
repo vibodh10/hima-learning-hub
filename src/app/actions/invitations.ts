@@ -22,6 +22,12 @@ const invitation = z.object({
   email: z.email("Enter a valid student email address.").trim().toLowerCase(),
 });
 
+const invitationManagement = z.object({
+  invitationId: z.uuid(),
+  classId: z.uuid(),
+  operation: z.enum(["cancel", "expire", "retry"]),
+});
+
 const blockedMessages: Record<string, string> = {
   archived_account: "This student account is archived. Ask an administrator to restore it before enrolling the student.",
   different_organisation: "This email already belongs to another organisation and cannot be attached to this class.",
@@ -60,6 +66,12 @@ export async function inviteStudent(_: InvitationState, formData: FormData): Pro
   });
   if (!origin) return { message: "The public application URL is not configured, so no invitation was sent." };
 
+  const { data: priorInvitation } = await sessionClient.from("student_invitations")
+    .select("id,status")
+    .eq("class_id", classData.id)
+    .eq("email_normalized", parsed.data.email)
+    .maybeSingle();
+
   const input: InvitationInput = {
     classId: classData.id,
     organisationId: actor.organisation_id,
@@ -74,23 +86,84 @@ export async function inviteStudent(_: InvitationState, formData: FormData): Pro
     return { message: blockedMessages[result.code] ?? "The invitation could not be completed safely. Please retry or ask an administrator." };
   }
 
+  let recoverySent = false;
+  let recoveryFailed = false;
+  if (result.kind === "connected" && priorInvitation && priorInvitation.status !== "accepted") {
+    const recovery = await sendAccountAccessEmail(sessionClient, input, result.invitationId, result.userId);
+    recoverySent = recovery.ok;
+    recoveryFailed = !recovery.ok;
+  }
+
   await createAdminClient().from("audit_logs").insert({
     organisation_id: actor.organisation_id,
     actor_id: actor.id,
     action: result.kind === "connected" ? "student.connected" : "student.invited",
     entity_type: "student_invitation",
     entity_id: result.invitationId,
-    after_data: { invited_user_id: result.userId, class_id: classData.id, outcome: result.kind },
+    after_data: {
+      invited_user_id: result.userId,
+      class_id: classData.id,
+      outcome: result.kind,
+      recovery_sent: recoverySent,
+    },
   });
   revalidatePath(`/teacher/classes/${classData.id}`);
 
   if (result.kind === "connected") {
+    if (recoverySent) {
+      return { ok: true, message: `${parsed.data.name}'s account is assigned to ${classData.name}, and a new secure password link was sent to ${parsed.data.email}.` };
+    }
+    if (recoveryFailed) {
+      return { ok: true, message: `${parsed.data.name}'s account is assigned to ${classData.name}, but another access email could not be sent yet. Retry shortly.` };
+    }
     return { ok: true, message: `${parsed.data.name}'s existing account is now assigned to ${classData.name}. No new email was needed.` };
   }
-  if (result.kind === "sent_pending_association") {
-    return { ok: true, message: `Invitation sent to ${parsed.data.email}. The account association will be retried when the student accepts the link.` };
-  }
   return { ok: true, message: `Invitation sent to ${parsed.data.email}. The student can use the secure email link to choose a password and open ${classData.name}.` };
+}
+
+export async function manageStudentInvitation(_: InvitationState, formData: FormData): Promise<InvitationState> {
+  const parsed = invitationManagement.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { message: "The invitation action was incomplete. Refresh the page and try again." };
+
+  await requireRole("teacher", "administrator");
+  const sessionClient = await createClient();
+  const { data: selected } = await sessionClient.from("student_invitations")
+    .select("id,class_id,email_normalized,display_name,status")
+    .eq("id", parsed.data.invitationId)
+    .eq("class_id", parsed.data.classId)
+    .maybeSingle();
+  if (!selected) return { message: "This invitation is not available for this group." };
+
+  if (parsed.data.operation === "retry") {
+    if (selected.status === "accepted") return { message: "This student has already joined the group." };
+    const retryData = new FormData();
+    retryData.set("classId", selected.class_id);
+    retryData.set("name", selected.display_name);
+    retryData.set("email", selected.email_normalized);
+    return inviteStudent({}, retryData);
+  }
+
+  const requestedStatus = parsed.data.operation === "cancel" ? "cancelled" : "expired";
+  const { error } = await sessionClient.rpc("manage_student_invitation", {
+    invitation_uuid: selected.id,
+    requested_status: requestedStatus,
+  });
+  if (error) {
+    if (error.message.includes("accepted_invitation_is_final")) {
+      return { message: "This student has already joined, so the invitation can no longer be changed." };
+    }
+    if (error.message.includes("invitation_cannot_expire")) {
+      return { message: "Only a preparing or sent invitation can be marked as expired." };
+    }
+    return { message: "The invitation could not be changed safely. Refresh the page and try again." };
+  }
+  revalidatePath(`/teacher/classes/${selected.class_id}`);
+  return {
+    ok: true,
+    message: requestedStatus === "cancelled"
+      ? `Invitation for ${selected.display_name} cancelled. Its secure link can no longer create class access.`
+      : `Invitation for ${selected.display_name} marked as expired. Its secure link can no longer create class access.`,
+  };
 }
 
 type SessionClient = Awaited<ReturnType<typeof createClient>>;
@@ -99,7 +172,14 @@ function createInvitationGateway(sessionClient: SessionClient, actorId: string):
   const admin = createAdminClient();
   return {
     async begin(input) {
-      const { data, error } = await admin.from("student_invitations").upsert({
+      const { data: current } = await admin.from("student_invitations")
+        .select("id,status")
+        .eq("class_id", input.classId)
+        .eq("email_normalized", input.email)
+        .maybeSingle();
+      if (current?.status === "accepted") return { invitationId: current.id as string };
+
+      const record = {
         organisation_id: input.organisationId,
         class_id: input.classId,
         email_normalized: input.email,
@@ -107,8 +187,22 @@ function createInvitationGateway(sessionClient: SessionClient, actorId: string):
         invited_by: input.invitedBy,
         status: "pending",
         last_detail_code: "requested",
+        cancelled_at: null,
+        expired_at: null,
         updated_at: new Date().toISOString(),
-      }, { onConflict: "class_id,email_normalized" }).select("id").single();
+      };
+      const query = current
+        ? admin.from("student_invitations").update(record).eq("id", current.id)
+        : admin.from("student_invitations").insert(record);
+      const { data, error } = await query.select("id").single();
+      if (error && !current) {
+        const { data: raced } = await admin.from("student_invitations")
+          .select("id")
+          .eq("class_id", input.classId)
+          .eq("email_normalized", input.email)
+          .maybeSingle();
+        if (raced) return { invitationId: raced.id as string };
+      }
       return error || !data ? { errorCode: "invitation_record_failed" } : { invitationId: data.id as string };
     },
 
@@ -120,12 +214,15 @@ function createInvitationGateway(sessionClient: SessionClient, actorId: string):
       if (!resolution.permitted || !resolution.user_id) {
         return { kind: "blocked", code: resolution.block_code ?? "account_exists" };
       }
+      if (!resolution.profile_exists) {
+        return { kind: "recoverable", userId: resolution.user_id as string };
+      }
       return { kind: "connectable", userId: resolution.user_id as string };
     },
 
     async sendNewUserInvite(input) {
       const { data, error } = await admin.auth.admin.inviteUserByEmail(input.email, {
-        redirectTo: input.redirectTo,
+        redirectTo: invitationRedirect(input.redirectTo, input.invitationId),
         data: {
           display_name: input.displayName,
           requested_role: "student",
@@ -140,6 +237,10 @@ function createInvitationGateway(sessionClient: SessionClient, actorId: string):
         return { errorCode: accountMayExist ? "account_exists" : "delivery_failed", accountMayExist };
       }
       return { userId: data.user.id };
+    },
+
+    async sendExistingAccountRecovery(input) {
+      return sendAccountAccessEmail(sessionClient, input, input.invitationId, input.userId);
     },
 
     async connect(input) {
@@ -182,7 +283,7 @@ function createInvitationGateway(sessionClient: SessionClient, actorId: string):
       const timestamp = new Date().toISOString();
       const update: Record<string, unknown> = { status, last_detail_code: detailCode, updated_at: timestamp };
       if (userId) update.auth_user_id = userId;
-      if (status === "sent" && detailCode === "email_requested") {
+      if (status === "sent" && ["email_requested", "recovery_requested"].includes(detailCode)) {
         update.last_sent_at = timestamp;
         update.send_count = Number(current?.send_count ?? 0) + 1;
       }
@@ -196,4 +297,40 @@ function createInvitationGateway(sessionClient: SessionClient, actorId: string):
       });
     },
   };
+}
+
+async function sendAccountAccessEmail(
+  sessionClient: SessionClient,
+  input: InvitationInput,
+  invitationId: string,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; errorCode: string }> {
+  const admin = createAdminClient();
+  const { data: authData, error: readError } = await admin.auth.admin.getUserById(userId);
+  const user = authData.user;
+  if (readError || !user || user.email?.trim().toLowerCase() !== input.email) {
+    return { ok: false, errorCode: "invalid_auth_account" };
+  }
+  const { error: metadataError } = await admin.auth.admin.updateUserById(userId, {
+    user_metadata: {
+      ...(user.user_metadata as Record<string, unknown>),
+      display_name: input.displayName,
+      requested_role: "student",
+      invited_class_id: input.classId,
+      invited_organisation_id: input.organisationId,
+      invitation_id: invitationId,
+    },
+  });
+  if (metadataError) return { ok: false, errorCode: "invalid_auth_account" };
+
+  const { error } = await sessionClient.auth.resetPasswordForEmail(input.email, {
+    redirectTo: invitationRedirect(input.redirectTo, invitationId),
+  });
+  return error ? { ok: false, errorCode: "delivery_failed" } : { ok: true };
+}
+
+function invitationRedirect(redirectTo: string, invitationId: string) {
+  const url = new URL(redirectTo);
+  url.searchParams.set("invitation", invitationId);
+  return url.toString();
 }

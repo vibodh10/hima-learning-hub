@@ -1,7 +1,7 @@
 import "server-only";
 import { getSessionProfile } from "./auth";
 import type { ExpertiseLevel } from "./learning-catalog";
-import { topicKey, type LearningProgress } from "./learning-progress";
+import { latestIncompleteCurriculumPosition, topicKey, type LearningProgress } from "./learning-progress";
 import { createClient } from "./supabase/server";
 
 export async function loadCurriculumProgress(): Promise<LearningProgress | null> {
@@ -10,8 +10,8 @@ export async function loadCurriculumProgress(): Promise<LearningProgress | null>
   const supabase = await createClient();
   const [{ data, error }, { data: existingMastery }, { data: startingEvidence }, { data: projectUnlocks }, { data: background }] = await Promise.all([
     supabase.from("learner_curriculum_progress")
-      .select("unit_code,topic_code,selected_level,topic_started_at,lesson_completed_at,practice_score,hints_used,mastery_score,mastered_at,current_section,independent_attempts,retrieval_due_at,fast_track_reason,evidence")
-      .eq("learner_id", actor.id),
+      .select("unit_code,topic_code,selected_level,topic_started_at,lesson_completed_at,practice_score,hints_used,mastery_score,mastered_at,current_section,independent_attempts,retrieval_due_at,fast_track_reason,evidence,updated_at")
+      .eq("learner_id", actor.id).order("updated_at",{ascending:false}),
     supabase.from("skill_mastery").select("current_pathway,mastery_score")
       .eq("learner_id", actor.id).order("mastery_score").limit(1),
     supabase.from("assessment_skill_results")
@@ -38,6 +38,7 @@ export async function loadCurriculumProgress(): Promise<LearningProgress | null>
         : "Support",
   };
   if (error || !data) return progress;
+  progress.currentPosition=latestIncompleteCurriculumPosition(data);
   for (const row of data) {
     if (row.selected_level) progress.level = row.selected_level as ExpertiseLevel;
     const mappedEvidence = Array.isArray(row.evidence) ? row.evidence as never[] : [];

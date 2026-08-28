@@ -35,6 +35,28 @@ export function topicKey(unitCode: string, topicCode: string) {
   return `${unitCode}:${topicCode}`;
 }
 
+export type CurriculumPositionRow = {
+  unit_code: string;
+  topic_code: string;
+  topic_started_at: string | null;
+  current_section: string | null;
+  mastery_score: number | string | null;
+  independent_attempts: number | null;
+  updated_at: string;
+};
+
+export function latestIncompleteCurriculumPosition(rows: CurriculumPositionRow[]) {
+  const latest = [...rows]
+    .filter(row => row.topic_started_at && !(Number(row.mastery_score) >= 80 && Number(row.independent_attempts) >= 3))
+    .sort((left, right) => new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime())[0];
+  return latest ? {
+    unitCode: latest.unit_code,
+    topicCode: latest.topic_code,
+    section: latest.current_section ?? "lesson:1",
+    updatedAt: latest.updated_at,
+  } : undefined;
+}
+
 export function projectReady(progress: LearningProgress, unitCode: string, requiredTopics: string[]) {
   const missing = requiredTopics.filter(code => {
     const topic = progress.topics[topicKey(unitCode, code)];

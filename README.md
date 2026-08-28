@@ -28,7 +28,7 @@ The original vertical slice is preserved and extended with:
   settings, target review and audited coin corrections;
 - adaptive homework, weekly plans, four-level measurable targets, permanent
   term/semester snapshots, teacher action logs and bulk actions;
-- learner and class PDF/CSV evidence reports;
+- explicitly class-scoped learner, whole-class and class-unit PDF/CSV evidence reports;
 - expanded role-aware student, class and learner dashboards;
 - responsive, accessible PWA shell and basic privacy page;
 - tested deterministic marking, reward idempotency and cross-learner isolation.
@@ -48,7 +48,8 @@ Prerequisites: Node.js 20+, npm, Supabase CLI, and a Supabase project.
 4. Reset a disposable local stack with `npx supabase db reset`. Apply
    `supabase/seed.sql`, `supabase/seed_adaptive_python_pilot.sql`, and
    `supabase/seed_complete_system.sql` if they are not configured as local seed
-   files.
+   files. The first and third files contain fictional local verification
+   identities/groups and must never be applied to a hosted or production project.
 5. Install and run: `npm install` then `npm run dev`.
 
 ## Local role testing
@@ -77,7 +78,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-database-contract.ps1
 ```
 
 The verifier creates a new disposable database for each SQL journey, applies
-the full migration and seed chain, and currently runs 27 independent journeys.
+the full migration and seed chain, and currently runs 42 independent journeys.
 Coverage includes enrolment and class lifecycles, RLS isolation, immutable
 starting points, equivalent progress checks, adaptive routing and homework,
 targets, snapshots, question/activity authoring, teacher and bulk actions,
@@ -97,8 +98,14 @@ npm run lint
 npm run build
 ```
 
-The release gate covers unit tests, 27 independent database journeys,
+The release gate covers unit tests, 42 independent database journeys,
 TypeScript, ESLint and a Next.js production build.
+
+After deploying a committed revision, run the read-only public verification in
+`docs/HOSTED_PORTAL_VERIFICATION.md`. It checks the safe `/api/release` identity,
+public pages and anonymous route isolation without creating accounts or evidence.
+The separate controlled-account checklist remains mandatory for invitation delivery,
+acceptance and authenticated cross-role proof.
 
 ## Staff activity preview
 

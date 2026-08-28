@@ -15,3 +15,12 @@ export function canIgnoreLegacyInvitationMetadata(
 ) {
   return Boolean(profile && !profile.archived_at && !hasDurableInvitation);
 }
+
+/** Only a delivered invitation (or an already accepted one) may provision. */
+export function invitationAcceptanceBlock(status: string | null | undefined) {
+  if (status === "sent" || status === "accepted") return null;
+  if (status === "cancelled") return "invitation_cancelled";
+  if (status === "expired") return "invitation_expired";
+  if (status === "pending") return "invitation_not_sent";
+  return "invitation_inactive";
+}
