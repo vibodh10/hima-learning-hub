@@ -7,8 +7,21 @@ import type { TopicEvidence } from "@/lib/learning-progress";
 import { createClient } from "@/lib/supabase/server";
 import { hasAssignedCurriculumUnit } from "@/lib/curriculum-access";
 import { isConfiguredUnitCode } from "@/lib/curriculum-unit-code";
+import { gradeStartingPointResponses } from "@/lib/starting-point-grading";
 
 const configuredUnitCodeSchema = z.string().refine(isConfiguredUnitCode);
+
+const startingPointSchema = z.object({
+  unitCode: configuredUnitCodeSchema,
+  background: z.object({
+    experience: z.string().trim().max(2000).optional(),
+    supportNeeds: z.string().trim().max(2000).optional(),
+  }),
+  responses: z.array(z.object({
+    questionId: z.string().trim().min(1).max(160),
+    selectedOption: z.number().int().min(0).max(20),
+  })).min(1).max(300),
+});
 
 const payloadSchema = z.object({
   unitCode: configuredUnitCodeSchema,
@@ -71,24 +84,32 @@ export async function saveCurriculumProgress(input: {
   return { ok: true, message: "Progress synced to your learner account." };
 }
 
-export async function saveStartingPoint(input: { unitCode: string; level: ExpertiseLevel; background: { experience?: string; supportNeeds?: string }; evidence: import("@/lib/adaptive-workbook").SkillEvidence[] }): Promise<{ ok: boolean; message: string }> {
+export async function saveStartingPoint(input: {
+  unitCode: string;
+  background: { experience?: string; supportNeeds?: string };
+  responses: { questionId: string; selectedOption: number }[];
+}): Promise<{ ok: boolean; message: string; recommendedLevel?: ExpertiseLevel }> {
   const actor = await getSessionProfile();
   if (!actor || actor.role !== "student") return { ok: false, message: "Sign in as a student to sync the starting point." };
-  const unit = configuredUnits.find(item => item.code === input.unitCode);
-  if (!unit || !["Support","Core","Stretch","Challenge"].includes(input.level)) return { ok: false, message: "Invalid starting-point record." };
-  if (!await hasAssignedCurriculumUnit(input.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
+  const parsed = startingPointSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Invalid starting-point record." };
+  const unit = configuredUnits.find(item => item.code === parsed.data.unitCode);
+  if (!unit) return { ok: false, message: "Invalid starting-point record." };
+  if (!await hasAssignedCurriculumUnit(parsed.data.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
+  const grade = gradeStartingPointResponses(unit, parsed.data.responses, new Date().toISOString());
+  if (!grade.ok) return { ok: false, message: "Complete every starting-point question once before saving." };
   const supabase = await createClient();
   const rows = unit.topics.map(topic => ({
-    learner_id: actor.id, unit_code: unit.code, topic_code: topic.code, selected_level: input.level,
+    learner_id: actor.id, unit_code: unit.code, topic_code: topic.code, selected_level: grade.recommendedLevel,
     independent_attempts: 0,
-    evidence: input.evidence.filter(item => item.topicCode === topic.code),
+    evidence: grade.evidence.filter(item => item.topicCode === topic.code),
   }));
   const [{ error }, { error: backgroundError }] = await Promise.all([
     supabase.from("learner_curriculum_progress").upsert(rows, { onConflict: "learner_id,unit_code,topic_code" }),
-    supabase.from("learner_workbook_background").upsert({ learner_id: actor.id, experience: input.background.experience ?? null, support_needs: input.background.supportNeeds ?? null, updated_at: new Date().toISOString() }, { onConflict: "learner_id" }),
+    supabase.from("learner_workbook_background").upsert({ learner_id: actor.id, experience: parsed.data.background.experience ?? null, support_needs: parsed.data.background.supportNeeds ?? null, updated_at: new Date().toISOString() }, { onConflict: "learner_id" }),
   ]);
   if (error || backgroundError) return { ok: false, message: "Starting point is saved on this device; account sync requires the adaptive workbook migrations." };
-  return { ok: true, message: "Starting-point evidence synced to your learner account." };
+  return { ok: true, message: "Starting-point evidence graded and synced to your learner account.", recommendedLevel: grade.recommendedLevel };
 }
 
 export type CurriculumActionState = { ok?: boolean; message?: string };

@@ -13,6 +13,7 @@ export function StartingPointAssessment({ unit, storageKey }: { unit: PearsonUni
   const [index, setIndex] = useState(0);
   const [choice, setChoice] = useState<number | null>(null);
   const [evidence, setEvidence] = useState<SkillEvidence[]>([]);
+  const [responses, setResponses] = useState<{ questionId: string; selectedOption: number }[]>([]);
   const [complete, setComplete] = useState(false);
   const [experience, setExperience] = useState("");
   const [supportNeeds, setSupportNeeds] = useState("");
@@ -40,7 +41,9 @@ export function StartingPointAssessment({ unit, storageKey }: { unit: PearsonUni
       recordedAt: new Date().toISOString(),
     };
     const nextEvidence = [...evidence, item];
+    const nextResponses = [...responses, { questionId: question.id, selectedOption: choice }];
     setEvidence(nextEvidence);
+    setResponses(nextResponses);
     setChoice(null);
     if (index < questions.length - 1) {
       setIndex(index + 1);
@@ -64,7 +67,14 @@ export function StartingPointAssessment({ unit, storageKey }: { unit: PearsonUni
     };
     localStorage.setItem(storageKey, JSON.stringify(next));
     startSync(async () => {
-      const result = await saveStartingPoint({ unitCode: unit.code, level: next.recommendedLevel!, background: { experience, supportNeeds }, evidence: nextEvidence });
+      const result = await saveStartingPoint({
+        unitCode: unit.code,
+        background: { experience, supportNeeds },
+        responses: nextResponses,
+      });
+      if (result.ok && result.recommendedLevel && result.recommendedLevel !== next.recommendedLevel) {
+        localStorage.setItem(storageKey, JSON.stringify({ ...next, recommendedLevel: result.recommendedLevel }));
+      }
       setSyncMessage(result.message);
     });
     setComplete(true);
