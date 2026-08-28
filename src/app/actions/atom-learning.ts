@@ -6,12 +6,13 @@ import {configuredUnits} from "@/lib/learning-catalog";
 import {createClient} from "@/lib/supabase/server";
 import {revalidatePath} from "next/cache";
 import {hasAssignedCurriculumUnit} from "@/lib/curriculum-access";
+import {isConfiguredUnitCode} from "@/lib/curriculum-unit-code";
 
 const resultSchema=z.object({
  id:z.string().min(1).max(100), difficulty:z.number().int().min(1).max(4), correct:z.boolean(), hintsUsed:z.number().int().min(0).max(5), marks:z.number().int().min(1).max(20),awardedMarks:z.number().int().min(0).max(20),answer:z.string().max(20000).optional()
 });
 const attemptSchema=z.object({
- kind:z.enum(["topic_practice","practice_paper"]),unitCode:z.string().regex(/^(1|2|4|6|8|9)$/),topicCode:z.string().min(1).max(20).nullable(),paperMode:z.enum(["knowledge","applied","assignment"]).nullable(),
+ kind:z.enum(["topic_practice","practice_paper"]),unitCode:z.string().refine(isConfiguredUnitCode),topicCode:z.string().min(1).max(20).nullable(),paperMode:z.enum(["knowledge","applied","assignment"]).nullable(),
  selectedLevel:z.enum(["Support","Core","Stretch","Challenge"]).nullable(),percentage:z.number().min(0).max(100),mark:z.number().int().min(0),maxMark:z.number().int().min(1),hintsUsed:z.number().int().min(0),activeSeconds:z.number().int().min(1).max(86400),results:z.array(resultSchema).min(1).max(100)
 });
 export type AtomAttemptInput=z.infer<typeof attemptSchema>;

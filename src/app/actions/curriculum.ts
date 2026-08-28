@@ -6,9 +6,12 @@ import { configuredUnits, type ExpertiseLevel } from "@/lib/learning-catalog";
 import type { TopicEvidence } from "@/lib/learning-progress";
 import { createClient } from "@/lib/supabase/server";
 import { hasAssignedCurriculumUnit } from "@/lib/curriculum-access";
+import { isConfiguredUnitCode } from "@/lib/curriculum-unit-code";
+
+const configuredUnitCodeSchema = z.string().refine(isConfiguredUnitCode);
 
 const payloadSchema = z.object({
-  unitCode: z.string().regex(/^(1|2|4|6|8|9)$/),
+  unitCode: configuredUnitCodeSchema,
   topicCode: z.string().min(1).max(20),
   level: z.enum(["Support", "Core", "Stretch", "Challenge"]),
   evidence: z.object({
@@ -95,7 +98,7 @@ export async function recordWorkbookTeacherDecision(_previous: CurriculumActionS
   const actor = await getSessionProfile();
   if (!actor || !["teacher", "administrator"].includes(actor.role)) return { ok: false, message: "Teacher access is required." };
   const parsed = z.object({
-    learnerId: z.string().uuid(), unitCode: z.string().regex(/^(1|2|4|6|8|9)$/), topicCode: z.string().max(20).optional(),
+    learnerId: z.string().uuid(), unitCode: configuredUnitCodeSchema, topicCode: z.string().max(20).optional(),
     decisionType: z.enum(["assign_topic","assign_mastery_check","assign_progress_point","route_override","project_unlock","feedback","intervention","reflection_review"]),
     originalRoute: z.string().max(80).optional(), newRoute: z.string().max(80).optional(), reason: z.string().min(10).max(1500), reviewOn: z.string().date().optional(),
   }).safeParse({

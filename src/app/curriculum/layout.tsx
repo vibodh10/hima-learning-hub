@@ -1,6 +1,8 @@
 import { AppHeader } from "@/components/app-header";
 import { requireRole } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function CurriculumLayout({ children }: { children: React.ReactNode }) {
   const actor = await requireRole("student", "teacher", "administrator");
   return <>

@@ -1,5 +1,5 @@
 export type TeacherNextAction = {
-  kind: "attention" | "create_group" | "choose_units" | "publish_units" | "invite_students" | "track_invitations" | "monitor";
+  kind: "attention" | "await_group" | "create_group" | "choose_units" | "publish_units" | "invite_students" | "track_invitations" | "monitor";
   eyebrow: string;
   title: string;
   detail: string;
@@ -33,7 +33,9 @@ const attentionLabels: Record<string, string> = {
 export function selectTeacherNextAction(input: {
   classes: TeacherClassSummary[];
   attention: TeacherAttentionCandidate[];
+  canManageGroupSetup?: boolean;
 }): TeacherNextAction {
+  const canManageGroupSetup = input.canManageGroupSetup ?? true;
   const attention = [...input.attention]
     .filter(candidate => candidate.status in attentionLabels)
     .sort((left,right)=>attentionPriority(left.status)-attentionPriority(right.status)||left.displayName.localeCompare(right.displayName))[0];
@@ -50,12 +52,22 @@ export function selectTeacherNextAction(input: {
   }
 
   if (!input.classes.length) {
+    if (!canManageGroupSetup) {
+      return {
+        kind: "await_group",
+        eyebrow: "My groups",
+        title: "No group has been assigned yet",
+        detail: "An administrator will add your group and units. You do not need to configure anything here.",
+        href: "#groups",
+        label: "View my groups",
+      };
+    }
     return {
       kind: "create_group",
       eyebrow: "Start here",
       title: "Create your first student group",
       detail: "Choose the programme first. You will select the units you teach inside the new group.",
-      href: "#classes",
+      href: "#groups",
       label: "Create a group",
       meta: "Step 1 of 3",
     };
@@ -63,6 +75,16 @@ export function selectTeacherNextAction(input: {
 
   const withoutUnits = input.classes.find(item => item.activeUnitCount === 0);
   if (withoutUnits) {
+    if (!canManageGroupSetup) {
+      return {
+        kind: "await_group",
+        eyebrow: "Group preparation",
+        title: `${withoutUnits.name} is being prepared`,
+        detail: "An administrator is adding the correct units. No setup is required from you.",
+        href: `/teacher/classes/${withoutUnits.id}`,
+        label: "View group",
+      };
+    }
     return {
       kind: "choose_units",
       eyebrow: "Continue setup",
@@ -76,6 +98,16 @@ export function selectTeacherNextAction(input: {
 
   const unpublished = input.classes.find(item => !item.published);
   if (unpublished) {
+    if (!canManageGroupSetup) {
+      return {
+        kind: "await_group",
+        eyebrow: "Group preparation",
+        title: `${unpublished.name} is being prepared`,
+        detail: "An administrator is checking the unit setup. No setup is required from you.",
+        href: `/teacher/classes/${unpublished.id}`,
+        label: "View group",
+      };
+    }
     return {
       kind: "publish_units",
       eyebrow: "Continue setup",

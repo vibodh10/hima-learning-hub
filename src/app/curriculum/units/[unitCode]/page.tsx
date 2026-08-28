@@ -1,14 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { UnitOverview } from "@/components/learning-journey";
-import { configuredUnits, unitByCode } from "@/lib/learning-catalog";
+import { unitByCode } from "@/lib/learning-catalog";
 import { loadCurriculumProgress } from "@/lib/curriculum-progress-server";
 import { requireCurriculumUnitAccess } from "@/lib/curriculum-access";
 import { progressKeyFor } from "@/lib/learning-progress";
-
-export function generateStaticParams() {
-  return configuredUnits.map(unit => ({ unitCode: unit.code }));
-}
 
 export default async function UnitPage({ params }: { params: Promise<{ unitCode: string }> }) {
   const { unitCode } = await params;

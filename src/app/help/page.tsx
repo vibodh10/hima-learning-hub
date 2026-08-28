@@ -3,10 +3,10 @@ import { AppHeader } from "@/components/app-header";
 import { requireRole, type Role } from "@/lib/auth";
 
 const teacherSteps = [
-  ["1", "Create a group", "Choose BTEC or T Level. A group is simply the students you teach; the unit content is reused."],
-  ["2", "Choose your units", "Open the group, select only the units you teach, then publish the group when it is ready."],
-  ["3", "Invite students", "Send each student a secure invitation from the group page. Their account is connected to the correct group automatically."],
-  ["4", "Teach and monitor", "Students complete their starting point and learning. Your dashboard then highlights progress, missed learning, outstanding work and evidence."],
+  ["1", "Open My groups", "Choose the group you teach. Its programme, units and timetable are already prepared for you."],
+  ["2", "Invite students", "Send each student a secure invitation from the group page. Their account and learning journey are connected automatically."],
+  ["3", "Check progress", "The group page shows students needing help first. Open a student only when you want their full evidence."],
+  ["4", "Download a report", "Use Download progress report on the group page whenever you need a current evidence report."],
 ];
 
 const studentSteps = [
@@ -17,10 +17,10 @@ const studentSteps = [
 ];
 
 const administratorSteps = [
-  ["1", "Give tutors access", "Open Administration, find Teacher access, choose the tutor and enter their own verified email. The tutor receives a secure password-setup link."],
-  ["2", "Tutors choose their units", "Each tutor signs in, creates their BTEC or T Level group and selects only the units they teach."],
-  ["3", "Tutors invite students", "The tutor publishes the group and sends secure student invitations. Joined students are connected to the correct programme, units and group automatically."],
-  ["4", "Monitor the whole portal", "Use the administrator overview for curriculum, users and governance. Tutors continue to manage the learning journey for their own groups."],
+  ["1", "Prepare groups", "Create each group once and attach its approved programme, units and teaching days."],
+  ["2", "Give tutors access", "Open Administration and send each tutor their own secure password-setup link."],
+  ["3", "Tutors invite students", "Tutors open their ready-made groups and send student invitations; they do not configure learning models."],
+  ["4", "Use advanced setup only when needed", "Curriculum, calendar, privacy and recognition controls stay collapsed on the administrator page."],
 ];
 
 export default async function HelpPage() {
@@ -32,8 +32,8 @@ export default async function HelpPage() {
   const introduction = isStudent
     ? "The portal keeps your assigned learning, progress, feedback and evidence together. You can only see your own record."
     : isAdministrator
-      ? "Create secure tutor access first. Tutors then choose their own units, invite their students and manage their teaching groups."
-      : "Choose what you teach, invite your students and then use the dashboard to decide where your professional attention is needed.";
+      ? "Prepare groups and secure tutor access once. Tutors then invite students, check progress and download reports from a short everyday workflow."
+      : "Open your group, invite students and check progress. Programme and unit setup is handled by an administrator.";
 
   return <>
     <AppHeader name={actor.display_name} role={actor.role}/>

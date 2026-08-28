@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StartingPointAssessment } from "@/components/starting-point-assessment";
-import { configuredUnits, unitByCode } from "@/lib/learning-catalog";
+import { unitByCode } from "@/lib/learning-catalog";
 import { requireCurriculumUnitAccess } from "@/lib/curriculum-access";
 import { progressKeyFor } from "@/lib/learning-progress";
-
-export function generateStaticParams() { return configuredUnits.map(unit => ({ unitCode: unit.code })); }
 
 export default async function StartingPointPage({ params }: { params: Promise<{ unitCode: string }> }) {
   const { unitCode } = await params;

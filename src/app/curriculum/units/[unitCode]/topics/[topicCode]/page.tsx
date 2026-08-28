@@ -1,14 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AtomTopicHub } from "@/components/atom-topic-hub";
-import { configuredUnits, topicByCode, unitByCode } from "@/lib/learning-catalog";
+import { topicByCode, unitByCode } from "@/lib/learning-catalog";
 import { requireCurriculumUnitAccess } from "@/lib/curriculum-access";
 import { loadCurriculumProgress } from "@/lib/curriculum-progress-server";
 import { progressKeyFor, topicKey } from "@/lib/learning-progress";
-
-export function generateStaticParams() {
-  return configuredUnits.flatMap(unit => unit.topics.map(topic => ({ unitCode: unit.code, topicCode: topic.code })));
-}
 
 export default async function TopicPage({ params,searchParams }: { params: Promise<{ unitCode: string; topicCode: string }>;searchParams:Promise<{catchup?:string;stage?:string}> }) {
   const { unitCode, topicCode } = await params;

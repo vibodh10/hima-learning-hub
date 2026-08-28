@@ -42,6 +42,9 @@ Test-PublicPage "/" "SCCB Digital Learning Hub"
 Test-PublicPage "/login" "One account has one role"
 Test-PublicPage "/forgot-password" "Reset your password"
 Test-PublicPage "/privacy" "How SCCB Digital Learning Hub handles learner data"
+Test-PublicPage "/register" "Student accounts are invitation only"
+Test-PublicPage "/update-password" "Choose a new password"
+Test-PublicPage "/course-entry-readiness" "Course Entry &amp; Readiness Assessment"
 
 $release = Invoke-RestMethod -Uri (Resolve-PortalUri "/api/release") -Method Get -TimeoutSec $TimeoutSec
 if ($release.status -ne "ok" -or $release.service -ne "sccb-digital-learning-hub") {
@@ -61,8 +64,25 @@ if ($ExpectedCommit) {
 
 Test-ProtectedPage "/dashboard" "Continue learning"
 Test-ProtectedPage "/admin" "Administration dashboard"
-Test-ProtectedPage "/teacher/classes/00000000-0000-0000-0000-000000000000" "Student group"
+Test-ProtectedPage "/help" "How the portal works"
+Test-ProtectedPage "/curriculum" "My curriculum"
 Test-ProtectedPage "/progress" "My progress"
+Test-ProtectedPage "/portfolio" "My work"
+Test-ProtectedPage "/rewards" "Rewards shop"
+Test-ProtectedPage "/teacher/content" "Curriculum configuration"
+Test-ProtectedPage "/teacher/sample-report" "Evidence report"
+Test-ProtectedPage "/teacher/classes/00000000-0000-0000-0000-000000000000" "Student group"
+Test-ProtectedPage "/teacher/learners/00000000-0000-0000-0000-000000000000" "Learner record"
+Test-ProtectedPage "/teacher/learners/00000000-0000-0000-0000-000000000000/evidence?classId=00000000-0000-0000-0000-000000000000" "Learner evidence"
+Test-ProtectedPage "/learn/network-security" "Protecting a college network"
+Test-ProtectedPage "/learn/00000000-0000-0000-0000-000000000000" "Lesson"
+Test-ProtectedPage "/learn/00000000-0000-0000-0000-000000000000/activities/00000000-0000-0000-0000-000000000000" "Activity"
+Test-ProtectedPage "/curriculum/units/10" "Big Data"
+Test-ProtectedPage "/curriculum/units/10/starting-point" "Starting point"
+Test-ProtectedPage "/curriculum/units/10/papers" "Practice papers"
+Test-ProtectedPage "/curriculum/units/10/project" "Project"
+Test-ProtectedPage "/curriculum/units/10/topics/A1" "Pearson topic"
+Test-ProtectedPage "/curriculum/units/10/topics/A1/practice" "Practice"
 
 $checks | Format-Table -AutoSize
 Write-Output "Hosted public verification passed. No account, invitation or learner evidence was created or changed."

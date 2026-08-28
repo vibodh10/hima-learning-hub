@@ -13,8 +13,19 @@ const readyClass = {
 describe("selectTeacherNextAction", () => {
   it("starts a new teacher with group creation", () => {
     expect(selectTeacherNextAction({ classes: [], attention: [] })).toMatchObject({
-      kind: "create_group", href: "#classes",
+      kind: "create_group", href: "#groups",
     });
+  });
+
+  it("does not ask an ordinary teacher to create or configure groups", () => {
+    expect(selectTeacherNextAction({ classes: [], attention: [], canManageGroupSetup: false })).toMatchObject({
+      kind: "await_group", href: "#groups",
+    });
+    expect(selectTeacherNextAction({
+      classes: [{ ...readyClass, activeUnitCount: 0, published: false, studentCount: 0 }],
+      attention: [],
+      canManageGroupSetup: false,
+    })).toMatchObject({ kind: "await_group", title: "Group 1 is being prepared" });
   });
 
   it("requires units before publication or invitation", () => {
