@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { configuredAppOrigin, resolveAppOrigin } from "@/lib/app-origin";
 import { requireRole } from "@/lib/auth";
+import { classInvitationReadiness } from "@/lib/class-invitation-readiness";
 import {
   runInvitationWorkflow,
   type ExistingAccountResolution,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/invitation-workflow";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { unitByCode } from "@/lib/learning-catalog";
 
 export type InvitationState = { ok?: boolean; message?: string; errors?: Record<string, string[]> };
 
@@ -49,16 +51,39 @@ export async function inviteStudent(_: InvitationState, formData: FormData): Pro
   const sessionClient = await createClient();
   const classQuery = sessionClient
     .from("classes")
-    .select("id,name,organisation_id,teacher_id,published,class_units!inner(unit_id,active)")
+    .select("id,name,organisation_id,teacher_id,published,active_unit_id,class_units!inner(unit_id,active,archived_at)")
     .eq("id", parsed.data.classId)
     .is("archived_at", null);
   const { data: classData } = await classQuery.single();
   if (!classData || classData.organisation_id !== actor.organisation_id) {
     return { message: "You can only invite students to your own active class." };
   }
-  if (!classData.published || !classData.class_units.some(unit => unit.active)) {
-    return { message: "Choose and publish at least one unit before inviting students." };
-  }
+  const activeClassUnitIds = classData.class_units
+    .filter(unit => unit.active && !unit.archived_at)
+    .map(unit => unit.unit_id);
+  const [{ data: activeUnit }, { data: journeyTemplate }] = classData.active_unit_id
+    ? await Promise.all([
+      sessionClient.from("units").select("code,status,archived_at")
+        .eq("id", classData.active_unit_id).maybeSingle(),
+      sessionClient.from("learning_journey_templates").select("id")
+        .eq("unit_id", classData.active_unit_id).eq("status", "approved")
+        .is("archived_at", null).limit(1).maybeSingle(),
+    ])
+    : [{ data: null }, { data: null }];
+  const configuredUnitCode = activeUnit
+    && activeUnit.status === "approved"
+    && !activeUnit.archived_at
+    && unitByCode(activeUnit.code)
+    ? activeUnit.code
+    : null;
+  const readiness = classInvitationReadiness({
+    published: classData.published,
+    activeUnitId: classData.active_unit_id,
+    activeClassUnitIds,
+    configuredUnitCode,
+    hasApprovedJourney: Boolean(journeyTemplate),
+  });
+  if (!readiness.ready) return { message: readiness.message };
 
   const origin = resolveAppOrigin({
     configuredOrigin: configuredAppOrigin(),
