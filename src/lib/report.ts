@@ -133,6 +133,7 @@ export function learnerJourneyCsv(input: {
   className: string;
   courseTitle: string;
   generatedAt: string;
+  evidenceRange?: string;
   rows: LearnerJourneyCsvRow[];
 }) {
   const rows: unknown[][] = [
@@ -141,6 +142,7 @@ export function learnerJourneyCsv(input: {
     ["Class", input.className],
     ["Course", input.courseTitle],
     ["Report generated", input.generatedAt],
+    ["Evidence period", input.evidenceRange ?? "All recorded evidence through report date"],
     [],
     [
       "Unit", "Topic", "Skill", "Evidence type", "Starting-point result",

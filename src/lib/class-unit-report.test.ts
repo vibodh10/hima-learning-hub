@@ -8,7 +8,7 @@ const base: ClassUnitReportInput = {
   unitCode: "4",
   unitTitle: "Programming",
   generatedAt: "2026-08-27T12:00:00.000Z",
-  journey: { title: "Programming — 12 teaching weeks", status: "in progress", teachingWeek: 3, totalTeachingWeeks: 12, startedOn: "2026-08-10" },
+  journey: { title: "Programming - 12 teaching weeks", status: "in progress", teachingWeek: 3, totalTeachingWeeks: 12, startedOn: "2026-08-10" },
   learners: [{ id: "student-1", name: "Sam Learner" }],
   topics: [
     { id: "topic-1", code: "A1", title: "Computational thinking" },
@@ -27,7 +27,7 @@ describe("class unit evidence report", () => {
       unitProgress: 0,
       currentModule: "Not started",
       latestAssessment: "Not yet recorded",
-      comparableProgress: "Not yet calculable — insufficient comparable evidence",
+      comparableProgress: "Not yet calculable - insufficient comparable evidence",
       attention: "Starting point not yet established",
       nextStep: "Complete the unit starting-point assessment",
     });
@@ -74,7 +74,7 @@ describe("class unit evidence report", () => {
       reviewedFeedback: 1,
       feedbackResponse: "+10 percentage points across 1 follow-up cycle",
       overdueTargets: 1,
-      attention: "Needs attention — 1 overdue target",
+      attention: "Needs attention - 1 overdue target",
       nextStep: "Complete a fresh selection trace",
       teacherDecisions: 1,
       portfolioArtifacts: 1,

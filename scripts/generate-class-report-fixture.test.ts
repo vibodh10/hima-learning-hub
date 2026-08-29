@@ -14,7 +14,7 @@ describe.skipIf(!enabled)("class report fixture generator", () => {
       name: `${["Alex", "Beth", "Casey", "Drew", "Em", "Farah", "George", "Holly", "Isaac", "Jaya", "Kai", "Leah"][index]} Example`,
     }));
     const report = projectClassReport({
-      className: "Level 2 Digital - Sample Group",
+      className: "FICTIONAL SAMPLE - Level 2 Digital Group",
       courseTitle: "BTEC Digital Information Technology",
       units: ["Unit 4: Programming", "Unit 5: Data and information"],
       generatedAt,

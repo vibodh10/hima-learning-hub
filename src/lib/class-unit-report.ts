@@ -1,5 +1,6 @@
 import { evidenceCounts, hasValidComparableProgress, reportTargetStatus } from "./learner-report-model";
 import { csvCell } from "./report";
+import { plainDisplayText } from "./plain-display-text";
 
 export type ClassUnitReportInput = {
   className: string;
@@ -172,7 +173,7 @@ export function projectClassUnitReport(input: ClassUnitReportInput): ClassUnitRe
       : null;
     const comparableProgress = validComparisons.length
       ? `${signed(averageChange!)} percentage points across ${validComparisons.length} comparable skill${validComparisons.length === 1 ? "" : "s"}`
-      : "Not yet calculable — insufficient comparable evidence";
+      : "Not yet calculable - insufficient comparable evidence";
 
     const targetLabels = targets.map(target => ({ target, label: reportTargetStatus(target.status, target.targetDate, asAt) }));
     const overdueTargets = targetLabels.filter(item => item.label === "Overdue");
@@ -192,20 +193,20 @@ export function projectClassUnitReport(input: ClassUnitReportInput): ClassUnitRe
     const catchUp = input.catchUp.filter(row => row.learnerId === learner.id && !row.completedAt);
     const repeatedDifficultyCode = repeatedDifficulty(attempts);
     const attention = overdueTargets.length
-      ? `Needs attention — ${overdueTargets.length} overdue target${overdueTargets.length === 1 ? "" : "s"}`
+      ? `Needs attention - ${overdueTargets.length} overdue target${overdueTargets.length === 1 ? "" : "s"}`
       : catchUp.length
-        ? `Needs attention — ${catchUp.length} outstanding catch-up item${catchUp.length === 1 ? "" : "s"}`
+        ? `Needs attention - ${catchUp.length} outstanding catch-up item${catchUp.length === 1 ? "" : "s"}`
         : repeatedDifficultyCode
-          ? `Needs attention — repeated difficulty in ${topicNames.get(repeatedDifficultyCode) ?? repeatedDifficultyCode}`
+          ? `Needs attention - repeated difficulty in ${topicNames.get(repeatedDifficultyCode) ?? repeatedDifficultyCode}`
           : averageChange != null && averageChange < 0
-            ? `Needs review — comparable progress changed by ${signed(averageChange)} points`
+            ? `Needs review - comparable progress changed by ${signed(averageChange)} points`
             : startingScore == null
               ? "Starting point not yet established"
               : modulesStarted === 0
                 ? "No unit learning recorded"
                 : modulesCompleted > 0 || Number(averageChange) > 0
-                  ? "Progress evidenced — no current alert rule triggered"
-                  : "Learning in progress — no current alert rule triggered";
+                  ? "Progress evidenced - no current alert rule triggered"
+                  : "Learning in progress - no current alert rule triggered";
     const priorityTarget = overdueTargets[0]?.target ?? activeTargets[0]?.target;
     const nextStep = priorityTarget
       ? priorityTarget.nextAction?.trim() || priorityTarget.targetText
@@ -271,7 +272,7 @@ export function classUnitReportCsv(report: ClassUnitReport) {
     ["Course", report.courseTitle],
     ["Unit", `${report.unitCode}: ${report.unitTitle}`],
     ["Generated", report.generatedAt],
-    ["Shared learning journey", report.journey ? `${report.journey.title} — ${report.journey.status}` : "Not started"],
+    ["Shared learning journey", report.journey ? `${report.journey.title} - ${report.journey.status}` : "Not started"],
     [],
     [
       "Learner", "Starting point", "Modules started", "Modules secure", "Approved modules",
@@ -289,7 +290,9 @@ export function classUnitReportCsv(report: ClassUnitReport) {
     row.reviewedFeedback, row.feedbackResponse, row.portfolioArtifacts, row.worksheets,
     row.outstandingCatchUp, row.teacherDecisions, row.attention, row.nextStep,
   ]));
-  return rows.map(row => row.map(csvCell).join(",")).join("\r\n");
+  return rows.map(row => row.map(value => csvCell(
+    typeof value === "string" ? plainDisplayText(value) : value,
+  )).join(",")).join("\r\n");
 }
 
 function evidenceItems(value: unknown) {

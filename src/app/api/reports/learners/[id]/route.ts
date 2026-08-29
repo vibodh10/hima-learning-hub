@@ -17,6 +17,12 @@ import {
   topicRecordInScope,
   type LearnerReportScope,
 } from "@/lib/learner-report-scope";
+import {
+  learnerReportDateRangeLabel,
+  learnerReportDateRangeSuffix,
+  parseLearnerReportDateRange,
+  scopeLearnerEvidenceToDateRange,
+} from "@/lib/learner-report-date-range";
 
 type Row = Record<string, unknown>;
 const idSchema = z.string().uuid();
@@ -26,8 +32,11 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const actor = await getSessionProfile();
   if (!actor) return privateResponse("Authentication required.", 401);
   if (!canViewLearnerEvidence(actor.role)) return privateResponse("Not authorised.", 403);
+  const url = new URL(request.url);
+  const parsedRange = parseLearnerReportDateRange(url.searchParams);
+  if (!parsedRange.ok) return privateResponse(parsedRange.message, 400);
   const parsedId = idSchema.safeParse((await context.params).id);
-  const parsedClassId = idSchema.safeParse(new URL(request.url).searchParams.get("classId"));
+  const parsedClassId = idSchema.safeParse(url.searchParams.get("classId"));
   if (!parsedId.success) return privateResponse("Learner report not found.", 404);
   if (!parsedClassId.success) return privateResponse("Choose a class before exporting this learner report.", 400);
   const id = parsedId.data;
@@ -79,7 +88,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   };
   const evidenceResults = await Promise.all([
     supabase.from("attempts").select("id,activity_id,percentage,attempt_number,completed_at,pathway,hints_used,teacher_override_by,teacher_override_reason,activities(title,learning_stage,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))").eq("learner_id", id).not("completed_at", "is", null).order("completed_at").limit(QUERY_LIMIT),
-    supabase.from("targets").select("id,class_id,course_id,unit_id,target_text,status,starts_on,target_date,review_on,reason,evidence,success_measure,current_progress,review_result,final_outcome,next_action,approved_by,units(id,code,title,course_id),topics(id,title,units(id,code,title,course_id)),skills(id,title,topics(id,title,units(id,code,title,course_id))),activities:linked_activity_id(title),teachers:approved_by(display_name)").eq("learner_id", id).is("archived_at", null).order("target_date").limit(QUERY_LIMIT),
+    supabase.from("targets").select("id,class_id,course_id,unit_id,target_text,status,starts_on,target_date,review_on,reason,evidence,success_measure,current_progress,review_result,final_outcome,next_action,approved_by,created_at,units(id,code,title,course_id),topics(id,title,units(id,code,title,course_id)),skills(id,title,topics(id,title,units(id,code,title,course_id))),activities:linked_activity_id(title),teachers:approved_by(display_name)").eq("learner_id", id).is("archived_at", null).order("target_date").limit(QUERY_LIMIT),
     supabase.from("skill_progress_comparisons").select("skill_id,starting_percentage,latest_percentage,improvement_points,status,evidence,skills(id,title,topics(id,title,units(id,code,title,course_id))),starting_result:starting_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title))),progress_result:latest_progress_result_id(hints_used,difficulty,created_at,assessment_instances(completed_at,activities(title)))").eq("learner_id", id).limit(QUERY_LIMIT),
     supabase.from("skill_mastery").select("skill_id,mastery_score,current_pathway,attempts_count,hints_used,repeated_error_count,retrieval_score,skills(id,title,topics(id,title,units(id,code,title,course_id)))").eq("learner_id", id).limit(QUERY_LIMIT),
     supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_mark,reviewed_at,reviewed_by,attempt_answers(answer,mark,max_mark,feedback,answered_at,attempts(id,activity_id,percentage,attempt_number,completed_at,hints_used,activities(title,assessment_kind,lessons(topics(id,title,units(id,code,title,course_id))))),questions(question_text,skills(id,title,topics(id,title,units(id,code,title,course_id)))))").eq("learner_id", id).order("created_at").limit(QUERY_LIMIT),
@@ -115,13 +124,15 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     { data: recognitions }, { data: attendanceEvents }, { data: certificateReviews },
   ] = evidenceResults;
 
-  const evidence: ReportEvidence = {
+  const exportedAt = new Date().toISOString();
+  const unscopedEvidence: ReportEvidence = {
     learnerName: learner.display_name,
     className: String(classInfo?.name ?? "No active class recorded"),
     courseTitle: String(course?.title ?? "No active course recorded"),
     teacherName: actor.display_name,
     enrolledAt: stringOrNull(enrolmentRow?.enrolled_at),
-    exportedAt: new Date().toISOString(),
+    exportedAt,
+    reportRange: learnerReportDateRangeLabel(parsedRange.range, exportedAt),
     skills: rows(curriculumSkillResult.data).filter(row => skillRecordInScope(scope, row)),
     comparisons: rows(comparisons).filter(row => skillRecordInScope(scope, row.skills)),
     mastery: rows(mastery).filter(row => skillRecordInScope(scope, row.skills)),
@@ -147,29 +158,32 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     attendanceEvents: rows(attendanceEvents),
     certificateReviews: rows(certificateReviews),
   };
+  const evidence = scopeLearnerEvidenceToDateRange(unscopedEvidence, parsedRange.range);
   const safeName = learner.display_name.replace(/[^a-z0-9]+/gi, "-")
     .replace(/^-|-$/g, "").toLowerCase() || "learner";
-  if (new URL(request.url).searchParams.get("format") === "csv") {
+  const rangeSuffix = learnerReportDateRangeSuffix(parsedRange.range);
+  if (url.searchParams.get("format") === "csv") {
     const csv = learnerJourneyCsv({
       learnerName: evidence.learnerName,
       className: evidence.className,
       courseTitle: evidence.courseTitle,
       generatedAt: evidence.exportedAt,
+      evidenceRange: evidence.reportRange,
       rows: buildCsvRows(evidence),
     });
     return new Response(csv, {
-      headers: downloadHeaders("text/csv; charset=utf-8", `${safeName}-progress-evidence.csv`),
+      headers: downloadHeaders("text/csv; charset=utf-8", `${safeName}-progress-evidence${rangeSuffix}.csv`),
     });
   }
   const bytes = await buildConciseLearnerReportPdf(evidence);
   return new Response(bytes as BodyInit, {
-    headers: downloadHeaders("application/pdf", `${safeName}-learner-progress-evidence.pdf`),
+    headers: downloadHeaders("application/pdf", `${safeName}-learner-progress-evidence${rangeSuffix}.pdf`),
   });
 }
 
 export type ReportEvidence = {
   learnerName: string; className: string; courseTitle: string; teacherName: string;
-  enrolledAt: string | null; exportedAt: string;
+  enrolledAt: string | null; exportedAt: string; reportRange?: string;
   skills: Row[]; comparisons: Row[]; mastery: Row[]; attempts: Row[];
   targets: Row[]; feedback: Row[]; misconceptions: Row[]; teacherActions: Row[];
   snapshots: Row[]; retrieval: Row[]; badges: Row[]; coins: Row[];

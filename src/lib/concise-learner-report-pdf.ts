@@ -7,7 +7,7 @@ import {
 type Row = Record<string, unknown>;
 export type ConciseReportEvidence = {
   learnerName: string; className: string; courseTitle: string; teacherName: string;
-  enrolledAt: string | null; exportedAt: string;
+  enrolledAt: string | null; exportedAt: string; reportRange?: string;
   skills: Row[]; comparisons: Row[]; mastery: Row[]; attempts: Row[];
   targets: Row[]; feedback: Row[]; misconceptions: Row[]; teacherActions: Row[];
   snapshots: Row[]; retrieval: Row[]; badges: Row[]; coins: Row[];
@@ -30,7 +30,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   const ensure = (minimum: number) => { if (y < minimum) newPage(); };
   const line = (text: string, size = 9, strong = false, indent = 0) => {
     for (const part of wrap(text, Math.max(44, 100 - indent))) {
-      if (y < 58) newPage();
+      if (y < 72) newPage();
       page.drawText(part, { x: 45 + indent * 5, y, size, font: strong ? bold : regular, color: rgb(.08, .14, .17) });
       y -= size + 5;
     }
@@ -75,6 +75,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   line(`Learner: ${data.learnerName} | Course: ${data.courseTitle}`, 10, true);
   line(`Class / group: ${data.className} | Teacher: ${data.teacherName}`);
   line(`Enrolled: ${date(data.enrolledAt)} | Report date: ${date(data.exportedAt)}`);
+  line(`Evidence period: ${data.reportRange ?? `All recorded evidence through ${date(data.exportedAt)}`}.`, 9, true);
   const partial = groups.filter(group => statusFor(group.items) === "Partially assessed").length;
   const established = groups.filter(group => statusFor(group.items) === "Baseline established").length;
   const progressed = groups.filter(group => statusFor(group.items) === "Progress point completed").length;
@@ -231,6 +232,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   if (!data.teacherActions.length && !data.overrides.length) line("No audit or exceptional-access records.", 8);
   ensure(225);
   subheading("Evidence integrity and scope");
+  line(`Evidence period: ${data.reportRange ?? `All recorded evidence through ${date(data.exportedAt)}`}. Dated records outside this period are excluded. Current aggregate totals without a reliable historical timestamp are not presented as historical facts.`,8);
   line("Academic judgements use dated assessment evidence, mapped curriculum content, recorded support, teacher feedback and follow-up where available. Open-ended practical papers are not treated as finally marked until a teacher records a review.",8);
   line("A missing record is shown as not recorded or not assessed; it is never converted into a progress claim. Rewards are reported separately from academic evidence.",8);
   line("This educational progress report supports inspection discussion but is not an Ofsted certificate. Attendance, safeguarding, SEND plans and statutory records remain in the centre's approved systems and must be considered alongside it.",8);

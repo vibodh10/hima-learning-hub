@@ -28,7 +28,9 @@ The original vertical slice is preserved and extended with:
   settings, target review and audited coin corrections;
 - adaptive homework, weekly plans, four-level measurable targets, permanent
   term/semester snapshots, teacher action logs and bulk actions;
-- explicitly class-scoped learner, whole-class and class-unit PDF/CSV evidence reports;
+- explicitly class-scoped learner, whole-class and class-unit PDF/CSV evidence reports,
+  including inclusive date-window exports for an individual learner that omit
+  undated current aggregates rather than presenting them as historical facts;
 - expanded role-aware student, class and learner dashboards;
 - responsive, accessible PWA shell and basic privacy page;
 - tested deterministic marking, reward idempotency and cross-learner isolation.

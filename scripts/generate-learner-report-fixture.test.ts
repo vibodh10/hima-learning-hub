@@ -7,7 +7,7 @@ describe("visual learner report fixture",()=>{
   const topic={id:"topic-normalisation",title:"Normalisation",units:{id:"unit-2",code:"2",title:"Creating Systems to Manage Information"}};
   const skill={id:"skill-normalise",title:"Normalise data from UNF to 3NF",topics:topic};
   const evidence:ConciseReportEvidence={
-   learnerName:"Sample Learner",className:"Level 3 IT - Group 1",courseTitle:"Pearson BTEC Level 3 National Information Technology",teacherName:"Hima",enrolledAt:"2026-09-03",exportedAt:"2026-11-20T15:30:00Z",
+   learnerName:"Fictional Sample Learner",className:"FICTIONAL SAMPLE - Level 3 IT Group",courseTitle:"Pearson BTEC Level 3 National Information Technology",teacherName:"Sample Teacher",enrolledAt:"2026-09-03",exportedAt:"2026-11-20T15:30:00Z",reportRange:"01/09/2026 to 20/11/2026 (inclusive)",
    skills:[skill],comparisons:[{skill_id:skill.id,starting_percentage:45,latest_percentage:82,improvement_points:37,evidence:{starting_question_count:6,progress_question_count:6,starting_sufficient:true,progress_sufficient:true},skills:skill,starting_result:{hints_used:2,created_at:"2026-09-12"},progress_result:{hints_used:0,created_at:"2026-11-15"}}],
    mastery:[{skill_id:skill.id,mastery_score:82,current_pathway:"Stretch",attempts_count:4,hints_used:0,repeated_error_count:0,retrieval_score:79}],
    attempts:[{id:"attempt-1",activity_id:"activity-1",percentage:45,attempt_number:1,completed_at:"2026-09-12",pathway:"Core",hints_used:2,activities:{title:"Normalisation baseline",lessons:{topics:topic}}},{id:"attempt-2",activity_id:"activity-1",percentage:82,attempt_number:2,completed_at:"2026-11-15",pathway:"Stretch",hints_used:0,activities:{title:"Normalisation reassessment",lessons:{topics:topic}}}],

@@ -177,6 +177,17 @@ export default async function LearnerPage({
 
     {enrolmentChoices.length>1&&<nav aria-label="Choose learner class" className="card mt-6"><p className="text-sm font-bold">Report programme</p><div className="mt-3 flex flex-wrap gap-2">{enrolmentChoices.map(choice=><Link className={choice.classId===classInfo?.id?"button":"button-secondary"} href={`/teacher/learners/${id}?classId=${choice.classId}`} key={choice.classId}>{choice.linkedClass.name}</Link>)}</div></nav>}
 
+    {classInfo&&<details className="card mt-6">
+      <summary className="cursor-pointer text-lg font-bold">Download a report for selected dates</summary>
+      <p className="mt-3 max-w-3xl text-sm text-slate-600">Choose an inclusive evidence period. The export includes dated records from that window and clearly omits current totals that cannot be reconstructed historically.</p>
+      <form action={`/api/reports/learners/${id}`} className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] lg:items-end" method="get">
+        <input name="classId" type="hidden" value={classInfo.id}/>
+        <label className="grid gap-1 text-sm font-semibold">From<input className="input" name="from" required type="date"/></label>
+        <label className="grid gap-1 text-sm font-semibold">To<input className="input" name="to" required type="date"/></label>
+        <div className="flex flex-wrap gap-2"><button className="button" type="submit">Period PDF</button><button className="button-secondary" name="format" type="submit" value="csv">Period CSV</button></div>
+      </form>
+    </details>}
+
     <section className="card mt-8"><p className="eyebrow">1. Learner overview</p><h2 className="mt-2 text-2xl font-bold">At a glance</h2>
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Summary label="Learner" value={learner.display_name}/><Summary label="Course" value={courseInfo?.title ?? "Not recorded"}/>

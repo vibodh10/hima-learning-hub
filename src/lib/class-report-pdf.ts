@@ -111,6 +111,7 @@ export async function buildClassReportPdf(data: ClassReport) {
   y -= 10;
   line("Accuracy and scope", 10, true);
   line("This report includes active learners and active selected units only. Starting points require sufficient stored evidence. Progress is shown only where a dated, comparable progress point exists. Missing evidence is labelled explicitly. Formal qualification assignments and grades are outside SCCB Digital Learning Hub.", 8);
+  line("This educational evidence report supports professional review but does not guarantee Ofsted compliance or replace the centre's approved attendance, safeguarding, SEND, qualification-assessment or statutory records.", 8);
   footer(page, pdf.getPageCount());
 
   const generatedAt = new Date(data.generatedAt);

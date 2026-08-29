@@ -14,11 +14,11 @@ describe("visual class unit report fixture", () => {
       overdueTargets: 0, achievedTargets: 2, reviewedFeedback: 2,
       feedbackResponse: "+18 percentage points across 2 follow-up cycles", portfolioArtifacts: 4,
       worksheets: 5, outstandingCatchUp: 0, teacherDecisions: 1,
-      attention: "Progress evidenced — no current alert rule triggered",
+      attention: "Progress evidenced - no current alert rule triggered",
       nextStep: "Complete the A4 mastery check independently", ...overrides,
     });
     const report: ClassUnitReport = {
-      className: "Level 3 IT - Sample Group", courseTitle: "Pearson BTEC Level 3 National Information Technology",
+      className: "FICTIONAL SAMPLE - Level 3 IT Group", courseTitle: "Pearson BTEC Level 3 National Information Technology",
       unitId: "40000000-0000-0000-0000-000000000004", unitCode: "4", unitTitle: "Programming",
       generatedAt: "2026-11-20T15:30:00Z",
       journey: { title: "Programming - 12 teaching weeks", status: "in progress", teachingWeek: 7, totalTeachingWeeks: 12, startedOn: "2026-09-14" },
