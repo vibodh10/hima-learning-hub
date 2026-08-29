@@ -6,7 +6,8 @@ declare
 begin
   foreach checked_table in array array[
     'attempts','attempt_answers','organisations','deadlines','reminders','audit_logs',
-    'learner_curriculum_progress','learner_curriculum_attempts'
+    'learner_curriculum_progress','learner_curriculum_attempts',
+    'workbook_teacher_decisions'
   ] loop
     if to_regclass('public.'||checked_table) is null then
       raise exception 'required table public.% is missing',checked_table;
@@ -67,6 +68,16 @@ begin
     select prosecdef and proconfig @> array['search_path=""']
     from pg_proc where oid='public.submit_activity(uuid,jsonb,integer)'::regprocedure
   ) then raise exception 'submission RPC is not security-definer with an empty search path'; end if;
+  if not (
+    select prosecdef and proconfig @> array['search_path=""']
+    from pg_proc
+    where oid='public.can_manage_workbook_learner_unit(uuid,text)'::regprocedure
+  ) then raise exception 'workbook scope helper is not security-definer with an empty search path'; end if;
+  if not (
+    select prosecdef and proconfig @> array['search_path=""']
+    from pg_proc
+    where oid='public.can_manage_class(uuid)'::regprocedure
+  ) then raise exception 'class management helper is not security-definer with an empty search path'; end if;
 end $$;
 
 select 'security invariants passed' as result;

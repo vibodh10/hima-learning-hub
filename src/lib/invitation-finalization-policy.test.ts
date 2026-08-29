@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canIgnoreLegacyInvitationMetadata,
   invitationAcceptanceBlock,
+  invitationProvisioningDetails,
 } from "@/lib/invitation-finalization-policy";
 
 describe("invitation finalization policy", () => {
@@ -39,5 +40,29 @@ describe("invitation finalization policy", () => {
     [null, "invitation_inactive"],
   ])("blocks a %s invitation with %s", (status, code) => {
     expect(invitationAcceptanceBlock(status)).toBe(code);
+  });
+
+  it("never provisions from user-editable Auth metadata alone", () => {
+    expect(invitationProvisioningDetails(null, {
+      invited_class_id: "attacker-selected-class",
+      invited_organisation_id: "attacker-selected-organisation",
+      display_name: "Attacker-selected name",
+    })).toBeNull();
+  });
+
+  it("uses only the durable invitation when metadata conflicts", () => {
+    expect(invitationProvisioningDetails({
+      class_id: "trusted-class",
+      organisation_id: "trusted-organisation",
+      display_name: "Trusted Learner",
+    }, {
+      invited_class_id: "attacker-selected-class",
+      invited_organisation_id: "attacker-selected-organisation",
+      display_name: "Attacker-selected name",
+    })).toEqual({
+      classId: "trusted-class",
+      organisationId: "trusted-organisation",
+      displayName: "Trusted Learner",
+    });
   });
 });

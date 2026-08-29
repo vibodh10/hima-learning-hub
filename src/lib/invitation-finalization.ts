@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   canIgnoreLegacyInvitationMetadata,
   invitationAcceptanceBlock,
+  invitationProvisioningDetails,
 } from "@/lib/invitation-finalization-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -29,9 +30,6 @@ export async function finalizeCurrentStudentInvitation(
   const admin = createAdminClient();
   const metadata = user.user_metadata as Record<string, unknown>;
   const metadataInvitationId = validUuid(preferredInvitationId) ?? validUuid(metadata.invitation_id);
-  const metadataClassId = validUuid(metadata.invited_class_id);
-  const metadataOrganisationId = validUuid(metadata.invited_organisation_id);
-  const metadataName = typeof metadata.display_name === "string" ? metadata.display_name.trim() : "";
 
   const invitationQuery = admin.from("student_invitations")
     .select("id,class_id,organisation_id,email_normalized,display_name,status,auth_user_id")
@@ -58,16 +56,24 @@ export async function finalizeCurrentStudentInvitation(
     return { kind: "ready" };
   }
 
-  const classId = validUuid(invitation?.class_id) ?? metadataClassId;
-  const expectedOrganisationId = validUuid(invitation?.organisation_id) ?? metadataOrganisationId;
-  if (!classId) return existingProfile ? { kind: "ready" } : { kind: "not_invited" };
+  if (!invitation) {
+    return existingProfile
+      ? { kind: "failed", code: "profile_conflict" }
+      : { kind: "not_invited" };
+  }
+
+  const provisioning = invitationProvisioningDetails(invitation, metadata);
+  if (!provisioning) return { kind: "not_invited" };
+  const classId = validUuid(provisioning.classId);
+  const expectedOrganisationId = validUuid(provisioning.organisationId);
+  if (!classId || !expectedOrganisationId) return { kind: "failed", code: "invalid_invitation" };
 
   const { data: classData, error: classError } = await admin.from("classes")
     .select("id,organisation_id,archived_at")
     .eq("id", classId)
     .maybeSingle();
   if (classError || !classData || classData.archived_at) return { kind: "failed", code: "invalid_class" };
-  if (expectedOrganisationId && classData.organisation_id !== expectedOrganisationId) {
+  if (classData.organisation_id !== expectedOrganisationId) {
     return { kind: "failed", code: "organisation_mismatch" };
   }
   if (invitation?.email_normalized && invitation.email_normalized !== user.email.trim().toLowerCase()) {
@@ -90,7 +96,7 @@ export async function finalizeCurrentStudentInvitation(
   }
 
   if (!existingProfile) {
-    const displayName = invitation?.display_name?.trim() || metadataName;
+    const displayName = provisioning.displayName;
     if (displayName.length < 2) return { kind: "failed", code: "missing_display_name" };
     const { error } = await admin.from("user_profiles").insert({
       id: user.id,

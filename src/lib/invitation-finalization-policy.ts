@@ -3,6 +3,18 @@ export type ExistingInvitationProfile = {
   archived_at: string | null;
 };
 
+export type DurableInvitationProvisioningRecord = {
+  class_id: string;
+  organisation_id: string;
+  display_name: string;
+};
+
+export type UntrustedInvitationMetadata = {
+  invited_class_id?: unknown;
+  invited_organisation_id?: unknown;
+  display_name?: unknown;
+};
+
 /**
  * Invitation metadata used before the durable invitation ledger was added can
  * remain on an Auth account after its profile has been provisioned or its role
@@ -23,4 +35,21 @@ export function invitationAcceptanceBlock(status: string | null | undefined) {
   if (status === "expired") return "invitation_expired";
   if (status === "pending") return "invitation_not_sent";
   return "invitation_inactive";
+}
+
+/**
+ * Auth user metadata is editable by its account holder and may only help find
+ * a durable invitation. It can never supply enrolment or profile attributes.
+ */
+export function invitationProvisioningDetails(
+  invitation: DurableInvitationProvisioningRecord | null,
+  untrustedMetadata: UntrustedInvitationMetadata,
+) {
+  void untrustedMetadata;
+  if (!invitation) return null;
+  return {
+    classId: invitation.class_id,
+    organisationId: invitation.organisation_id,
+    displayName: invitation.display_name.trim(),
+  };
 }

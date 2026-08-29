@@ -98,7 +98,7 @@ npm run lint
 npm run build
 ```
 
-The release gate covers unit tests, 42 independent database journeys,
+The release gate covers unit tests, 43 independent database journeys,
 TypeScript, ESLint and a Next.js production build.
 
 After deploying a committed revision, run the read-only public verification in
