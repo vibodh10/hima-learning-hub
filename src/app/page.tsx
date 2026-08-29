@@ -23,12 +23,12 @@ export default function Home() {
         <p className="mt-5 text-sm text-slate-500">Practice and progress only. Formal qualification assignments stay outside SCCB Digital Learning Hub.</p>
       </div>
       <div className="relative">
-        <div className="absolute -inset-5 -rotate-3 rounded-[2rem] bg-amber-100" aria-hidden />
+        <div className="brand-splash absolute -inset-5 -rotate-3 rounded-[2rem]" aria-hidden />
         <div className="card lesson-preview relative overflow-hidden p-0">
           <div className="border-b border-slate-100 p-6"><p className="text-sm text-slate-500">Example student view</p><h2 className="mt-1 text-xl font-bold">Network security fundamentals</h2></div>
           <div className="grid gap-4 p-6">
             <div className="preview-progress rounded-2xl p-5"><div className="flex items-center justify-between"><span className="font-semibold">Topic progress</span><strong className="text-2xl text-teal-800">72%</strong></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white"><div className="preview-progress-bar h-full w-[72%] rounded-full" /></div></div>
-            {["Remember - 5 min","Learn and worked example - 12 min","Core practice - 10 min"].map((item,index)=><div key={item} className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"><span className={`grid size-9 place-items-center rounded-full font-bold ${index===2?"bg-amber-100 text-amber-900":"bg-teal-700 text-white"}`}>{index===2?"→":"✓"}</span><span className="font-medium">{item}</span></div>)}
+            {["Remember - 5 min","Learn and worked example - 12 min","Core practice - 10 min"].map((item,index)=><div key={item} className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"><span className={`grid size-9 place-items-center rounded-full font-bold ${index===2?"bg-fuchsia-100 text-fuchsia-900":"bg-teal-700 text-white"}`}>{index===2?"→":"✓"}</span><span className="font-medium">{item}</span></div>)}
           </div>
         </div>
       </div>
