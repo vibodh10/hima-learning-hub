@@ -3,11 +3,12 @@
 import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
 import { configuredUnits, type ExpertiseLevel } from "@/lib/learning-catalog";
-import type { TopicEvidence } from "@/lib/learning-progress";
 import { createClient } from "@/lib/supabase/server";
 import { hasAssignedCurriculumUnit } from "@/lib/curriculum-access";
 import { isConfiguredUnitCode } from "@/lib/curriculum-unit-code";
 import { gradeStartingPointResponses } from "@/lib/starting-point-grading";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { curriculumPositionSection } from "@/lib/curriculum-position";
 
 const configuredUnitCodeSchema = z.string().refine(isConfiguredUnitCode);
 
@@ -23,65 +24,49 @@ const startingPointSchema = z.object({
   })).min(1).max(300),
 });
 
-const payloadSchema = z.object({
+const positionSchema = z.object({
   unitCode: configuredUnitCodeSchema,
   topicCode: z.string().min(1).max(20),
-  level: z.enum(["Support", "Core", "Stretch", "Challenge"]),
-  evidence: z.object({
-    startedAt: z.string().datetime().optional(),
-    lessonCompletedAt: z.string().datetime().optional(),
-    practiceScore: z.number().min(0).max(100).optional(),
-    hintsUsed: z.number().int().min(0).optional(),
-    masteryScore: z.number().min(0).max(100).optional(),
-    masteredAt: z.string().datetime().optional(),
-    currentSection: z.string().max(80).optional(),
-    independentAttempts: z.number().int().min(0).optional(),
-    retrievalDueAt: z.string().datetime().optional(),
-    fastTrackReason: z.string().max(1000).optional(),
-    evidence: z.array(z.object({
-      id: z.string(), kind: z.enum(["initial_diagnostic","guided_practice","independent_practice","topic_mastery","progress_point","retrieval","unit_assessment","project"]),
-      unitCode: z.string(), topicCode: z.string(), skill: z.string(), learningAim: z.string().optional(), criterion: z.string().optional(), difficulty: z.union([z.literal(1),z.literal(2),z.literal(3),z.literal(4)]), correct: z.boolean(), independent: z.boolean(), hintsUsed: z.number().int().min(0), misconception: z.string().optional(), feedback: z.string().optional(), recordedAt: z.string().datetime(),
-    })).max(200).optional(),
-  }),
+  currentSection: z.string().trim().min(1).max(80),
 });
 
 export async function saveCurriculumProgress(input: {
   unitCode: string;
   topicCode: string;
-  level: ExpertiseLevel;
-  evidence: TopicEvidence;
+  currentSection: string;
 }): Promise<{ ok: boolean; message: string }> {
   const actor = await getSessionProfile();
   if (!actor || actor.role !== "student") return { ok: false, message: "Sign in as a student to sync progress." };
-  const parsed = payloadSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "The curriculum progress record was invalid." };
+  const parsed = positionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "The lesson position was invalid." };
   const unit = configuredUnits.find(item => item.code === parsed.data.unitCode);
-  if (!unit?.topics.some(item => item.code === parsed.data.topicCode)) return { ok: false, message: "This topic is not part of the configured curriculum." };
+  const topic = unit?.topics.find(item => item.code === parsed.data.topicCode);
+  if (!unit || !topic) return { ok: false, message: "This topic is not part of the configured curriculum." };
   if (!await hasAssignedCurriculumUnit(parsed.data.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
-  const evidence = parsed.data.evidence;
-  if (evidence.masteryScore != null && (!evidence.lessonCompletedAt || evidence.practiceScore == null || (evidence.independentAttempts ?? 0) < 3)) {
-    return { ok: false, message: "Independent mastery requires completed teaching and practice." };
-  }
-  const supabase = await createClient();
-  const { error } = await supabase.from("learner_curriculum_progress").upsert({
-    learner_id: actor.id,
-    unit_code: parsed.data.unitCode,
-    topic_code: parsed.data.topicCode,
-    selected_level: parsed.data.level,
-    topic_started_at: evidence.startedAt ?? null,
-    lesson_completed_at: evidence.lessonCompletedAt ?? null,
-    practice_score: evidence.practiceScore ?? null,
-    hints_used: evidence.hintsUsed ?? 0,
-    mastery_score: evidence.masteryScore ?? null,
-    mastered_at: evidence.masteredAt ?? null,
-    current_section: evidence.currentSection ?? null,
-    independent_attempts: evidence.independentAttempts ?? 0,
-    retrieval_due_at: evidence.retrievalDueAt ?? null,
-    fast_track_reason: evidence.fastTrackReason ?? null,
-    evidence: evidence.evidence ?? [],
-  }, { onConflict: "learner_id,unit_code,topic_code" });
+  const admin = createAdminClient();
+  const { data: existing } = await admin.from("learner_curriculum_progress")
+    .select("selected_level,topic_started_at")
+    .eq("learner_id", actor.id)
+    .eq("unit_code", unit.code)
+    .eq("topic_code", topic.code)
+    .maybeSingle();
+  const currentSection = curriculumPositionSection(unit, topic, parsed.data.currentSection, existing?.selected_level);
+  if (!currentSection) return { ok: false, message: "That lesson position is not part of this topic." };
+  const now = new Date().toISOString();
+  const { error } = existing
+    ? await admin.from("learner_curriculum_progress").update({
+      current_section: currentSection,
+      topic_started_at: existing.topic_started_at ?? now,
+    }).eq("learner_id", actor.id).eq("unit_code", unit.code).eq("topic_code", topic.code)
+    : await admin.from("learner_curriculum_progress").insert({
+      learner_id: actor.id,
+      unit_code: unit.code,
+      topic_code: topic.code,
+      topic_started_at: now,
+      current_section: currentSection,
+    });
   if (error) return { ok: false, message: "Progress is saved on this device; account sync will resume when the curriculum migration is applied." };
-  return { ok: true, message: "Progress synced to your learner account." };
+  return { ok: true, message: "Lesson position synced to your learner account." };
 }
 
 export async function saveStartingPoint(input: {
@@ -98,7 +83,7 @@ export async function saveStartingPoint(input: {
   if (!await hasAssignedCurriculumUnit(parsed.data.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
   const grade = gradeStartingPointResponses(unit, parsed.data.responses, new Date().toISOString());
   if (!grade.ok) return { ok: false, message: "Complete every starting-point question once before saving." };
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const rows = unit.topics.map(topic => ({
     learner_id: actor.id, unit_code: unit.code, topic_code: topic.code, selected_level: grade.recommendedLevel,
     independent_attempts: 0,

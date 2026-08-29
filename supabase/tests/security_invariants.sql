@@ -5,7 +5,8 @@ declare
   checked_table text;
 begin
   foreach checked_table in array array[
-    'attempts','attempt_answers','organisations','deadlines','reminders','audit_logs'
+    'attempts','attempt_answers','organisations','deadlines','reminders','audit_logs',
+    'learner_curriculum_progress','learner_curriculum_attempts'
   ] loop
     if to_regclass('public.'||checked_table) is null then
       raise exception 'required table public.% is missing',checked_table;
@@ -50,6 +51,14 @@ begin
   end if;
   if has_table_privilege('authenticated','public.attempt_answers','UPDATE') then
     raise exception 'browser role can rewrite historical answers';
+  end if;
+  if has_table_privilege('authenticated','public.learner_curriculum_progress','INSERT')
+    or has_table_privilege('authenticated','public.learner_curriculum_progress','UPDATE') then
+    raise exception 'browser role can forge curriculum progress';
+  end if;
+  if has_table_privilege('authenticated','public.learner_curriculum_attempts','INSERT')
+    or has_table_privilege('authenticated','public.learner_curriculum_attempts','UPDATE') then
+    raise exception 'browser role can forge curriculum marks or teacher reviews';
   end if;
   if has_column_privilege('authenticated','public.questions','correct_answer','SELECT') then
     raise exception 'correct answers are directly readable by browser users';

@@ -5,7 +5,6 @@ import {
   scoreQuestion,
   type PaperMode,
 } from "./atom-question-bank";
-import type { ExpertiseLevel } from "./learning-catalog";
 import type { PearsonUnit } from "./pearson-curriculum";
 
 export type AtomResponse = {
@@ -20,7 +19,6 @@ export type AtomAttemptSubmission = {
   topicCode: string | null;
   paperMode: PaperMode | null;
   paperVersion: number | null;
-  selectedLevel: ExpertiseLevel | null;
   activeSeconds: number;
   responses: AtomResponse[];
 };

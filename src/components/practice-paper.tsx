@@ -82,7 +82,7 @@ export function PracticePaper({ unit }: { unit: PearsonUnit }) {
     startSync(async () => {
       const response = await saveAtomAttempt({
         kind: "practice_paper", unitCode: unit.code, topicCode: null, paperMode: mode,
-        paperVersion: version, selectedLevel: null,
+        paperVersion: version,
         activeSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
         responses: questions.map(question => ({ id: question.id, hintsUsed: 0, answer: answers[question.id] ?? "" })),
       });

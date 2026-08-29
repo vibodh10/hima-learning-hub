@@ -15,7 +15,6 @@ describe("server-authoritative curriculum attempt grading", () => {
       topicCode: topic.code,
       paperMode: null,
       paperVersion: null,
-      selectedLevel: "Core",
       activeSeconds: 300,
       responses: topicQuestions.map(question => ({
         id: question.id,
@@ -53,7 +52,6 @@ describe("server-authoritative curriculum attempt grading", () => {
       topicCode: topic.code,
       paperMode: null,
       paperVersion: null,
-      selectedLevel: "Core" as const,
       activeSeconds: 300,
     };
 
@@ -73,7 +71,6 @@ describe("server-authoritative curriculum attempt grading", () => {
       topicCode: null,
       paperMode: "applied",
       paperVersion: version,
-      selectedLevel: null,
       activeSeconds: 1200,
       responses: questions.map(question => ({ id: question.id, answer: question.modelAnswer, hintsUsed: 0 })),
     });

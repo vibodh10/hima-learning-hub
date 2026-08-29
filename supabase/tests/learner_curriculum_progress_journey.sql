@@ -3,6 +3,18 @@
 set request.jwt.claim.sub='90000000-0000-0000-0000-000000000002';
 set role authenticated;
 
+do $$
+begin
+  begin
+    insert into public.learner_curriculum_progress(learner_id,unit_code,topic_code,selected_level,topic_started_at)
+    values('90000000-0000-0000-0000-000000000002','2','A1','Challenge',now());
+    raise exception 'browser role directly wrote academic progress';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+
+reset role;
+
 insert into public.learner_curriculum_progress(
   learner_id,unit_code,topic_code,selected_level,topic_started_at
 ) values(
@@ -26,6 +38,20 @@ begin
   ) then raise exception 'learner curriculum progress was not persisted'; end if;
 end $$;
 
+set request.jwt.claim.sub='90000000-0000-0000-0000-000000000002';
+set role authenticated;
+
+do $$
+begin
+  if not exists(
+    select 1 from public.learner_curriculum_progress
+    where learner_id='90000000-0000-0000-0000-000000000002'
+      and selected_level='Challenge' and practice_score=78
+  ) then raise exception 'learner could not read server-authored progress'; end if;
+end $$;
+
+reset role;
+
 do $$
 begin
   begin
@@ -38,5 +64,3 @@ begin
   exception when check_violation then null;
   end;
 end $$;
-
-reset role;

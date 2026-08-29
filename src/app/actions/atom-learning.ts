@@ -8,6 +8,7 @@ import {revalidatePath} from "next/cache";
 import {hasAssignedCurriculumUnit} from "@/lib/curriculum-access";
 import {isConfiguredUnitCode} from "@/lib/curriculum-unit-code";
 import {gradeAtomAttempt} from "@/lib/atom-attempt-grading";
+import {createAdminClient} from "@/lib/supabase/admin";
 
 const responseSchema=z.object({
  id:z.string().min(1).max(160),
@@ -16,7 +17,7 @@ const responseSchema=z.object({
 });
 const attemptSchema=z.object({
  kind:z.enum(["topic_practice","practice_paper"]),unitCode:z.string().refine(isConfiguredUnitCode),topicCode:z.string().min(1).max(20).nullable(),paperMode:z.enum(["knowledge","applied","assignment"]).nullable(),
- paperVersion:z.number().int().min(0).max(10000).nullable(),selectedLevel:z.enum(["Support","Core","Stretch","Challenge"]).nullable(),activeSeconds:z.number().int().min(1).max(86400),responses:z.array(responseSchema).min(1).max(100)
+ paperVersion:z.number().int().min(0).max(10000).nullable(),activeSeconds:z.number().int().min(1).max(86400),responses:z.array(responseSchema).min(1).max(100)
 });
 export type AtomAttemptInput=z.infer<typeof attemptSchema>;
 
@@ -29,8 +30,9 @@ export async function saveAtomAttempt(input:AtomAttemptInput):Promise<{ok:boolea
  if(!await hasAssignedCurriculumUnit(data.unitCode))return{ok:false,message:"This unit is not assigned to your student group."};
  const grade=gradeAtomAttempt(unit,data);
  if(!grade.ok)return{ok:false,message:"Complete the approved question set before saving this result."};
- const supabase=await createClient();
- const{error}=await supabase.from("learner_curriculum_attempts").insert({learner_id:actor.id,kind:data.kind,unit_code:data.unitCode,topic_code:data.topicCode,paper_mode:data.paperMode,selected_level:data.selectedLevel,percentage:grade.percentage,mark:grade.mark,max_mark:grade.maxMark,hints_used:grade.hintsUsed,active_seconds:data.activeSeconds,question_results:grade.results});
+ const admin=createAdminClient();
+ const{data:storedProgress}=await admin.from("learner_curriculum_progress").select("selected_level").eq("learner_id",actor.id).eq("unit_code",data.unitCode).order("updated_at",{ascending:false}).limit(1).maybeSingle();
+ const{error}=await admin.from("learner_curriculum_attempts").insert({learner_id:actor.id,kind:data.kind,unit_code:data.unitCode,topic_code:data.topicCode,paper_mode:data.paperMode,selected_level:storedProgress?.selected_level??null,percentage:grade.percentage,mark:grade.mark,max_mark:grade.maxMark,hints_used:grade.hintsUsed,active_seconds:data.activeSeconds,question_results:grade.results});
  if(error)return{ok:false,message:"Saved on this device; account reporting will begin after the latest database migration is applied."};
  return{ok:true,message:"Result added to your learner and teacher progress reports."};
 }
@@ -52,7 +54,7 @@ export async function reviewCurriculumAttempt(_:CurriculumReviewState,formData:F
  if(!attempt)return{message:"This paper is not available for your review."};
  if(parsed.data.mark>attempt.max_mark)return{errors:{mark:[`The mark cannot exceed ${attempt.max_mark}.`]}};
  const percentage=Math.round(parsed.data.mark/attempt.max_mark*100);
- const{error}=await supabase.from("learner_curriculum_attempts").update({teacher_mark:parsed.data.mark,teacher_feedback:parsed.data.feedback,reviewed_by:actor.id,reviewed_at:new Date().toISOString(),mark:parsed.data.mark,percentage}).eq("id",attempt.id);
+ const{error}=await createAdminClient().from("learner_curriculum_attempts").update({teacher_mark:parsed.data.mark,teacher_feedback:parsed.data.feedback,reviewed_by:actor.id,reviewed_at:new Date().toISOString(),mark:parsed.data.mark,percentage}).eq("id",attempt.id);
  if(error)return{message:"The review could not be saved. Apply the latest database migration, then try again."};
  revalidatePath(`/teacher/learners/${parsed.data.learnerId}`);revalidatePath("/progress");
  return{ok:true,message:"The final mark and teacher feedback are now visible in learner and teacher reports."};

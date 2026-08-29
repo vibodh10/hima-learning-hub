@@ -19,14 +19,12 @@ select public.start_group_learning_journey(
 reset role;
 
 set request.jwt.claim.sub='90000000-0000-0000-0000-000000000002';
-set local role authenticated;
 insert into public.learner_curriculum_attempts(
   learner_id,kind,unit_code,topic_code,selected_level,percentage,mark,max_mark,
   hints_used,active_seconds,question_results
 ) values(
   auth.uid(),'topic_practice','4','A4','Stretch',90,9,10,0,600,'[]'
 );
-reset role;
 
 set request.jwt.claim.sub='90000000-0000-0000-0000-000000000001';
 set local role authenticated;

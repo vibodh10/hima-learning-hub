@@ -3,6 +3,16 @@ begin;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000002',true);
 
+do $$ begin
+  begin
+    insert into public.learner_curriculum_attempts(learner_id,kind,unit_code,topic_code,percentage,max_mark)
+    values('90000000-0000-0000-0000-000000000002','topic_practice','2','A1',100,1);
+    raise exception 'browser role directly wrote a curriculum mark';
+  exception when insufficient_privilege then null; end;
+end $$;
+
+reset role;
+
 insert into public.learner_curriculum_attempts(
   learner_id,kind,unit_code,topic_code,paper_mode,selected_level,percentage,mark,max_mark,hints_used,active_seconds,question_results
 ) values(
@@ -25,6 +35,15 @@ do $$ begin
   exception when check_violation then null; end;
 end $$;
 
+set local role authenticated;
+select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000002',true);
+do $$ begin
+  if (select count(*) from public.learner_curriculum_attempts where learner_id='90000000-0000-0000-0000-000000000002')<>2
+    then raise exception 'learner could not read server-authored attempts'; end if;
+end $$;
+
+reset role;
+
 select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',true);
 update public.learner_curriculum_attempts
 set teacher_mark=19,mark=19,percentage=76,teacher_feedback='Accurate design; improve the test evidence.',reviewed_by='90000000-0000-0000-0000-000000000001',reviewed_at=now()
@@ -36,9 +55,12 @@ do $$ begin
 end $$;
 
 select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000002',true);
+set local role authenticated;
 do $$ declare changed integer; begin
-  update public.learner_curriculum_attempts set teacher_mark=25 where kind='practice_paper';
-  get diagnostics changed = row_count;
-  if changed<>0 then raise exception 'learner was able to award a teacher mark'; end if;
+  begin
+    update public.learner_curriculum_attempts set teacher_mark=25 where kind='practice_paper';
+    get diagnostics changed = row_count;
+    raise exception 'learner was able to award a teacher mark';
+  exception when insufficient_privilege then null; end;
 end $$;
 rollback;

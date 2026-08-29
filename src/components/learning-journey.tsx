@@ -29,15 +29,16 @@ function useProgress(initialProgress: LearningProgress | null = null, storageKey
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     try {
+      if (initialProgress) {
+        setProgress(initialProgress);
+        return;
+      }
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const local = JSON.parse(saved) as LearningProgress;
         setProgress({
-          ...initialProgress,
           ...local,
-          level: local.level ?? initialProgress?.level,
-          recommendedLevel: initialProgress?.recommendedLevel ?? local.recommendedLevel,
-          topics: { ...(initialProgress?.topics ?? {}), ...local.topics },
+          topics: local.topics ?? {},
         });
       }
     } finally {
@@ -46,7 +47,7 @@ function useProgress(initialProgress: LearningProgress | null = null, storageKey
   }, [initialProgress, storageKey]);
   function update(change: (current: LearningProgress) => LearningProgress) {
     let current = progress;
-    try {
+    if (!initialProgress) try {
       current = JSON.parse(localStorage.getItem(storageKey) ?? "") as LearningProgress;
     } catch {
       // The in-memory state is the safe fallback when no saved state exists yet.
@@ -137,7 +138,7 @@ export function TopicLesson({ unit, topic, previousTopic, nextTopic, initialProg
     startSync(async () => {
       const result = await saveCurriculumProgress({
         unitCode: unit.code, topicCode: topic.code,
-        level: next.level ?? systemRecommendation, evidence: nextEvidence,
+        currentSection: nextEvidence.currentSection ?? "lesson:1",
       });
       if (!result.ok) setMessage(result.message);
     });
