@@ -5,8 +5,11 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth";
+import { findAuthUserByEmail } from "@/lib/auth-admin-directory";
 import { configuredAppOrigin, resolveAppOrigin } from "@/lib/app-origin";
 import { requestedTeacherNames } from "@/lib/requested-teachers";
+import { canReuseTeacherProfile } from "@/lib/staff-account-policy";
+import { isSccbStaffEmail } from "@/lib/staff-email";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,7 +21,8 @@ export type StaffAccountState = {
 
 const teacherAccount = z.object({
   name: z.enum(requestedTeacherNames),
-  email: z.email("Enter the tutor's verified email address.").trim().toLowerCase(),
+  email: z.email("Enter the tutor's verified email address.").trim().toLowerCase()
+    .refine(isSccbStaffEmail, "Use the tutor's verified @sccb.ac.uk email address."),
 });
 
 export async function setupTeacherAccount(
@@ -36,20 +40,29 @@ export async function setupTeacherAccount(
   if (!origin) return { message: "The public application URL is not configured, so no account was created." };
 
   const admin = createAdminClient();
-  const { data: directory, error: directoryError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const { user: existingUser, error: directoryError } = await findAuthUserByEmail(admin, parsed.data.email);
   if (directoryError) return { message: "The account directory could not be checked. Nothing was changed." };
-
-  const existingUser = directory.users.find(user => user.email?.trim().toLowerCase() === parsed.data.email);
+  const { data: namedProfile, error: namedProfileError } = await admin.from("user_profiles")
+    .select("id")
+    .eq("organisation_id", actor.organisation_id)
+    .eq("role", "teacher")
+    .ilike("display_name", parsed.data.name)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (namedProfileError) return { message: "The tutor profile could not be checked safely. Nothing was changed." };
+  if (!existingUser && namedProfile) {
+    return { message: "This tutor already has an active profile linked to another or missing login. Ask an administrator to repair that account instead of creating a duplicate." };
+  }
   let userId = existingUser?.id;
   let created = false;
 
   if (existingUser) {
     const { data: profile } = await admin.from("user_profiles")
-      .select("id,organisation_id,role,archived_at")
+      .select("id,organisation_id,role,display_name,archived_at")
       .eq("id", existingUser.id)
       .maybeSingle();
-    if (!profile || profile.organisation_id !== actor.organisation_id || profile.role !== "teacher" || profile.archived_at) {
-      return { message: "That email already belongs to another or inactive account. No role or organisation was changed." };
+    if (!canReuseTeacherProfile(profile, actor.organisation_id, parsed.data.name)) {
+      return { message: "That email belongs to a different, inactive, or incomplete account. No password link was sent and no role or organisation was changed." };
     }
   } else {
     const { data, error } = await admin.auth.admin.createUser({

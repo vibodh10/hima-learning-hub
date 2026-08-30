@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { canCreateClass, canJoinClass, canManageCurriculumConfiguration, canManageGroupConfiguration, canSubmitPractice, canViewLearnerEvidence } from "./permissions";
+import { canJoinClass, canManageCurriculumConfiguration, canPerformAdministratorAction, canPerformTeachingAction, canSetUpOwnedGroup, canSubmitPractice, canViewLearnerEvidence } from "./permissions";
 
 describe("role permissions", () => {
-  it("keeps class administration away from students", () => {
-    expect(canCreateClass("student")).toBe(false);
-    expect(canCreateClass("teacher")).toBe(true);
+  it("keeps teaching actions away from students", () => {
+    expect(canPerformTeachingAction("student")).toBe(false);
+    expect(canPerformTeachingAction("teacher")).toBe(true);
+    expect(canPerformTeachingAction("administrator")).toBe(true);
   });
   it("only lets learners join and submit practice", () => {
     expect(canJoinClass("student")).toBe(true);
@@ -22,9 +23,12 @@ describe("role permissions", () => {
     expect(canManageCurriculumConfiguration("teacher")).toBe(false);
     expect(canManageCurriculumConfiguration("administrator")).toBe(true);
   });
-  it("lets teaching staff configure their own groups while keeping students out", () => {
-    expect(canManageGroupConfiguration("student")).toBe(false);
-    expect(canManageGroupConfiguration("teacher")).toBe(true);
-    expect(canManageGroupConfiguration("administrator")).toBe(true);
+  it("separates owned-group setup from advanced group administration", () => {
+    expect(canSetUpOwnedGroup("student")).toBe(false);
+    expect(canSetUpOwnedGroup("teacher")).toBe(true);
+    expect(canSetUpOwnedGroup("administrator")).toBe(true);
+    expect(canPerformAdministratorAction("student")).toBe(false);
+    expect(canPerformAdministratorAction("teacher")).toBe(false);
+    expect(canPerformAdministratorAction("administrator")).toBe(true);
   });
 });

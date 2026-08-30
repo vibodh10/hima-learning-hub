@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/auth";
 
-export function canCreateClass(role: Role) {
+export function canPerformTeachingAction(role: Role) {
   return role === "teacher" || role === "administrator";
 }
 export function canJoinClass(role: Role) {
@@ -15,6 +15,9 @@ export function canViewLearnerEvidence(role: Role) {
 export function canManageCurriculumConfiguration(role: Role) {
   return role === "administrator";
 }
-export function canManageGroupConfiguration(role: Role) {
+export function canSetUpOwnedGroup(role: Role) {
   return role === "teacher" || role === "administrator";
+}
+export function canPerformAdministratorAction(role: Role) {
+  return role === "administrator";
 }

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import { canCreateClass, canJoinClass, canManageCurriculumConfiguration, canManageGroupConfiguration, canSubmitPractice } from "@/lib/permissions";
+import { canJoinClass, canManageCurriculumConfiguration, canPerformAdministratorAction, canPerformTeachingAction, canSetUpOwnedGroup, canSubmitPractice } from "@/lib/permissions";
 
 export type ActionState = {
   ok?: boolean;
@@ -24,7 +24,7 @@ export type ActionState = {
 
 export async function runTestModeAction(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Staff preview is restricted to teachers and administrators."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Staff preview is restricted to teachers and administrators."};
   const parsed=z.object({
     event:z.enum(["activity_opened","answer_revealed","simulated_correct","simulated_incorrect",
       "simulated_percentage","simulated_pathway","target_achieved","badge_awarded",
@@ -57,7 +57,7 @@ export async function runTestModeAction(_:ActionState,formData:FormData):Promise
 export async function resetTestMode(previousState:ActionState):Promise<ActionState>{
   void previousState;
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Staff preview is restricted to teachers and administrators."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Staff preview is restricted to teachers and administrators."};
   const supabase=await createClient();
   const{data,error}=await supabase.rpc("reset_test_mode");
   if(error)return{message:"The staff preview could not be cleared."};
@@ -86,7 +86,7 @@ const classInput = z.object({
 
 export async function createClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Teacher access is required to create a group." };
+  if (!actor || !canSetUpOwnedGroup(actor.role)) return { message: "Teacher access is required to create a group." };
   const parsed = classInput.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { message: "Check the group name, programme and academic year." };
   const supabase = await createClient();
@@ -105,7 +105,7 @@ export async function createClass(_: ActionState, formData: FormData): Promise<A
 
 export async function configureClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Teacher access is required to configure a group." };
+  if (!actor || !canSetUpOwnedGroup(actor.role)) return { message: "Teacher access is required to configure a group." };
   const parsed = z.object({
     classId: databaseUuid,
     className: z.string().trim().min(2).max(80),
@@ -149,7 +149,7 @@ export async function configureClass(_: ActionState, formData: FormData): Promis
 
 export async function startGroupLearningJourney(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only authorised teaching staff can start a group journey." };
+  if (!actor || !canPerformTeachingAction(actor.role)) return { message: "Only authorised teaching staff can start a group journey." };
   const parsed = z.object({
     classId: databaseUuid,
     templateId: databaseUuid,
@@ -291,7 +291,7 @@ export async function purchaseReward(_: ActionState, formData: FormData): Promis
 
 export async function recogniseLearner(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Teaching staff access is required."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Teaching staff access is required."};
   const parsed=z.object({learnerId:databaseUuid,classId:databaseUuid,templateId:databaseUuid})
     .safeParse(Object.fromEntries(formData));
   if(!parsed.success)return{message:"Choose a recognition template."};
@@ -334,7 +334,7 @@ export async function reconcileRewardPurchases(previousState:ActionState):Promis
 
 export async function overrideActivityLock(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teachers and administrators can override an activity lock."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Only teachers and administrators can override an activity lock."};
   const parsed=z.object({
     learnerId:databaseUuid,activityId:databaseUuid,
     reason:z.string().trim().min(5).max(500),
@@ -347,7 +347,7 @@ export async function overrideActivityLock(_:ActionState,formData:FormData):Prom
   });
   if(error)return{message:"The lock override could not be recorded."};
   revalidatePath(`/teacher/learners/${parsed.data.learnerId}`);
-  return{ok:true,message:"Activity unlocked and the override was added to the audit log."};
+  return{ok:true,message:"Activity unlocked and the override was recorded securely."};
 }
 
 const contentStatus = z.enum(["draft", "approved", "archived"]);
@@ -476,7 +476,7 @@ export async function setGamification(_: ActionState, formData: FormData): Promi
 
 export async function updateTarget(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can review targets." };
+  if (!actor || !canPerformTeachingAction(actor.role)) return { message: "Only teaching staff can review targets." };
   const parsed = z.object({
     targetId: databaseUuid,
     status: z.enum(["proposed","approved","active","achieved","partially_achieved","not_achieved","extended","replaced","archived"]),
@@ -496,7 +496,7 @@ export async function updateTarget(_: ActionState, formData: FormData): Promise<
 
 export async function adjustCoins(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to correct coin records." };
+  if (!actor || !canPerformAdministratorAction(actor.role)) return { message: "Administrator access is required to correct coin records." };
   const parsed = z.object({
     learnerId: databaseUuid, amount: z.coerce.number().int().min(-500).max(500).refine(value => value !== 0),
     note: z.string().trim().min(5).max(500),
@@ -513,7 +513,7 @@ export async function adjustCoins(_: ActionState, formData: FormData): Promise<A
 
 export async function recordTeacherAction(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can record actions." };
+  if (!actor || !canPerformTeachingAction(actor.role)) return { message: "Only teaching staff can record actions." };
   const parsed = z.object({
     classId: databaseUuid, learnerId: databaseUuid,
     action: z.string().trim().min(3).max(120),
@@ -536,7 +536,7 @@ export async function recordTeacherAction(_: ActionState, formData: FormData): P
 
 export async function recordTeacherNote(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can record learner notes." };
+  if (!actor || !canPerformTeachingAction(actor.role)) return { message: "Only teaching staff can record learner notes." };
   const parsed = z.object({
     classId: databaseUuid,
     learnerId: databaseUuid,
@@ -556,7 +556,7 @@ export async function recordTeacherNote(_: ActionState, formData: FormData): Pro
 
 export async function overridePathway(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canCreateClass(actor.role)) return { message: "Only teaching staff can override pathways." };
+  if (!actor || !canPerformTeachingAction(actor.role)) return { message: "Only teaching staff can override pathways." };
   const parsed = z.object({
     learnerId: databaseUuid, skillId: databaseUuid, newPathway: pathway,
     reason: z.string().trim().min(5).max(1000), reviewOn: z.iso.date(),
@@ -575,7 +575,7 @@ export async function overridePathway(_: ActionState, formData: FormData): Promi
 
 export async function createProgressSnapshot(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await getSessionProfile();
-  if (!actor || !canManageGroupConfiguration(actor.role)) return { message: "Administrator access is required to create legacy period snapshots." };
+  if (!actor || !canPerformAdministratorAction(actor.role)) return { message: "Administrator access is required to create legacy period snapshots." };
   const parsed = z.object({
     learnerId: databaseUuid, classId: databaseUuid, academicPeriodId: databaseUuid,
     reflection: z.string().trim().max(2000), nextPriorities: z.string().trim().min(5).max(2000),
@@ -597,7 +597,7 @@ export async function createProgressSnapshot(_: ActionState, formData: FormData)
 
 export async function duplicateClass(_: ActionState, formData: FormData): Promise<ActionState> {
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to duplicate classes."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to duplicate classes."};
   const parsed=z.object({
     sourceClassId:databaseUuid,newName:z.string().trim().min(2).max(80),
     enrolmentCode:z.string().trim().min(6).max(24).regex(/^[a-zA-Z0-9-]+$/),
@@ -615,7 +615,7 @@ export async function duplicateClass(_: ActionState, formData: FormData): Promis
 
 export async function importExistingStudents(_: ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can import learners."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Only teaching staff can import learners."};
   const classId=databaseUuid.safeParse(formData.get("classId"));
   const emails=String(formData.get("emails")??"").split(/[\r\n,;]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
   const filename=z.string().trim().max(255).safeParse(formData.get("filename")??"pasted-learner-list.csv");
@@ -632,7 +632,7 @@ export async function importExistingStudents(_: ActionState,formData:FormData):P
 
 export async function allocateAdaptiveHomework(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required for manual homework allocation."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required for manual homework allocation."};
   const parsed=z.object({
     classId:databaseUuid,topicId:databaseUuid,
     pathwayMode:z.enum(["Auto","Support","Core","Stretch","Mastery"]),
@@ -658,7 +658,7 @@ export async function allocateAdaptiveHomework(_:ActionState,formData:FormData):
 
 export async function createTeacherTarget(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only teaching staff can create targets."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Only teaching staff can create targets."};
   const parsed=z.object({
     learnerId:databaseUuid,classId:databaseUuid,
     level:z.enum(["weekly","topic","unit","term_semester"]),
@@ -687,7 +687,7 @@ export async function createTeacherTarget(_:ActionState,formData:FormData):Promi
 
 export async function saveWeeklyPlan(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to manage weekly plans."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to manage weekly plans."};
   const parsed=z.object({
     classId:databaseUuid,weekStart:z.iso.date(),
     title:z.string().trim().min(3).max(160),
@@ -713,26 +713,28 @@ export async function updateAdminSettings(_:ActionState,formData:FormData):Promi
   if(!actor||actor.role!=="administrator")return{message:"Administrator access is required."};
   const parsed=z.object({
     learnerEvidenceYears:z.coerce.number().int().min(1).max(25),
-    auditLogYears:z.coerce.number().int().min(1).max(25),
     archivedClassYears:z.coerce.number().int().min(1).max(25),
     organisationLabel:z.string().trim().max(160),
   }).safeParse(Object.fromEntries(formData));
   if(!parsed.success)return{message:"Retention periods must be between 1 and 25 years."};
   const supabase=await createClient();
+  const{data:currentRetention,error:retentionError}=await supabase.from("retention_settings")
+    .select("audit_log_years").maybeSingle();
+  if(retentionError)return{message:"The existing retention settings could not be checked, so nothing was changed."};
   const{error}=await supabase.rpc("admin_update_settings",{
     settings_value:{organisationLabel:parsed.data.organisationLabel},
     learner_years:parsed.data.learnerEvidenceYears,
-    audit_years:parsed.data.auditLogYears,class_years:parsed.data.archivedClassYears,
+    audit_years:currentRetention?.audit_log_years??7,class_years:parsed.data.archivedClassYears,
     deletion_approval:formData.get("deletionRequiresApproval")==="on",
   });
   if(error)return{message:"System settings could not be updated."};
   revalidatePath("/admin");
-  return{ok:true,message:"System and retention settings updated with an audit record."};
+  return{ok:true,message:"System and retention settings updated."};
 }
 
 export async function setPathwayThresholds(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to change pathway thresholds."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to change pathway thresholds."};
   const parsed=z.object({
     classId:databaseUuid,supportMax:z.coerce.number().min(0).max(99),
     coreMax:z.coerce.number().min(1).max(99),stretchMax:z.coerce.number().min(1).max(99),
@@ -758,7 +760,7 @@ export async function setPathwayThresholds(_:ActionState,formData:FormData):Prom
 
 export async function archiveClass(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to archive classes."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to archive classes."};
   const classId=databaseUuid.safeParse(formData.get("classId"));
   const confirmation=z.literal("ARCHIVE").safeParse(String(formData.get("confirmation")??"").trim().toUpperCase());
   if(!classId.success||!confirmation.success)return{message:"Type ARCHIVE to confirm."};
@@ -771,7 +773,7 @@ export async function archiveClass(_:ActionState,formData:FormData):Promise<Acti
 
 export async function addClassTeacher(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to add co-teachers."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to add co-teachers."};
   const parsed=z.object({classId:databaseUuid,teacherId:databaseUuid}).safeParse(Object.fromEntries(formData));
   if(!parsed.success)return{message:"Choose a teacher."};
   const supabase=await createClient();
@@ -785,7 +787,7 @@ export async function addClassTeacher(_:ActionState,formData:FormData):Promise<A
 
 export async function moveStudent(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to move learners."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to move learners."};
   const parsed=z.object({
     learnerId:databaseUuid,fromClassId:databaseUuid,toClassId:databaseUuid,
     reason:z.string().trim().min(3).max(500),
@@ -804,7 +806,7 @@ export async function moveStudent(_:ActionState,formData:FormData):Promise<Actio
 
 export async function archiveEnrolment(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to archive enrolments."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to archive enrolments."};
   const parsed=z.object({
     learnerId:databaseUuid,classId:databaseUuid,
     reason:z.string().trim().min(3).max(500),
@@ -909,7 +911,7 @@ export async function reviewCertificateEligibility(_:ActionState,formData:FormDa
 
 export async function setCoinRules(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canManageGroupConfiguration(actor.role))return{message:"Administrator access is required to change coin rules."};
+  if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to change coin rules."};
   const parsed=z.object({
     classId:databaseUuid,
     requiredLearning:z.coerce.number().int().min(0).max(100),
@@ -1069,7 +1071,7 @@ export async function executeLearnerDataDeletion(_:ActionState,formData:FormData
 
 export async function reviewFormativeResponse(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only authorised teaching staff can review formative responses."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Only authorised teaching staff can review formative responses."};
   const parsed=z.object({
     reviewId:databaseUuid,
     learnerId:databaseUuid,
@@ -1190,7 +1192,7 @@ export async function reviewQuestion(_:ActionState,formData:FormData):Promise<Ac
 
 export async function bulkApproveTargets(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only authorised teaching staff can approve targets."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Only authorised teaching staff can approve targets."};
   const targetIds=formData.getAll("targetIds").map(String);
   const learnerId=databaseUuid.safeParse(formData.get("learnerId"));
   if(!learnerId.success||targetIds.length<1||targetIds.length>100||!targetIds.every(id=>databaseUuid.safeParse(id).success))return{message:"Select between 1 and 100 proposed targets."};
@@ -1203,7 +1205,7 @@ export async function bulkApproveTargets(_:ActionState,formData:FormData):Promis
 
 export async function recordBulkTeacherAction(_:ActionState,formData:FormData):Promise<ActionState>{
   const actor=await getSessionProfile();
-  if(!actor||!canCreateClass(actor.role))return{message:"Only authorised teaching staff can record actions."};
+  if(!actor||!canPerformTeachingAction(actor.role))return{message:"Only authorised teaching staff can record actions."};
   const parsed=z.object({
     classId:databaseUuid,action:z.string().trim().min(3).max(120),
     reason:z.string().trim().min(3).max(1000),

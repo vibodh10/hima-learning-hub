@@ -391,18 +391,88 @@ uncommitted worktree. No production sign-in, form submission or data mutation wa
 performed. The exact controlled-account process and evidence record are defined in
 `docs/HOSTED_PORTAL_VERIFICATION.md`.
 
+### Explicit teaching and administration permissions
+
+The application permission layer now distinguishes three staff boundaries instead
+of reusing a group-creation permission for unrelated work. Teachers and
+administrators can perform ordinary teaching actions such as reviewing responses,
+recording feedback and targets, and working with evidence. A teacher can set up only
+a group they own through the separately named owned-group boundary. Advanced group
+configuration and lifecycle operations, including thresholds, weekly plans, manual
+allocation, coin rules and corrections, class duplication or archiving, co-teacher
+changes, learner moves and enrolment archiving, require administrator mode before a
+server action reaches the database. Students satisfy none of these staff boundaries.
+
+This split mirrors the simplified interface: ordinary teachers see their groups,
+students, progress, invitations and evidence rather than administration controls.
+The database functions continue to repeat organisation, role and exact-class checks;
+the application check is an additional fail-early boundary, not a replacement for
+row-level or function-level authorisation.
+
+The administrator page leads with the normal Groups workflow and keeps occasional
+organisation-wide controls inside a collapsed Advanced administration section. No
+audit-log viewer or audit-retention control is shown in the interface. Existing
+security records remain protected internally rather than being deleted.
+
+Regression contracts enumerate the protected administrator, teacher, student and
+assigned-unit pages and the three private report routes. They also assert that the
+deliberately public course-readiness calculation has no Supabase or database mutation
+path, and that invitation callbacks validate internal destinations and finalise the
+durable invitation before redirecting. A separate hosted-seed contract rejects Auth,
+profile, class, enrolment, invitation, attempt, target, feedback and reward writes so
+reusable curriculum cannot silently become fabricated operational data.
+
+Direct database reads of approved lessons and activities also call the
+`can_access_unit` row-level boundary. For students, that boundary requires an active
+enrolment, a published non-archived class and an active non-archived class-unit
+selection. Course starting-point Unit 1 remains the sole documented course-wide
+exception for an enrolled learner. Staff retain curriculum preview access.
+
+The final class and learner access helpers replace an older broad administrator
+shortcut. Administrators can manage or read a class only when the class and their
+active profile share an organisation. Teachers additionally require ownership or an
+active co-teacher assignment. A teacher can read a learner only through that
+learner's active enrolment in such a class. Students can read only their own learner
+record and classes in which they have an active enrolment. A regression contract
+pins these organisation, archive, role, assignment and enrolment conditions to the
+latest helper definitions.
+
+The profile table has a read policy but no browser-role insert, update or delete
+policy. Users therefore cannot promote themselves, change organisation or create a
+second application role by calling the database API directly. Profile role and
+archive changes use the administrator governance function, remain organisation
+scoped, and reject an administrator attempting to demote or archive their own active
+administrator profile.
+
+The Server Action contract covers 66 exported mutations across learning, curriculum,
+worksheets, invitations, staff accounts and curriculum-attempt review. Each file is
+server-only and every exported mutation establishes the current profile or requires
+an explicit role before validating input or reaching Supabase. Public sign-in,
+sign-out and password recovery are tested separately because they intentionally begin
+without an existing application profile.
+
+Tutor onboarding includes Himabindu Gunde and the named tutors supplied for this
+programme. Creating or resending teacher access is administrator-only. The account
+lookup normalises the verified college email and scans the complete paginated Auth
+directory before deciding that an address is new; any directory error fails closed,
+so the portal cannot silently create a duplicate account. Teacher addresses must use
+the exact `@sccb.ac.uk` domain. If an Auth account already exists, its active teacher
+profile, organisation and display name must all match the selected tutor before a
+password-setup link can be sent.
+
 ## Verification
 
 - TypeScript: passed.
 - ESLint: passed.
-- Full suite after the slices: 196 tests passed, with 3 opt-in artifact-generation tests skipped by default.
+- Full suite after the slices: 302 tests passed, with 3 opt-in artifact-generation tests skipped by default.
 - PostgreSQL contract: 42 independent journeys passed from clean databases,
   including sent-versus-accepted activation, invitation cancellation/expiry,
   exact allocation completion, allocation and configuration direct-mutation denial,
   idempotence, auditing and the current tutor-owned group-creation boundary.
 - Student/teacher next-action, invitation presentation, saved curriculum position,
   curriculum, permission, role-navigation and sign-in coverage passed.
-- Next.js production build: passed; 89 application pages generated.
+- Next.js production build: passed; all 25 static-generation tasks completed and
+  all dynamic application and API routes compiled.
 
 ## Recommended next slices
 
