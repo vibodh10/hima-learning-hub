@@ -11,6 +11,7 @@ import {
 } from "@/components/learner-teacher-controls";
 import { configuredUnits } from "@/lib/learning-catalog";
 import { RecognitionForm } from "@/components/recognition-form";
+import { TeacherSecondaryPanel } from "@/components/teacher-secondary-panel";
 import {
   conciseCurrentJudgement, evidenceCounts, groupByTopic, hasValidComparableProgress,
   isPriorExperienceSkill, learnerReflectionLabel, reportTargetStatus, topicAssessmentStatus,
@@ -214,8 +215,6 @@ export default async function LearnerPage({
       </div>
     </section>
 
-    {classInfo&&<RecognitionForm learnerId={id} classId={classInfo.id} templates={recognitionTemplates??[]}/>}
-
     <section className="mt-6"><p className="eyebrow">2. Starting-point summary by topic</p><h2 className="mt-2 text-2xl font-bold">What the initial evidence shows</h2>
       <div className="mt-5 grid gap-5">
         {workbookStartingPoints.map(item => <WorkbookStartingPointCard key={item.unit.code} unit={item.unit} summary={item.summary}/>)}
@@ -251,7 +250,10 @@ export default async function LearnerPage({
       })}</div>
     </section>
 
-    <section className="card mt-6"><p className="eyebrow">Atom-style practice evidence</p><h2 className="mt-2 text-2xl font-bold">Question sessions, papers and learning needs</h2>
+    <TeacherSecondaryPanel>
+      {classInfo&&<RecognitionForm learnerId={id} classId={classInfo.id} templates={recognitionTemplates??[]}/>}
+
+    <section className="card"><p className="eyebrow">Atom-style practice evidence</p><h2 className="mt-2 text-2xl font-bold">Question sessions, papers and learning needs</h2>
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Summary label="Topic sessions" value={String(curriculumPractice.length)}/><Summary label="Secure sessions" value={String(curriculumStrengths.length)}/><Summary label="Need more practice" value={String(curriculumNeeds.length)}/><Summary label="Practice papers" value={String(curriculumPapers.length)}/></div>
       {curriculumNeeds.length ? <div className="mt-6"><h3 className="font-bold">Priority topics</h3><div className="mt-3 grid gap-3 sm:grid-cols-2">{curriculumNeeds.slice(0,6).map(item=><div className="rounded-xl bg-amber-50 p-4" key={item.id}><p className="text-xs font-bold uppercase text-amber-900">Unit {item.unit_code} · {item.topic_code}</p><p className="mt-1 font-bold">{Math.round(Number(item.percentage))}% · {item.hints_used} hint(s)</p><p className="mt-1 text-sm">Revisit teaching, then complete a fresh comparable session.</p></div>)}</div></div> : <p className="mt-5 rounded-xl bg-slate-50 p-4 text-slate-600">No below-threshold topic sessions have been recorded.</p>}
       <h3 className="mt-6 font-bold">Recent question and paper history</h3><div className="mt-3 grid gap-3">{(curriculumAttempts ?? []).slice(0,10).map(item=>{
@@ -322,6 +324,7 @@ export default async function LearnerPage({
         </div>
       </details>
     </section>
+    </TeacherSecondaryPanel>
   </main></>;
 }
 
