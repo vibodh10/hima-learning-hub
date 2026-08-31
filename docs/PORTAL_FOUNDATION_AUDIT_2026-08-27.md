@@ -464,7 +464,7 @@ password-setup link can be sent.
 
 - TypeScript: passed.
 - ESLint: passed.
-- Full suite after the slices: 302 tests passed, with 3 opt-in artifact-generation tests skipped by default.
+- Full suite after the slices: 303 unique tests passed, with 3 opt-in artifact-generation tests skipped by default. Five files that timed out only during a host-contention full run passed when rerun separately.
 - PostgreSQL contract: 42 independent journeys passed from clean databases,
   including sent-versus-accepted activation, invitation cancellation/expiry,
   exact allocation completion, allocation and configuration direct-mutation denial,
@@ -476,8 +476,10 @@ password-setup link can be sent.
 
 ## Recommended next slices
 
-1. Test hosted invitation delivery and acceptance with distinct controlled teacher
-   and student accounts; the database acceptance/activation contract is covered.
+1. Correct the Supabase Auth Site URL and redirect allow list to the canonical SCCB
+   origin, resend the controlled Himabindu password link, then test hosted invitation
+   delivery and acceptance with distinct teacher and student accounts. The database
+   acceptance/activation contract is covered; the live email journey is not yet proven.
 2. Move secondary teacher analytics behind class/unit drill-downs after observing
    the new priority action with real tutors.
 3. Pilot and approve one complete module/lesson sequence per selected unit before
