@@ -25,6 +25,7 @@ import { hasCompleteUnitStartingPoint } from "@/lib/unit-starting-point";
 import { isConfiguredUnitCode } from "@/lib/curriculum-unit-code";
 import { classInvitationReadiness } from "@/lib/class-invitation-readiness";
 import { TeacherGroupCard } from "@/components/teacher-group-card";
+import { StudentEnrolmentSummary } from "@/components/student-enrolment-summary";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -332,6 +333,11 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       <h1 className="mt-2 text-4xl font-bold">Good to see you, {name.split(" ")[0]}.</h1>
       <p className="mt-2 text-slate-600">{related(course.courses)?.title ?? "Your course"} is ready. Start with the next action shown below.</p>
     </div>
+
+    <StudentEnrolmentSummary
+      groupName={course.name}
+      courseTitle={related(course.courses)?.title ?? "Your assigned course"}
+    />
 
     {studentNextAction?<section className="card mt-8 border-teal-200 bg-teal-50" aria-labelledby="continue-learning-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
