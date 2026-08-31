@@ -10,7 +10,7 @@ bounded pilot exists but the full product claim would be broader than the eviden
 
 | Brief requirement | Current status | Authoritative evidence | Remaining proof or work |
 | --- | --- | --- | --- |
-| 1. Simple teacher workflow | Partial; deployed foundation proven | Teacher next-action projection; class creation, active unit selection, publishing, invitation ledger and automatic first-student journey activation in `src/app/dashboard/page.tsx`, `src/app/teacher/classes/[id]/page.tsx` and migrations `202608270001`–`202608270003`. Production `/api/release` returned exact commit `574394cf8884d7dc1cb87c2f0fc9cf15c19dc9e7` on 31 August 2026. | Correct the Supabase Auth Site URL, then complete a fresh hosted teacher-to-student invitation with controlled accounts and observe the workflow with real tutors. |
+| 1. Simple teacher workflow | Partial; deployed foundation and corrected Auth URL proven | Teacher next-action projection; class creation, active unit selection, publishing, invitation ledger and automatic first-student journey activation in `src/app/dashboard/page.tsx`, `src/app/teacher/classes/[id]/page.tsx` and migrations `202608270001`–`202608270003`. Production `/api/release` returned exact commit `574394cf8884d7dc1cb87c2f0fc9cf15c19dc9e7` on 31 August 2026. The live Auth URL gate passed after correction, and a replacement controlled-student email was recorded as sent. | Open only the newest controlled email and complete the hosted acceptance journey before inviting real learners. |
 | 2. Course → Unit → Module → Lesson → Activity | Proven locally for the existing curriculum | Reusable relational hierarchy remains intact; official Pearson topics are presented as modules by `src/app/curriculum/page.tsx`, `src/components/atom-topic-hub.tsx` and `src/lib/learning-catalog.ts`. | Expand only centre-approved content; the portal must not invent missing T Level material. |
 | 3. Short, doing-led teaching with no video lessons | Proven locally for the active guided experience | `src/components/topic-explainer.tsx` now provides learner-paced text, examples and a quick check without autoplay or video controls. Short lesson cards lead into adaptive questions and worksheets. Its component test enforces the no-video contract. | Tutor/content-owner review of the wording and qualification accuracy remains necessary before broad publication. |
 | 4. Mastery through varied repetition | Proven locally for supported activities | The adaptive submission engine, skill mastery records, retrieval schedules, pathway thresholds and versioned Atom question banks require repeated independent evidence rather than one completion. | Continue coverage unit by unit only where approved questions and mark schemes exist. |
@@ -40,11 +40,19 @@ rather than being filled with fabricated lessons.
 On 31 August 2026 the public release gate, login page and intentional confirmation
 page all returned successfully from exact production commit
 `574394cf8884d7dc1cb87c2f0fc9cf15c19dc9e7`. The Railway `APP_URL` is the canonical
-`https://sccb.up.railway.app` origin. A read-only Supabase Management API inspection,
-however, found that the separate Auth Site URL and redirect allow list still point to
-the retired `web-production-be53a.up.railway.app` origin. This explains the captured
-Railway Not Found password link. Production Auth configuration must be corrected and
-a fresh link tested before teacher onboarding can be called complete.
+`https://sccb.up.railway.app` origin. A read-only Supabase Management API inspection
+identified that the separate Auth Site URL and redirect allow list still pointed to
+the retired `web-production-be53a.up.railway.app` origin, explaining the captured
+Railway Not Found link.
+
+The production Auth Site URL was then corrected to `https://sccb.up.railway.app` and
+the callback allow list now accepts `https://sccb.up.railway.app/auth/callback**` while
+retaining local development callbacks. The repository's read-only Auth configuration
+gate passed against production. The invite and recovery templates contain no
+hard-coded retired host. A replacement email was sent from the existing controlled
+student invitation record at 19:43 local time; the ledger remained at 0 students and
+1 awaiting response. The newest recipient link still requires a real click and
+acceptance test before hosted onboarding can be called complete.
 
 The next local changes should be driven by observed tutor/learner friction or by an
 explicit evidence gap. The repository should not invent attendance, approved

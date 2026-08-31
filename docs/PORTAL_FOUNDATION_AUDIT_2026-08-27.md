@@ -476,10 +476,11 @@ password-setup link can be sent.
 
 ## Recommended next slices
 
-1. Correct the Supabase Auth Site URL and redirect allow list to the canonical SCCB
-   origin, resend the controlled Himabindu password link, then test hosted invitation
-   delivery and acceptance with distinct teacher and student accounts. The database
-   acceptance/activation contract is covered; the live email journey is not yet proven.
+1. Open only the newest controlled-student email sent after the Supabase Auth Site URL
+   and callback allow list were corrected to the canonical SCCB origin. Complete the
+   hosted acceptance journey with distinct teacher and student accounts. The database
+   acceptance/activation contract and live URL configuration are covered; the newest
+   email link and authenticated browser journey are not yet proven.
 2. Move secondary teacher analytics behind class/unit drill-downs after observing
    the new priority action with real tutors.
 3. Pilot and approve one complete module/lesson sequence per selected unit before
