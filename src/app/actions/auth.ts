@@ -61,7 +61,22 @@ export async function updatePassword(_: AuthState, formData: FormData): Promise<
   const parsed = z.string().min(10, "Use at least 10 characters.").safeParse(formData.get("password"));
   if (!parsed.success) return { errors: { password: [parsed.error.issues[0].message] } };
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: parsed.data });
-  if (error) return { message: "The reset session has expired. Request another link." };
+  const { data, error } = await supabase.auth.updateUser({ password: parsed.data });
+  if (error || !data.user) return { message: "The reset session has expired. Request another link." };
+
+  const metadata = data.user.user_metadata as Record<string, unknown>;
+  if (metadata.requested_role === "student" && metadata.invited_class_id) {
+    const finalized = await finalizeCurrentStudentInvitation();
+    if (finalized.kind !== "ready") {
+      console.error("Student invitation password association failed", {
+        outcome: finalized.kind,
+        code: "code" in finalized ? finalized.code : undefined,
+      });
+      await supabase.auth.signOut();
+      return {
+        message: "Your password was updated, but your group could not be connected yet. Sign in with your new password to retry, or ask your teacher to resend the invitation.",
+      };
+    }
+  }
   redirect("/dashboard");
 }
