@@ -24,6 +24,7 @@ import {
   scopeLearnerEvidenceToDateRange,
 } from "@/lib/learner-report-date-range";
 import { configuredUnits } from "@/lib/learning-catalog";
+import { CERTIFICATE_ELIGIBILITY_REVIEW_SELECT } from "@/lib/report-query-contracts";
 import { summariseWorkbookStartingPoint } from "@/lib/workbook-starting-point";
 
 type Row = Record<string, unknown>;
@@ -109,7 +110,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     scope.unitCodes.size ? supabase.from("learner_catch_up_records").select("id,unit_code,topic_code,source,opened_teaching_week,opened_at,completed_at").eq("learner_id", id).in("unit_code", [...scope.unitCodes]).order("opened_at", { ascending: false }).limit(QUERY_LIMIT) : emptyResult(),
     supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id", id).eq("class_id", classId).order("recognised_at", { ascending: false }).limit(QUERY_LIMIT),
     supabase.from("attendance_events").select("id,session_on,attendance_status,provider_name,imported_at").eq("learner_id", id).eq("class_id", classId).order("session_on", { ascending: false }).limit(QUERY_LIMIT),
-    supabase.from("certificate_eligibility_reviews").select("id,status,eligible_at,reviewed_at,review_note,achievement_levels(title,threshold_points)").eq("learner_id", id).order("eligible_at", { ascending: false }).limit(QUERY_LIMIT),
+    supabase.from("certificate_eligibility_reviews").select(CERTIFICATE_ELIGIBILITY_REVIEW_SELECT).eq("learner_id", id).order("eligible_at", { ascending: false }).limit(QUERY_LIMIT),
     scope.unitCodes.size ? supabase.from("learner_curriculum_progress").select("unit_code,topic_code,selected_level,evidence,updated_at").eq("learner_id", id).in("unit_code", [...scope.unitCodes]).limit(QUERY_LIMIT) : emptyResult(),
   ]);
   if (evidenceResults.some(result => result.error)) {
