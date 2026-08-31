@@ -24,6 +24,12 @@ function evidence() {
     badges: [], coins: [], assessments: [], overrides: [], curriculumAttempts: [],
     achievement: { ap_total: 20 }, portfolioArtifacts: [], worksheets: [], catchUpRecords: [],
     recognitions: [], attendanceEvents: [], certificateReviews: [],
+    workbookProgress: [{
+      unit_code: "6", topic_code: "A1", evidence: [
+        { id: "inside", recordedAt: "2026-10-20T09:00:00Z" },
+        { id: "outside", recordedAt: "2027-01-20T09:00:00Z" },
+      ],
+    }],
   };
 }
 
@@ -48,5 +54,8 @@ describe("learner report date ranges", () => {
     expect(scoped.targets.map(row => row.id)).toEqual(["overlaps"]);
     expect(scoped.mastery).toEqual([]);
     expect(scoped.achievement).toBeUndefined();
+    expect(scoped.workbookProgress).toEqual([expect.objectContaining({
+      evidence: [{ id: "inside", recordedAt: "2026-10-20T09:00:00Z" }],
+    })]);
   });
 });

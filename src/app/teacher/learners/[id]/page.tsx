@@ -24,6 +24,10 @@ import {
   topicRecordInScope,
   type LearnerReportScope,
 } from "@/lib/learner-report-scope";
+import {
+  summariseWorkbookStartingPoint,
+  type WorkbookStartingPointSummary,
+} from "@/lib/workbook-starting-point";
 
 export default async function LearnerPage({
   params,
@@ -119,6 +123,15 @@ export default async function LearnerPage({
   const workbookProgress=(allWorkbookProgress??[]).filter(item=>scope.unitCodes.has(item.unit_code));
   const workbookDecisions=(allWorkbookDecisions??[]).filter(item=>scope.unitCodes.has(item.unit_code));
   const curriculumAttempts=(allCurriculumAttempts??[]).filter(item=>scope.unitCodes.has(item.unit_code));
+  const workbookStartingPoints = configuredUnits.flatMap(unit => {
+    if (!scope.unitCodes.has(unit.code)) return [];
+    const summary = summariseWorkbookStartingPoint(
+      workbookProgress,
+      unit.code,
+      unit.topics.map(topic => topic.code),
+    );
+    return summary ? [{ unit, summary }] : [];
+  });
   const[{data:achievementRows,error:achievementError},{data:recognitions,error:recognitionError}]=await Promise.all([
     supabase.rpc("learner_achievement_summary",{learner_uuid:id}),
     classInfo?supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id",id).eq("class_id",classInfo.id).order("recognised_at",{ascending:false}):Promise.resolve({data:[],error:null}),
@@ -193,7 +206,7 @@ export default async function LearnerPage({
         <Summary label="Learner" value={learner.display_name}/><Summary label="Course" value={courseInfo?.title ?? "Not recorded"}/>
         <Summary label="Teacher" value={teacherName}/><Summary label="Enrolment date" value={formatDate(selectedEnrolment?.enrolment.enrolled_at)}/>
         <Summary label="Report date" value={now.toLocaleDateString("en-GB")}/>
-        <Summary label="Starting-point status" value={overviewStartingStatus(topicGroups)}/>
+        <Summary label="Starting-point status" value={overviewStartingStatus(topicGroups, workbookStartingPoints)}/>
         <Summary label="Current progress status" value={topicGroups.some(group => group.items.some(item => item.valid)) ? "Comparable progress evidence is available." : "No comparable progress-point assessment has been completed yet."}/>
         <Summary label="Active / achieved targets" value={`${activeTargets.length} / ${achievedTargets.length}`}/>
         <Summary label="Next review date" value={formatDate(nextReview)}/>
@@ -204,7 +217,11 @@ export default async function LearnerPage({
     {classInfo&&<RecognitionForm learnerId={id} classId={classInfo.id} templates={recognitionTemplates??[]}/>}
 
     <section className="mt-6"><p className="eyebrow">2. Starting-point summary by topic</p><h2 className="mt-2 text-2xl font-bold">What the initial evidence shows</h2>
-      <div className="mt-5 grid gap-5">{topicGroups.map(group => <TopicSummaryCard key={`${group.unitTitle}-${group.topicTitle}`} group={group}/>)}</div>
+      <div className="mt-5 grid gap-5">
+        {workbookStartingPoints.map(item => <WorkbookStartingPointCard key={item.unit.code} unit={item.unit} summary={item.summary}/>)}
+        {topicGroups.map(group => <TopicSummaryCard key={`${group.unitTitle}-${group.topicTitle}`} group={group}/>)}
+        {!workbookStartingPoints.length&&!topicGroups.length&&<Empty text="No starting-point evidence has been recorded yet."/>}
+      </div>
     </section>
 
     <section className="mt-6"><p className="eyebrow">3. Topic progress and feedback</p><h2 className="mt-2 text-2xl font-bold">Skills within each topic</h2>
@@ -272,7 +289,10 @@ export default async function LearnerPage({
         <Summary label="Retrieval check date" value={formatDate(retrieval?.find(item => item.status !== "cancelled")?.scheduled_for ?? null)}/>
       </div>
       <h3 className="mt-6 text-lg font-bold">Recent assessment timeline</h3>
-      <div className="mt-3 grid gap-2">{[...(attempts ?? [])].reverse().slice(0, 8).map(attempt => <div className="flex flex-wrap justify-between gap-3 border-t border-slate-200 py-3 text-sm" key={attempt.id}><span><strong>{formatDate(attempt.completed_at)}</strong> · {parentFromActivity(attempt.activities)} · {related(attempt.activities)?.title}</span><span>{attempt.percentage}% · {attempt.hints_used} hints</span></div>)}</div>
+      <div className="mt-3 grid gap-2">
+        {workbookStartingPoints.map(item=><div className="flex flex-wrap justify-between gap-3 border-t border-slate-200 py-3 text-sm" key={`starting-${item.unit.code}`}><span><strong>{formatDate(item.summary.completedAt)}</strong> · Unit {item.unit.code} {item.unit.title} · starting point</span><span>{item.summary.mark}/{item.summary.maxMark} · {item.summary.percentage}% · {item.summary.recommendedLevel??"route pending"}</span></div>)}
+        {[...(attempts ?? [])].reverse().slice(0, 8).map(attempt => <div className="flex flex-wrap justify-between gap-3 border-t border-slate-200 py-3 text-sm" key={attempt.id}><span><strong>{formatDate(attempt.completed_at)}</strong> · {parentFromActivity(attempt.activities)} · {related(attempt.activities)?.title}</span><span>{attempt.percentage}% · {attempt.hints_used} hints</span></div>)}
+      </div>
 
       <details className="mt-6 rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer text-lg font-bold">Additional evidence</summary>
         <div className="mt-5 grid gap-6">
@@ -313,6 +333,35 @@ type TopicItem = {
 };
 type TopicGroup = { unitTitle: string; topicTitle: string; items: TopicItem[] };
 
+function WorkbookStartingPointCard({
+  unit,
+  summary,
+}: {
+  unit: (typeof configuredUnits)[number];
+  summary: WorkbookStartingPointSummary;
+}) {
+  return <article className="card border-teal-200 bg-teal-50">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div><p className="eyebrow">Unit {unit.code}</p><h3 className="mt-2 text-xl font-bold">{unit.title}</h3></div>
+      <StatusBadge status={summary.complete?"Baseline established":"Partially assessed"}/>
+    </div>
+    <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <CompactFact label="Starting-point date" value={formatDate(summary.completedAt)}/>
+      <CompactFact label="Independent result" value={`${summary.mark} of ${summary.maxMark} · ${summary.percentage}%`}/>
+      <CompactFact label="Recommended route" value={`${summary.recommendedLevel??"Not yet available"}. This changes support inside the unit, not the learner's group or timetable.`}/>
+      <CompactFact label="Evidence strength" value={summary.complete?"Three independent, unhinted questions are stored for every configured topic.":"The diagnostic is incomplete and is not treated as a secure unit baseline."}/>
+    </dl>
+    <div className="mt-5 grid gap-3 sm:grid-cols-2">{summary.topics.map(topic => {
+      const configuredTopic=unit.topics.find(item=>item.code===topic.topicCode);
+      return <div className="rounded-xl bg-white p-4 text-sm" key={topic.topicCode}>
+        <p className="font-bold">{topic.topicCode} · {configuredTopic?.title??"Topic"}</p>
+        <p className="mt-1">{topic.mark} of {topic.maxMark} correct · {topic.percentage}%</p>
+        <p className="mt-1 text-xs text-slate-600">{topic.skills.length?topic.skills.join(", "):"Mapped diagnostic skills not labelled."}</p>
+      </div>;
+    })}</div>
+  </article>;
+}
+
 function TopicSummaryCard({ group }: { group: TopicGroup }) {
   const sampled = group.items.filter(item => item.counts.startingQuestionCount > 0);
   const secure = group.items.filter(item => item.counts.startingSufficient);
@@ -341,7 +390,13 @@ function topicStatus(group: TopicGroup) {
     completedProgressSkills: group.items.filter(item => item.valid).length,
   });
 }
-function overviewStartingStatus(groups: TopicGroup[]) {
+function overviewStartingStatus(
+  groups: TopicGroup[],
+  workbookStartingPoints: { unit: (typeof configuredUnits)[number]; summary: WorkbookStartingPointSummary }[],
+) {
+  if (workbookStartingPoints.length) return workbookStartingPoints.map(({unit,summary}) =>
+    `Unit ${unit.code}: ${summary.mark} of ${summary.maxMark} (${summary.percentage}%) · ${summary.recommendedLevel??"route pending"}`,
+  ).join(" · ");
   if (!groups.length) return "No starting-point topics are available.";
   const labels = groups.map(group => topicStatus(group));
   const partial = labels.filter(label => label === "Partially assessed").length;

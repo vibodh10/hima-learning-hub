@@ -3,6 +3,8 @@ import {
   conciseCurrentJudgement, evidenceCounts, groupByTopic, hasValidComparableProgress,
   isPriorExperienceSkill, learnerReflectionLabel, reportTargetStatus, topicAssessmentStatus,
 } from "./learner-report-model";
+import { configuredUnits } from "./learning-catalog";
+import { summariseWorkbookStartingPoint } from "./workbook-starting-point";
 
 type Row = Record<string, unknown>;
 export type ConciseReportEvidence = {
@@ -15,6 +17,7 @@ export type ConciseReportEvidence = {
   achievement?: Row;
   portfolioArtifacts?: Row[]; worksheets?: Row[]; catchUpRecords?: Row[];
   recognitions?: Row[]; attendanceEvents?: Row[]; certificateReviews?: Row[];
+  workbookProgress?: Row[];
 };
 
 export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) {
@@ -63,6 +66,14 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
     };
   });
   const groups = groupByTopic(topicRows);
+  const workbookStartingPoints = configuredUnits.flatMap(unit => {
+    const summary = summariseWorkbookStartingPoint(
+      data.workbookProgress ?? [],
+      unit.code,
+      unit.topics.map(topic => topic.code),
+    );
+    return summary ? [{ unit, summary }] : [];
+  });
   const active = data.targets.filter(item => ["approved", "active", "extended"].includes(String(item.status)));
   const achieved = data.targets.filter(item => item.status === "achieved");
   const nextReview = [...data.targets.map(item => textOrNull(item.review_on)), ...data.teacherActions.map(item => textOrNull(item.review_on))]
@@ -79,12 +90,24 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   const partial = groups.filter(group => statusFor(group.items) === "Partially assessed").length;
   const established = groups.filter(group => statusFor(group.items) === "Baseline established").length;
   const progressed = groups.filter(group => statusFor(group.items) === "Progress point completed").length;
-  line(`Starting point: ${partial} topic(s) partially assessed; ${established} baseline(s) established. Limited evidence is not a secure baseline.`);
+  line(workbookStartingPoints.length
+    ? `Starting point: ${workbookStartingPoints.map(({unit,summary}) => `Unit ${unit.code} ${summary.mark}/${summary.maxMark} (${summary.percentage}%), ${summary.recommendedLevel ?? "route pending"}`).join("; ")}.`
+    : `Starting point: ${partial} topic(s) partially assessed; ${established} baseline(s) established. Limited evidence is not a secure baseline.`);
   line(`Current progress: ${progressed ? `${progressed} topic(s) have comparable progress evidence.` : "No comparable progress-point assessment has been completed yet."}`);
   line(`Targets: ${active.length} active | ${achieved.length} achieved | Next review: ${date(nextReview)}.`);
   if(data.achievement)line(`Computing Achievement: ${Number(data.achievement.ap_total??0)} AP | Level: ${String(data.achievement.current_level_title??"Building toward Bronze")}${data.achievement.next_level_title?` | ${Number(data.achievement.points_to_next??0)} AP to ${String(data.achievement.next_level_title)}`:""}.`);
 
   heading(2, "Starting-point summary by topic");
+  workbookStartingPoints.forEach(({unit,summary}) => {
+    ensure(155);
+    line(`Unit ${unit.code} ${unit.title} | ${summary.complete ? "Baseline established" : "Partially assessed"}`, 10, true);
+    line(`Independent result: ${summary.mark} of ${summary.maxMark} (${summary.percentage}%) | Date: ${date(summary.completedAt)} | Recommended route: ${summary.recommendedLevel ?? "not yet available"}.`);
+    line("The route changes support and challenge inside the assigned unit; it does not change the learner's group, timetable or mandatory assignments.");
+    summary.topics.forEach(topic => {
+      const configuredTopic = unit.topics.find(item => item.code === topic.topicCode);
+      line(`${topic.topicCode} ${configuredTopic?.title ?? "Topic"}: ${topic.mark}/${topic.maxMark} (${topic.percentage}%) | ${topic.skills.join(", ") || "Mapped diagnostic skills not labelled"}.`, 8, false, 1);
+    });
+  });
   groups.forEach(group => {
     ensure(150);
     const sampled = group.items.filter(item => item.counts.startingQuestionCount > 0);
@@ -97,6 +120,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
     line(`Initial indications: ${positive.length ? `positive responses in ${positive.map(item => item.skill.title).join(", ")}` : "no secure strengths established"}${low.length ? `; lowest response in ${low.map(item => item.skill.title).join(", ")}` : ""}.`);
     line(`Next step: ${secure.length < group.items.length ? "Complete a fuller baseline assessment." : group.items.some(item => item.valid) ? "Use the comparison and current target to guide the next learning." : "Complete a comparable progress-point assessment."}`);
   });
+  if (!workbookStartingPoints.length && !groups.length) line("No starting-point evidence has been recorded yet.");
 
   heading(3, "Topic progress and feedback");
   groups.forEach(group => {
@@ -196,6 +220,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   line(`Teacher response: ${String(snapshot.teacher_response ?? "No teacher response recorded.")}`);
   line(`Retrieval check date: ${date(textOrNull(data.retrieval.find(item => item.status !== "cancelled")?.scheduled_for))}.`);
   subheading("Recent assessment timeline");
+  workbookStartingPoints.forEach(({unit,summary}) => line(`${date(summary.completedAt)} | Unit ${unit.code} ${unit.title} | starting point | ${summary.mark}/${summary.maxMark} (${summary.percentage}%) | ${summary.recommendedLevel ?? "route pending"}.`, 8));
   data.attempts.slice(-8).reverse().forEach(item => line(`${date(textOrNull(item.completed_at))} | ${parentFromActivity(item.activities)} | ${String(related(item.activities)?.title ?? "Activity")} | ${item.percentage}% | ${item.hints_used} hints.`, 8));
 
   subheading("Curriculum question sessions and papers");
@@ -211,8 +236,9 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   line("Detailed supporting evidence", 18, true);
   line("Appendix - historical and administrative records retained for review", 9);
   subheading("Full assessment history");
+  workbookStartingPoints.forEach(({unit,summary}) => line(`${date(summary.completedAt)} | unit starting point | Unit ${unit.code} ${unit.title} | ${summary.mark}/${summary.maxMark} (${summary.percentage}%).`, 8));
   data.assessments.forEach(item => line(`${date(textOrNull(item.completed_at))} | ${String(item.kind).replaceAll("_", " ")} | ${String(related(item.activities)?.title ?? "Assessment")}.`, 8));
-  if (!data.assessments.length) line("No formal assessment history recorded.", 8);
+  if (!data.assessments.length && !workbookStartingPoints.length) line("No formal assessment history recorded.", 8);
   subheading("Course starting point and learner background");
   background.forEach(item => {
     const skillTitle = String(related(item.skills)?.title ?? "Background item");

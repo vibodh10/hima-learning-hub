@@ -12,6 +12,7 @@ import { presentInvitationStatus } from "@/lib/invitation-status";
 import { unitByCode } from "@/lib/learning-catalog";
 import { projectClassCurriculumOverview, projectCurriculumPaperAssessments } from "@/lib/class-curriculum-overview";
 import { ClassCurriculumOverviewTable } from "@/components/class-curriculum-overview-table";
+import { summariseWorkbookStartingPoint } from "@/lib/workbook-starting-point";
 
 type AttentionRow={learner_id:string;display_name:string;starting_score:number|null;current_score:number|null;progress_points:number|null;catch_up_status:string;outstanding_count:number;attention_status:string;attention_reason:string;ap_total:number;achievement_level:string|null};
 
@@ -63,7 +64,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const [progressResult,assessmentResult,targetResult] = studentIds.length ? await Promise.all([
     overviewUnit
       ? supabase.from("learner_curriculum_progress").select(
-        "learner_id,topic_code,topic_started_at,lesson_completed_at,mastery_score,mastered_at,current_section,independent_attempts,updated_at",
+        "learner_id,unit_code,topic_code,selected_level,topic_started_at,lesson_completed_at,mastery_score,mastered_at,current_section,independent_attempts,evidence,updated_at",
       ).in("learner_id", studentIds).eq("unit_code", overviewUnit.code).order("updated_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     supabase.from("assessment_instances").select(
@@ -80,6 +81,27 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const {data:curriculumOverviewTargets,error:curriculumOverviewTargetsError}=targetResult;
 
   const configuredOverviewUnit = overviewUnit ? unitByCode(String(overviewUnit.code)) : undefined;
+  const startingPointByLearner = new Map(studentIds.flatMap(learnerId => {
+    if (!configuredOverviewUnit) return [];
+    const summary = summariseWorkbookStartingPoint(
+      (curriculumOverviewProgress ?? []).filter(row => row.learner_id === learnerId),
+      configuredOverviewUnit.code,
+      configuredOverviewUnit.topics.map(topic => topic.code),
+    );
+    return summary?.complete ? [[learnerId, summary] as const] : [];
+  }));
+  const projectedAttention = attention.map(row => {
+    const startingPoint = startingPointByLearner.get(row.learner_id);
+    if (!startingPoint || row.starting_score != null) return row;
+    const route = startingPoint.recommendedLevel ? ` · ${startingPoint.recommendedLevel} route` : "";
+    return {
+      ...row,
+      starting_score: startingPoint.percentage,
+      attention_reason: row.current_score == null
+        ? `Unit ${startingPoint.unitCode} starting point recorded at ${startingPoint.percentage}%${route}. Comparable progress evidence is not yet available.`
+        : row.attention_reason,
+    };
+  });
   const learningReady=Boolean(configuredOverviewUnit&&automaticJourneyTemplate);
   const overviewModules = configuredOverviewUnit?.topics.map(topic => ({
     code: topic.code, title: topic.title,
@@ -118,7 +140,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     targets: (curriculumOverviewTargets ?? []).map(row => ({
       learnerId: row.learner_id, status: row.status, targetDate: row.target_date,
     })),
-    attention: attention.map(row => ({
+    attention: projectedAttention.map(row => ({
       learnerId: row.learner_id, startingScore: row.starting_score,
       status: row.attention_status, reason: row.attention_reason,
     })),
@@ -139,7 +161,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     <Link className="link mt-6 inline-block" href="/dashboard">← Teacher dashboard</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">My group</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title}</p><p className="mt-1 text-sm text-slate-500">{formatWeeklyLearningDays(classData.weekly_learning_days,classData.weekly_learning_day)}</p></div><div className="flex flex-wrap items-center gap-3"><Link className="button" href={`/api/reports/classes/${id}`}>Download progress report</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Download spreadsheet</Link></div></div>
 
-    <section className="mt-8 grid gap-5 sm:grid-cols-3"><Metric label="Students" value={String(studentIds.length)}/><Metric label="Latest progress" value={average == null ? "Not available" : `${average}%`}/><Metric label="Need attention" value={String(attention.filter(row=>["intervention_required","action_required","catch_up_required"].includes(row.attention_status)).length)}/></section>
+    <section className="mt-8 grid gap-5 sm:grid-cols-3"><Metric label="Students" value={String(studentIds.length)}/><Metric label="Latest progress" value={average == null ? "Not available" : `${average}%`}/><Metric label="Need attention" value={String(projectedAttention.filter(row=>["intervention_required","action_required","catch_up_required"].includes(row.attention_status)).length)}/></section>
 
     {selectedUnits.length>0&&<details className="card mt-6" aria-labelledby="unit-report-title">
       <summary className="cursor-pointer text-lg font-bold" id="unit-report-title">More report formats</summary>
@@ -194,7 +216,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     )}</details>}
     {studentIds.length>0&&!overviewUnit&&<section className="card mt-8 border-amber-200 bg-amber-50"><p className="eyebrow">Class curriculum</p><h2 className="mt-2 text-2xl font-bold">Select an active unit</h2><p className="mt-3 text-sm text-amber-950">The curriculum overview remains unavailable until an administrator selects an active unit for this group. No progress state has been inferred.</p></section>}
     {studentIds.length>0&&<section className="card mt-8 overflow-x-auto p-0"><div className="p-5"><p className="eyebrow">Students</p><h2 className="mt-2 text-2xl font-bold">Progress at a glance</h2><p className="mt-2 text-sm text-slate-600">Students needing help appear first. Open one student for their full evidence.</p></div><table className="w-full min-w-[720px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Student</th><th className="p-5">Latest progress</th><th className="p-5">Status</th><th className="p-5">Open</th></tr></thead>
-      <tbody>{attention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5"><strong>{row.current_score==null?"Not recorded":`${row.current_score}%`}</strong>{row.progress_points!=null&&<p className="mt-1 text-xs text-slate-500">{Number(row.progress_points)>=0?"+":""}{row.progress_points} percentage points</p>}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-md text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><Link className="button-secondary button-small" href={`/teacher/learners/${row.learner_id}?classId=${id}`}>View progress</Link></td></tr>)}</tbody>
+      <tbody>{projectedAttention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5"><strong>{row.current_score==null?"Not recorded":`${row.current_score}%`}</strong>{row.progress_points!=null&&<p className="mt-1 text-xs text-slate-500">{Number(row.progress_points)>=0?"+":""}{row.progress_points} percentage points</p>}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-md text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><Link className="button-secondary button-small" href={`/teacher/learners/${row.learner_id}?classId=${id}`}>View progress</Link></td></tr>)}</tbody>
     </table></section>}
 
     {studentIds.length>0&&<details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">More class analysis</summary><section className="mt-5 grid gap-6 lg:grid-cols-2">

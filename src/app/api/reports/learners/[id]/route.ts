@@ -23,6 +23,8 @@ import {
   parseLearnerReportDateRange,
   scopeLearnerEvidenceToDateRange,
 } from "@/lib/learner-report-date-range";
+import { configuredUnits } from "@/lib/learning-catalog";
+import { summariseWorkbookStartingPoint } from "@/lib/workbook-starting-point";
 
 type Row = Record<string, unknown>;
 const idSchema = z.string().uuid();
@@ -108,6 +110,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     supabase.from("learner_recognitions").select("id,title,message,recognised_at").eq("learner_id", id).eq("class_id", classId).order("recognised_at", { ascending: false }).limit(QUERY_LIMIT),
     supabase.from("attendance_events").select("id,session_on,attendance_status,provider_name,imported_at").eq("learner_id", id).eq("class_id", classId).order("session_on", { ascending: false }).limit(QUERY_LIMIT),
     supabase.from("certificate_eligibility_reviews").select("id,status,eligible_at,reviewed_at,review_note,achievement_levels(title,threshold_points)").eq("learner_id", id).order("eligible_at", { ascending: false }).limit(QUERY_LIMIT),
+    scope.unitCodes.size ? supabase.from("learner_curriculum_progress").select("unit_code,topic_code,selected_level,evidence,updated_at").eq("learner_id", id).in("unit_code", [...scope.unitCodes]).limit(QUERY_LIMIT) : emptyResult(),
   ]);
   if (evidenceResults.some(result => result.error)) {
     return privateResponse("The learner evidence report could not be generated.", 500);
@@ -122,6 +125,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     { data: coins }, { data: assessments }, { data: overrides }, { data: curriculumAttempts }, { data: achievementRows },
     { data: portfolioArtifacts }, { data: worksheets }, { data: catchUpRecords },
     { data: recognitions }, { data: attendanceEvents }, { data: certificateReviews },
+    { data: workbookProgress },
   ] = evidenceResults;
 
   const exportedAt = new Date().toISOString();
@@ -157,6 +161,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     recognitions: rows(recognitions),
     attendanceEvents: rows(attendanceEvents),
     certificateReviews: rows(certificateReviews),
+    workbookProgress: rows(workbookProgress),
   };
   const evidence = scopeLearnerEvidenceToDateRange(unscopedEvidence, parsedRange.range);
   const safeName = learner.display_name.replace(/[^a-z0-9]+/gi, "-")
@@ -191,6 +196,7 @@ export type ReportEvidence = {
   achievement?: Row;
   portfolioArtifacts?: Row[]; worksheets?: Row[]; catchUpRecords?: Row[];
   recognitions?: Row[]; attendanceEvents?: Row[]; certificateReviews?: Row[];
+  workbookProgress?: Row[];
 };
 
 function buildCsvRows(data: ReportEvidence): LearnerJourneyCsvRow[] {
@@ -254,6 +260,36 @@ function buildCsvRows(data: ReportEvidence): LearnerJourneyCsvRow[] {
       feedback: "Not yet recorded", learnerAction: "Not yet recorded",
       improvementAfterFeedback: "Not claimed", target: "Not yet recorded",
       deadline: "Not yet recorded", reviewDate: "Not yet recorded", status: "Background only",
+    });
+  });
+  configuredUnits.filter(unit => (data.workbookProgress ?? []).some(row => row.unit_code === unit.code)).forEach(unit => {
+    const summary = summariseWorkbookStartingPoint(
+      data.workbookProgress ?? [],
+      unit.code,
+      unit.topics.map(topic => topic.code),
+    );
+    if (!summary) return;
+    summary.topics.forEach(topic => {
+      const configuredTopic = unit.topics.find(item => item.code === topic.topicCode);
+      result.push({
+        unit: `Unit ${unit.code} ${unit.title}`,
+        topic: `${topic.topicCode}: ${configuredTopic?.title ?? "Topic"}`,
+        skill: "Unit starting-point diagnostic",
+        evidenceType: summary.complete ? "Independent unit baseline established" : "Incomplete unit starting point",
+        startingPointResult: `${topic.mark} of ${topic.maxMark} (${topic.percentage}%)`,
+        startingPointDate: formatDate(summary.completedAt),
+        progressPointResult: "Not yet assessed",
+        progressPointDate: "Not yet recorded",
+        supportOrHintsUsed: "Independent; no hints",
+        change: "Not yet calculable",
+        feedback: "Automatically marked diagnostic feedback available to the learner",
+        learnerAction: `${summary.recommendedLevel ?? "Adaptive"} route recommended inside the assigned unit`,
+        improvementAfterFeedback: "Not yet assessed",
+        target: "Continue the assigned unit learning journey",
+        deadline: "Group timetable applies",
+        reviewDate: "Not yet scheduled",
+        status: summary.complete ? "Baseline established" : "Incomplete",
+      });
     });
   });
   return result;

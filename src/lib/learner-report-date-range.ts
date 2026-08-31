@@ -26,6 +26,7 @@ export type DateScopedLearnerEvidence = {
   assessments: Row[];
   overrides: Row[];
   curriculumAttempts: Row[];
+  workbookProgress?: Row[];
   achievement?: Row;
   portfolioArtifacts?: Row[];
   worksheets?: Row[];
@@ -101,6 +102,7 @@ export function scopeLearnerEvidenceToDateRange<T extends DateScopedLearnerEvide
     assessments: filter(evidence.assessments, range, "completed_at"),
     overrides: filter(evidence.overrides, range, "created_at", "expires_at", "revoked_at"),
     curriculumAttempts: filter(evidence.curriculumAttempts, range, "completed_at", "reviewed_at"),
+    workbookProgress: filterWorkbookStartingPoint(evidence.workbookProgress ?? [], range),
     achievement: undefined,
     portfolioArtifacts: filter(evidence.portfolioArtifacts ?? [], range, "recorded_at"),
     worksheets: filter(evidence.worksheets ?? [], range, "submitted_at"),
@@ -109,6 +111,17 @@ export function scopeLearnerEvidenceToDateRange<T extends DateScopedLearnerEvide
     attendanceEvents: filter(evidence.attendanceEvents ?? [], range, "session_on", "imported_at"),
     certificateReviews: filter(evidence.certificateReviews ?? [], range, "eligible_at", "reviewed_at"),
   };
+}
+
+function filterWorkbookStartingPoint(rows: Row[], range: LearnerReportDateRange) {
+  return rows.flatMap(row => {
+    if (!Array.isArray(row.evidence)) return [];
+    const scopedEvidence = row.evidence.filter(item => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+      return dateInRange(String((item as Row).recordedAt ?? ""), range);
+    });
+    return scopedEvidence.length ? [{ ...row, evidence: scopedEvidence }] : [];
+  });
 }
 
 function filter(rows: Row[], range: LearnerReportDateRange, ...keys: string[]) {
