@@ -22,7 +22,28 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-hosted-public.ps1 `
 Do not omit `-ExpectedCommit` for a release decision. A missing or mismatched commit
 means the live service is not proven to contain the audited code.
 
-## 2. Controlled invitation and role journey
+## 2. Supabase Auth URL verification
+
+The public application origin and Supabase Auth Site URL are separate settings. A
+correct Railway `APP_URL` does not prove that an email template using
+`{{ .SiteURL }}` will open the same host. Before sending any real invitation or
+password link, run the read-only management check with a short-lived or securely
+stored Supabase personal access token. The script never prints the token and changes
+no setting.
+
+```powershell
+$env:SUPABASE_ACCESS_TOKEN = "YOUR_SUPABASE_PERSONAL_ACCESS_TOKEN"
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-supabase-auth-config.ps1 `
+  -ProjectRef "YOUR_PROJECT_REF" `
+  -ExpectedOrigin "https://YOUR-HOST"
+Remove-Item Env:\SUPABASE_ACCESS_TOKEN
+```
+
+The check fails unless the Auth Site URL exactly matches the expected HTTPS origin
+and the redirect allow list accepts the password callback. Do not paste the access
+token into source control, screenshots, task output or a shared shell history.
+
+## 3. Controlled invitation and role journey
 
 Run this in a dedicated hosted test environment unless the owner explicitly approves
 creating test operational records in production. Use a controlled teacher identity
@@ -64,7 +85,7 @@ relevant immutable audit facts before resetting a dedicated test environment.
 ## Current evidence boundary
 
 The repository's automated tests and clean-database journeys prove the acceptance,
-role, RLS, idempotence and journey-activation contracts locally. The checklist above
-is still required to prove SMTP delivery, allowed redirects, the deployed revision
-and actual browser behavior. Without both stages, hosted invitation readiness remains
-unverified.
+role, RLS, idempotence and journey-activation contracts locally. The checks above are
+still required to prove the deployed revision, Auth URL configuration, SMTP delivery
+and actual browser behavior. Without all three stages, hosted invitation readiness
+remains unverified.

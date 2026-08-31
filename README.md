@@ -106,8 +106,9 @@ TypeScript, ESLint and a Next.js production build.
 After deploying a committed revision, run the read-only public verification in
 `docs/HOSTED_PORTAL_VERIFICATION.md`. It checks the safe `/api/release` identity,
 public pages and anonymous route isolation without creating accounts or evidence.
-The separate controlled-account checklist remains mandatory for invitation delivery,
-acceptance and authenticated cross-role proof.
+The same guide includes a read-only Supabase Auth URL gate so email links cannot
+silently inherit a retired host. The separate controlled-account checklist remains
+mandatory for invitation delivery, acceptance and authenticated cross-role proof.
 
 ## Staff activity preview
 
