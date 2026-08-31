@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type ExistingInvitationProfile = {
   role: "student" | "teacher" | "administrator";
   archived_at: string | null;
@@ -52,4 +54,16 @@ export function invitationProvisioningDetails(
     organisationId: invitation.organisation_id,
     displayName: invitation.display_name.trim(),
   };
+}
+
+const storedGuid = z.guid();
+
+/**
+ * PostgreSQL accepts UUID-shaped identifiers without requiring an RFC version
+ * nibble. The hosted curriculum uses fixed version-0 organisation IDs, so
+ * strict `z.uuid()` validation would reject a genuine durable database row.
+ */
+export function validStoredGuid(value: unknown) {
+  const parsed = storedGuid.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }

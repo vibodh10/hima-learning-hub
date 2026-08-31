@@ -3,6 +3,7 @@ import {
   canIgnoreLegacyInvitationMetadata,
   invitationAcceptanceBlock,
   invitationProvisioningDetails,
+  validStoredGuid,
 } from "@/lib/invitation-finalization-policy";
 
 describe("invitation finalization policy", () => {
@@ -64,5 +65,16 @@ describe("invitation finalization policy", () => {
       organisationId: "trusted-organisation",
       displayName: "Trusted Learner",
     });
+  });
+
+  it("accepts the hosted curriculum's fixed version-0 organisation identifier", () => {
+    expect(validStoredGuid("10000000-0000-0000-0000-000000000001"))
+      .toBe("10000000-0000-0000-0000-000000000001");
+  });
+
+  it("continues to accept generated RFC UUIDs and reject malformed identifiers", () => {
+    expect(validStoredGuid("9b27d78b-1892-4254-8f51-5a6012f3a5cd"))
+      .toBe("9b27d78b-1892-4254-8f51-5a6012f3a5cd");
+    expect(validStoredGuid("not-a-database-id")).toBeNull();
   });
 });

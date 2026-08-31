@@ -1,9 +1,9 @@
 import "server-only";
-import { z } from "zod";
 import {
   canIgnoreLegacyInvitationMetadata,
   invitationAcceptanceBlock,
   invitationProvisioningDetails,
+  validStoredGuid,
 } from "@/lib/invitation-finalization-policy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -12,8 +12,6 @@ export type InvitationFinalizationResult =
   | { kind: "ready"; classId?: string }
   | { kind: "not_invited" }
   | { kind: "failed"; code: string };
-
-const uuid = z.uuid();
 
 /**
  * Completes the durable, idempotent part of invitation acceptance. This is
@@ -29,7 +27,7 @@ export async function finalizeCurrentStudentInvitation(
 
   const admin = createAdminClient();
   const metadata = user.user_metadata as Record<string, unknown>;
-  const metadataInvitationId = validUuid(preferredInvitationId) ?? validUuid(metadata.invitation_id);
+  const metadataInvitationId = validStoredGuid(preferredInvitationId) ?? validStoredGuid(metadata.invitation_id);
 
   const invitationQuery = admin.from("student_invitations")
     .select("id,class_id,organisation_id,email_normalized,display_name,status,auth_user_id")
@@ -64,8 +62,8 @@ export async function finalizeCurrentStudentInvitation(
 
   const provisioning = invitationProvisioningDetails(invitation, metadata);
   if (!provisioning) return { kind: "not_invited" };
-  const classId = validUuid(provisioning.classId);
-  const expectedOrganisationId = validUuid(provisioning.organisationId);
+  const classId = validStoredGuid(provisioning.classId);
+  const expectedOrganisationId = validStoredGuid(provisioning.organisationId);
   if (!classId || !expectedOrganisationId) return { kind: "failed", code: "invalid_invitation" };
 
   const { data: classData, error: classError } = await admin.from("classes")
@@ -140,9 +138,4 @@ export async function finalizeCurrentStudentInvitation(
     after_data: { invited_user_id: user.id, class_id: classData.id },
   });
   return { kind: "ready", classId: classData.id };
-}
-
-function validUuid(value: unknown) {
-  const parsed = uuid.safeParse(value);
-  return parsed.success ? parsed.data : null;
 }
