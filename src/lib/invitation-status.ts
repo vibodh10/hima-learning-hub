@@ -4,8 +4,19 @@ export type InvitationStatusPresentation = {
   detail: string;
 };
 
-export function presentInvitationStatus(status: string, detailCode: string | null): InvitationStatusPresentation {
+export function presentInvitationStatus(
+  status: string,
+  detailCode: string | null,
+  currentlyEnrolled: boolean,
+): InvitationStatusPresentation {
   if (status === "accepted") {
+    if (!currentlyEnrolled) {
+      return {
+        label: "Joined previously",
+        className: "bg-slate-100 text-slate-700",
+        detail: "The invitation was accepted, but this learner is not currently active in the group.",
+      };
+    }
     return {
       label: "Joined",
       className: "bg-emerald-100 text-emerald-900",
