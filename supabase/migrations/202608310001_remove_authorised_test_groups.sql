@@ -1,7 +1,8 @@
 -- One-time, user-authorised production cleanup of the two named test groups.
 -- The learner account is removed first through the separately authorised
--- learner-data deletion workflow. This migration refuses to continue if the
--- exact records or expected invitation count do not match.
+-- learner-data deletion workflow. A fresh database or an already-cleaned
+-- database is a no-op; if either production target ID is present, the migration
+-- still refuses to continue unless the complete authorised scope matches.
 
 do $$
 declare
@@ -10,18 +11,26 @@ declare
     'baea00fc-6085-459a-9464-08d7b044a823'::uuid
   ];
   expected_class_count integer;
+  present_target_count integer;
   expected_invitation_count integer;
   target_organisation_id uuid;
   cleanup_actor_id uuid;
   deleted_class_count integer;
 begin
+  select count(*) into present_target_count
+  from public.classes where id=any(target_ids);
+  if present_target_count=0 then
+    return;
+  end if;
+
   select count(*)
   into expected_class_count
   from public.classes
   where (id='7fb2fb00-2db2-4161-acb5-67e88be5a72b'::uuid and name='L3 Computing Integration Test')
      or (id='baea00fc-6085-459a-9464-08d7b044a823'::uuid and name='Python Unit 4');
 
-  if expected_class_count<>2
+  if present_target_count<>2
+    or expected_class_count<>2
     or (select count(distinct organisation_id) from public.classes where id=any(target_ids))<>1 then
     raise exception 'authorised_test_group_scope_mismatch';
   end if;

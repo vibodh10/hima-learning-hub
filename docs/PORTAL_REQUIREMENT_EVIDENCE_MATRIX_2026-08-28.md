@@ -50,6 +50,14 @@ for an empty group, while repeat invitations and invitation history are collapse
 behind one labelled section once learners exist. This keeps everyday monitoring first
 without removing onboarding, evidence or administrator controls.
 
+The local database now confines class assessment dates to the same active class and
+organisation relationships as learner evidence. This secures the scheduling model,
+but it does not claim that the supplied assessment-plan screenshots have been entered
+as exact dates. The screenshots do not provide an unambiguous machine-readable mapping
+for every group, unit and event, so the original workbook or another authoritative
+structured source is still required before those dates can be imported without
+guessing.
+
 The next local changes should be driven by observed tutor/learner friction or by an
 explicit evidence gap. The repository should not invent attendance, approved
 qualification content or operational outcomes merely to make the matrix appear

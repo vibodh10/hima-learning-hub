@@ -460,15 +460,26 @@ the exact `@sccb.ac.uk` domain. If an Auth account already exists, its active te
 profile, organisation and display name must all match the selected tutor before a
 password-setup link can be sent.
 
+Class assessment dates now repeat the same access boundary. An active learner can
+read dates only for a class in which they are actively enrolled. A teacher can read
+and create dates only for a class they own or actively co-teach. Administrators remain
+restricted to their organisation and are the only role allowed to create
+organisation-wide dates. An activity-linked date is also rejected unless that
+activity belongs to an active unit selected for the class. The database regression
+journey proves the owning teacher, enrolled learner, unrelated teacher, unrelated
+learner, same-organisation administrator and external-organisation administrator
+cases independently.
+
 ## Verification
 
 - TypeScript: passed.
 - ESLint: passed.
-- Full suite after the slices: 303 unique tests passed, with 3 opt-in artifact-generation tests skipped by default. Five files that timed out only during a host-contention full run passed when rerun separately.
-- PostgreSQL contract: 42 independent journeys passed from clean databases,
+- Full suite after the slices: 323 unique tests passed, with 3 opt-in artifact-generation tests skipped by default.
+- PostgreSQL contract: 44 independent journeys passed from clean databases,
   including sent-versus-accepted activation, invitation cancellation/expiry,
   exact allocation completion, allocation and configuration direct-mutation denial,
-  idempotence, auditing and the current tutor-owned group-creation boundary.
+  idempotence, auditing, the current tutor-owned group-creation boundary and
+  class-scoped assessment dates.
 - Student/teacher next-action, invitation presentation, saved curriculum position,
   curriculum, permission, role-navigation and sign-in coverage passed.
 - Next.js production build: passed; all 25 static-generation tasks completed and
