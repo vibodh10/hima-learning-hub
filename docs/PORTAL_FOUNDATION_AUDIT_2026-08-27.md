@@ -470,16 +470,25 @@ journey proves the owning teacher, enrolled learner, unrelated teacher, unrelate
 learner, same-organisation administrator and external-organisation administrator
 cases independently.
 
+Professional intervention records are now stricter than ordinary class resources.
+Students cannot read intervention rows, including rows for their own class, because
+these records may contain staff-only evidence and notes. An owning or actively
+assigned teacher can read a row only when the named learner is actively enrolled in
+the exact class; a same-organisation administrator has the same exact-class boundary.
+Unrelated staff and external-organisation administrators receive no rows. Direct
+browser insert, update and delete privileges are revoked so intervention history can
+only be changed through an explicitly authorised server workflow.
+
 ## Verification
 
 - TypeScript: passed.
 - ESLint: passed.
 - Full suite after the slices: 323 unique tests passed, with 3 opt-in artifact-generation tests skipped by default.
-- PostgreSQL contract: 44 independent journeys passed from clean databases,
+- PostgreSQL contract: 45 independent journeys passed from clean databases,
   including sent-versus-accepted activation, invitation cancellation/expiry,
   exact allocation completion, allocation and configuration direct-mutation denial,
   idempotence, auditing, the current tutor-owned group-creation boundary and
-  class-scoped assessment dates.
+  class-scoped assessment dates and staff-only interventions.
 - Student/teacher next-action, invitation presentation, saved curriculum position,
   curriculum, permission, role-navigation and sign-in coverage passed.
 - Next.js production build: passed; all 25 static-generation tasks completed and

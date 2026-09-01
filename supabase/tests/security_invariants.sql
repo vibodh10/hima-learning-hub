@@ -6,6 +6,7 @@ declare
 begin
   foreach checked_table in array array[
     'attempts','attempt_answers','organisations','deadlines','reminders','audit_logs',
+    'interventions',
     'learner_curriculum_progress','learner_curriculum_attempts',
     'workbook_teacher_decisions'
   ] loop
@@ -46,6 +47,11 @@ begin
       and policyname='profiles_select_authorised') then
     raise exception 'profile authorisation policy is missing';
   end if;
+  if not exists(select 1 from pg_policies
+    where schemaname='public' and tablename='interventions'
+      and policyname='interventions_staff_read') then
+    raise exception 'staff-only intervention policy is missing';
+  end if;
 
   if has_table_privilege('authenticated','public.attempts','INSERT') then
     raise exception 'browser role can insert attempt headers directly';
@@ -60,6 +66,11 @@ begin
   if has_table_privilege('authenticated','public.learner_curriculum_attempts','INSERT')
     or has_table_privilege('authenticated','public.learner_curriculum_attempts','UPDATE') then
     raise exception 'browser role can forge curriculum marks or teacher reviews';
+  end if;
+  if has_table_privilege('authenticated','public.interventions','INSERT')
+    or has_table_privilege('authenticated','public.interventions','UPDATE')
+    or has_table_privilege('authenticated','public.interventions','DELETE') then
+    raise exception 'browser role can rewrite professional intervention history';
   end if;
   if has_column_privilege('authenticated','public.questions','correct_answer','SELECT') then
     raise exception 'correct answers are directly readable by browser users';
@@ -78,6 +89,11 @@ begin
     from pg_proc
     where oid='public.can_manage_class(uuid)'::regprocedure
   ) then raise exception 'class management helper is not security-definer with an empty search path'; end if;
+  if not (
+    select prosecdef and proconfig @> array['search_path=""']
+    from pg_proc
+    where oid='public.can_read_class_intervention(uuid,uuid)'::regprocedure
+  ) then raise exception 'intervention scope helper is not security-definer with an empty search path'; end if;
 end $$;
 
 select 'security invariants passed' as result;
