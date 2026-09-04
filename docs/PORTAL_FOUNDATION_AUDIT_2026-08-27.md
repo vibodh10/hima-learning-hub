@@ -168,6 +168,11 @@ first student action. Existing student accounts can sign in on the same page and
 join the exact group. Every open, close and successful use is audited. This is a
 bounded alternative to blocked email, not an unrestricted public sign-up page.
 
+The earlier class-code RPC is no longer executable by browser roles and its student
+form has been removed. Internal random hashes remain on legacy class rows only for
+schema compatibility. This makes the teacher's Close registration link control a
+genuine access boundary rather than leaving a second reusable code path open.
+
 The teacher group page now puts this primary route first, moves email invitation into
 an optional fallback and collapses secondary setup detail. Learner-facing topic and
 activity phrases are normalised to begin with a capital letter without changing

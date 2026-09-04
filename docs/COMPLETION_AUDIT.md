@@ -36,8 +36,9 @@ an authenticated two-role browser journey**.
   curriculum seed executed successfully. Read-only verification returned 23/23
   expected tables, 5/5 required functions and RLS enabled across the sensitive
   learner and operational tables.
-- Hosted browser journey: fictional teacher created a class; fictional learner
-  joined with its hashed enrolment code, submitted five correct answers, received
+- Historical hosted browser journey before controlled registration links: fictional
+  teacher created a class; fictional learner joined with its then-active hashed
+  enrolment code, submitted five correct answers, received
   6/6 and Mastery, signed out and back in, and retained the result and target.
   The teacher then saw the learner in the class roster and the complete individual
   evidence timeline.

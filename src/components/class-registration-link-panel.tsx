@@ -24,7 +24,7 @@ export function ClassRegistrationLinkPanel({
   const [openState, openAction, opening] = useActionState<ClassRegistrationState, FormData>(openClassRegistrationLink, {});
   const [closeState, closeAction, closing] = useActionState<ClassRegistrationState, FormData>(closeClassRegistrationLink, {});
   return <section className="card mt-6 border-teal-200 bg-teal-50" id="registration-link">
-    <p className="eyebrow">Add students without email</p>
+    <p className="eyebrow">Add students when invitation email is blocked</p>
     <h2 className="mt-2 text-2xl font-bold">Share one group registration link</h2>
     <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
       Students open the link, enter their details and join this group. The link expires after seven days, and you can close it as soon as everyone has registered.

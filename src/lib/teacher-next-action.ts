@@ -137,10 +137,10 @@ export function selectTeacherNextAction(input: {
     return {
       kind: "invite_students",
       eyebrow: "Continue setup",
-      title: `Invite students to ${awaitingStudents.name}`,
-      detail: "Send each student a secure invitation. Their course, units and learning journey will be connected automatically.",
-      href: `/teacher/classes/${awaitingStudents.id}#invitations`,
-      label: "Invite students",
+      title: `Add students to ${awaitingStudents.name}`,
+      detail: "Create one temporary group registration link, share it with the class and close it when everyone has joined. Their learning journey starts automatically.",
+      href: `/teacher/classes/${awaitingStudents.id}#registration-link`,
+      label: "Open student registration",
       meta: "Step 3 of 3",
     };
   }

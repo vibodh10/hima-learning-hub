@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
-import { canJoinClass, canManageCurriculumConfiguration, canPerformAdministratorAction, canPerformTeachingAction, canSetUpOwnedGroup, canSubmitPractice } from "@/lib/permissions";
+import { canManageCurriculumConfiguration, canPerformAdministratorAction, canPerformTeachingAction, canSetUpOwnedGroup, canSubmitPractice } from "@/lib/permissions";
 
 export type ActionState = {
   ok?: boolean;
@@ -169,18 +169,6 @@ export async function startGroupLearningJourney(_: ActionState, formData: FormDa
   revalidatePath("/dashboard");
   revalidatePath(`/teacher/classes/${parsed.data.classId}`);
   return { ok: true, message: "Learning journey started at Teaching Week 1. Holidays and closures will pause it automatically." };
-}
-
-export async function joinClass(_: ActionState, formData: FormData): Promise<ActionState> {
-  const actor = await getSessionProfile();
-  if (!actor || !canJoinClass(actor.role)) return { message: "Only learner accounts can join a class." };
-  const parsed = z.string().trim().min(6).max(24).safeParse(formData.get("enrolmentCode"));
-  if (!parsed.success) return { message: "Enter the enrolment code provided by your teacher." };
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("join_class", { enrolment_code: parsed.data });
-  if (error) return { message: "That code was not recognised for your organisation." };
-  revalidatePath("/dashboard");
-  return { ok: true, message: "You have joined the class." };
 }
 
 export async function saveDatabaseActivityPosition(
@@ -600,13 +588,13 @@ export async function duplicateClass(_: ActionState, formData: FormData): Promis
   if(!actor||!canPerformAdministratorAction(actor.role))return{message:"Administrator access is required to duplicate classes."};
   const parsed=z.object({
     sourceClassId:databaseUuid,newName:z.string().trim().min(2).max(80),
-    enrolmentCode:z.string().trim().min(6).max(24).regex(/^[a-zA-Z0-9-]+$/),
   }).safeParse(Object.fromEntries(formData));
-  if(!parsed.success)return{message:"Enter a new class name and secure enrolment code."};
+  if(!parsed.success)return{message:"Enter a new class name."};
+  const internalCode=`SCCB-${randomUUID().replaceAll("-","").slice(0,12).toUpperCase()}`;
   const supabase=await createClient();
   const{error}=await supabase.rpc("teacher_duplicate_class",{
     source_class_uuid:parsed.data.sourceClassId,new_name:parsed.data.newName,
-    enrolment_code:parsed.data.enrolmentCode,
+    enrolment_code:internalCode,
   });
   if(error)return{message:"The class structure could not be duplicated."};
   revalidatePath("/dashboard");

@@ -56,7 +56,9 @@ link, share it through an approved channel and close it immediately after the cl
 has registered. It is capped, stores only a hash, preserves one student role per
 account, enrols only into the exact published group and starts only the approved
 journey. Opening, successful use and closing are auditable. The email workflow
-remains available as an optional one-person fallback. This slice has passed local
+remains available as an optional one-person fallback. The legacy reusable class-code
+function and form are disabled, so closing the current registration link does not
+leave a second student self-service route open. This slice has passed local
 application, build and clean-database verification but is not a hosted production
 claim until its commit is deployed and checked there.
 

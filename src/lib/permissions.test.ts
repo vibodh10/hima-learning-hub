@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canJoinClass, canManageCurriculumConfiguration, canPerformAdministratorAction, canPerformTeachingAction, canSetUpOwnedGroup, canSubmitPractice, canViewLearnerEvidence } from "./permissions";
+import { canManageCurriculumConfiguration, canPerformAdministratorAction, canPerformTeachingAction, canSetUpOwnedGroup, canSubmitPractice, canViewLearnerEvidence } from "./permissions";
 
 describe("role permissions", () => {
   it("keeps teaching actions away from students", () => {
@@ -7,9 +7,7 @@ describe("role permissions", () => {
     expect(canPerformTeachingAction("teacher")).toBe(true);
     expect(canPerformTeachingAction("administrator")).toBe(true);
   });
-  it("only lets learners join and submit practice", () => {
-    expect(canJoinClass("student")).toBe(true);
-    expect(canJoinClass("teacher")).toBe(false);
+  it("only lets learners submit practice", () => {
     expect(canSubmitPractice("student")).toBe(true);
     expect(canSubmitPractice("administrator")).toBe(false);
   });

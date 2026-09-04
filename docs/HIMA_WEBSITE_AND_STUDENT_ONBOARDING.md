@@ -54,6 +54,9 @@ The link contains the secret. Do not post it publicly or reuse it for another cl
 Creating a replacement closes the earlier link. Closing it blocks further joins but
 does not remove learners who have already registered or their evidence.
 
+Legacy class codes cannot be used to join. This ensures that closing the current
+registration link genuinely closes reusable student access to the group.
+
 ## How Hima invites a student
 
 1. Sign in as Hima.

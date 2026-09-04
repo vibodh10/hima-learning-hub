@@ -2,22 +2,11 @@
 import { useActionState, useState } from "react";
 import {
   addClassTeacher, allocateAdaptiveHomework, archiveClass, archiveEnrolment,
-  configureClass, createClass, duplicateClass, importExistingStudents, joinClass,
+  configureClass, createClass, duplicateClass, importExistingStudents,
   moveStudent, recordBulkTeacherAction, saveWeeklyPlan, setPathwayThresholds,
   startGroupLearningJourney, type ActionState,
 } from "@/app/actions/learning";
 import { ISO_WEEKDAYS, normaliseWeeklyLearningDays } from "@/lib/weekly-schedule";
-
-export function JoinClassForm() {
-  const [state, action, pending] = useActionState<ActionState, FormData>(joinClass, {});
-  return <form action={action} className="card mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
-    <label className="grid gap-2 text-sm font-semibold">Class enrolment code
-      <input className="input" name="enrolmentCode" autoComplete="off" minLength={6} maxLength={24} required />
-    </label>
-    <button className="button self-end" disabled={pending}>{pending ? "Joining…" : "Join class"}</button>
-    {state.message && <p role="status" className={`sm:col-span-2 text-sm ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}
-  </form>;
-}
 
 export function CreateClassForm({ courses, years }: { courses: { id: string; title: string }[]; years: { id: string; name: string }[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(createClass, {});
@@ -156,7 +145,7 @@ export function ClassLifecycleForms({classId}:{classId:string}){
   const[duplicateState,duplicateAction,duplicating]=useActionState<ActionState,FormData>(duplicateClass,{});
   const[importState,importAction,importing]=useActionState<ActionState,FormData>(importExistingStudents,{});
   return <div className="mt-6 grid gap-6 lg:grid-cols-2">
-    <details className="card"><summary className="cursor-pointer text-lg font-bold">Duplicate class structure</summary><form action={duplicateAction} className="mt-4 grid gap-3"><input type="hidden" name="sourceClassId" value={classId}/><Field label="New class name" name="newName" placeholder="Group 6"/><Field label="New enrolment code" name="enrolmentCode" placeholder="GROUP-6-2026"/><button className="button-secondary justify-self-start" disabled={duplicating}>{duplicating?"Duplicating…":"Duplicate structure"}</button>{duplicateState.message&&<p className={`text-sm ${duplicateState.ok?"text-teal-800":"text-red-700"}`}>{duplicateState.message}</p>}</form></details>
+    <details className="card"><summary className="cursor-pointer text-lg font-bold">Duplicate class structure</summary><form action={duplicateAction} className="mt-4 grid gap-3"><input type="hidden" name="sourceClassId" value={classId}/><Field label="New class name" name="newName" placeholder="Group 6"/><p className="text-xs text-slate-500">Student access stays closed until the new group is published and a teacher opens its temporary registration link.</p><button className="button-secondary justify-self-start" disabled={duplicating}>{duplicating?"Duplicating…":"Duplicate structure"}</button>{duplicateState.message&&<p className={`text-sm ${duplicateState.ok?"text-teal-800":"text-red-700"}`}>{duplicateState.message}</p>}</form></details>
     <details className="card"><summary className="cursor-pointer text-lg font-bold">Import existing learners</summary><form action={importAction} className="mt-4 grid gap-3"><input type="hidden" name="classId" value={classId}/><label className="grid gap-1 text-sm font-semibold">Source filename<input className="input" name="filename" defaultValue="learner-import.csv"/></label><label className="grid gap-1 text-sm font-semibold">Learner account emails<textarea className="input min-h-28" name="emails" placeholder={"student1@example.com\nstudent2@example.com"} required/></label><p className="text-xs text-slate-500">Paste the email column from a CSV. Accounts must already exist in this organisation; unmatched rows are retained in the import evidence.</p><button className="button-secondary justify-self-start" disabled={importing}>{importing?"Importing…":"Import learners"}</button>{importState.message&&<p className={`text-sm ${importState.ok?"text-teal-800":"text-red-700"}`}>{importState.message}</p>}</form></details>
   </div>;
 }

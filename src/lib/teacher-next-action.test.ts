@@ -44,12 +44,17 @@ describe("selectTeacherNextAction", () => {
     expect(action).toMatchObject({ kind: "publish_units" });
   });
 
-  it("invites students only after units are selected and published", () => {
+  it("opens controlled student registration only after units are selected and published", () => {
     const action = selectTeacherNextAction({
       classes: [{ ...readyClass, studentCount: 0 }],
       attention: [],
     });
-    expect(action).toMatchObject({ kind: "invite_students", href: "/teacher/classes/class-1#invitations" });
+    expect(action).toMatchObject({
+      kind: "invite_students",
+      title: "Add students to Group 1",
+      href: "/teacher/classes/class-1#registration-link",
+      label: "Open student registration",
+    });
   });
 
   it("tracks sent invitations instead of asking the teacher to resend them", () => {

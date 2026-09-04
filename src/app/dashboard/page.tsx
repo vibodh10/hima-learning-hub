@@ -4,7 +4,7 @@ import { getSessionProfile, type Role } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { RoleBanner } from "@/components/role-banner";
-import { CreateClassForm, JoinClassForm } from "@/components/class-forms";
+import { CreateClassForm } from "@/components/class-forms";
 import { NewBadgeNotifications } from "@/components/achievement-celebration";
 import { summariseActivityProgress } from "@/lib/activity-progress";
 import { selectNextTarget } from "@/lib/target-priority";
@@ -107,12 +107,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       <section className="card mt-8 max-w-3xl border-blue-200 bg-blue-50" aria-labelledby="no-course-title">
         <p className="eyebrow">Next step</p>
         <h2 className="mt-2 text-2xl font-bold" id="no-course-title">No course assigned yet</h2>
-        <p className="mt-3 leading-7 text-slate-700">Your account is active, but it is not currently enrolled in a class. Ask your teacher to send or retry your SCCB invitation. Your course, assessments and progress will appear here after enrolment.</p>
-        <details className="mt-5 rounded-xl border border-blue-200 bg-white p-4">
-          <summary className="cursor-pointer font-semibold">I was given a class code</summary>
-          <p className="mt-3 text-sm text-slate-600">Use the code below only if your teacher specifically asked you to join this way.</p>
-          <JoinClassForm />
-        </details>
+        <p className="mt-3 leading-7 text-slate-700">Your account is active, but it is not currently enrolled in a group. Ask your teacher for the current group registration link, or ask them to retry your SCCB email invitation. Your course, assessments and progress will appear after you join.</p>
       </section>
     </main>;
   }

@@ -31,12 +31,14 @@ select public.create_class(
   \quit 1
 \endif
 
+-- Registration itself has a dedicated controlled-link journey. This vertical
+-- slice begins with a fixture enrolment so it can focus on attempt persistence,
+-- adaptation and learner isolation without reviving the disabled class-code path.
+reset role;
+insert into public.enrolments(class_id,student_id)
+values(:'created_class','90000000-0000-0000-0000-000000000003');
+set role authenticated;
 select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000003',false);
-select public.join_class('HIMA-B-26') as joined_class \gset
-\if :{?joined_class}
-\else
-  \quit 1
-\endif
 
 create temporary table journey_result(payload jsonb);
 insert into journey_result

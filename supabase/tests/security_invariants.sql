@@ -122,6 +122,10 @@ begin
     or has_function_privilege('anon','public.consume_class_registration_link(text,uuid,text,text)','EXECUTE') then
     raise exception 'registration-link consumption function is browser executable';
   end if;
+  if has_function_privilege('authenticated','public.join_class(text)','EXECUTE')
+    or has_function_privilege('anon','public.join_class(text)','EXECUTE') then
+    raise exception 'legacy class-code join remains browser executable';
+  end if;
   if not (
     select prosecdef and proconfig @> array['search_path=""']
     from pg_proc

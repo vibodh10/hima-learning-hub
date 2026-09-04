@@ -25,7 +25,7 @@ export function TeacherGroupCard({
         <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
           invitationReady ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-950"
         }`}>
-          {invitationReady ? "Ready to invite" : "Setup in progress"}
+          {invitationReady ? "Ready for students" : "Setup in progress"}
         </span>
       </div>
       <p className="mt-1 text-sm text-slate-600">
@@ -35,7 +35,7 @@ export function TeacherGroupCard({
         {schedule} · {unitTitles.join(", ") || "Unit setup in progress"}
       </p>
       {!invitationReady && <p className="mt-2 text-xs font-semibold text-amber-900">
-        Students cannot be invited until an administrator completes this group.
+        Students cannot join until an administrator completes this group.
       </p>}
     </div>
     <span className="font-bold text-teal-700">Open group →</span>
