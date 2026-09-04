@@ -19,8 +19,9 @@ learner-facing unit/module/lesson hierarchy instead of creating parallel systems
 - `user_profiles.role` is the authoritative application role. One profile has one
   role: `student`, `teacher` or `administrator`.
 - The public sign-in form does not allow a user to choose or switch role.
-- Student self-registration is not offered; student provisioning is invitation
-  only. Teacher provisioning requires administrator approval.
+- Uncontrolled student self-registration is not offered. Students can be
+  provisioned through a one-person email invitation or a teacher-controlled class
+  registration link. Teacher provisioning requires administrator approval.
 - Private pages perform server-side role checks. Student-only progress, portfolio
   and rewards pages reject staff accounts; teacher learner/class pages reject
   student accounts; administrator pages reject both ordinary roles.
@@ -150,6 +151,27 @@ only the provisional class enrolment when there is no accepted invitation event 
 independent `enrolment.joined` audit fact. The learner profile and all stored evidence
 remain intact. This gives teachers a real access boundary without fabricating or
 deleting operational learning data.
+
+### Teacher-controlled class registration links
+
+When college email filtering prevents an Auth invitation from reaching learners, a
+teacher can now open one high-entropy registration link for the exact published
+group. The link expires after seven days, is capped at 100 successful registrations
+and can be closed immediately by the teacher. Creating a replacement closes the
+earlier link. Only the token hash is stored, and direct browser writes to link or
+enrolment state remain prohibited.
+
+A learner who opens a valid link sees the intended group and course before creating
+an account. Registration then confirms the student role, exact class enrolment and
+approved group journey atomically, so the assigned starting-point assessment is the
+first student action. Existing student accounts can sign in on the same page and
+join the exact group. Every open, close and successful use is audited. This is a
+bounded alternative to blocked email, not an unrestricted public sign-up page.
+
+The teacher group page now puts this primary route first, moves email invitation into
+an optional fallback and collapses secondary setup detail. Learner-facing topic and
+activity phrases are normalised to begin with a capital letter without changing
+their stored curriculum identifiers.
 
 ### Automatic first-student journey activation
 
@@ -479,16 +501,25 @@ Unrelated staff and external-organisation administrators receive no rows. Direct
 browser insert, update and delete privileges are revoked so intervention history can
 only be changed through an explicitly authorised server workflow.
 
+Workbook teacher decisions now follow the same server-authoritative pattern. The
+browser calls an audited security-definer function which checks the current staff
+profile, exact active class, active learner enrolment, active selected unit and
+approved journey topic before recording a decision. Direct authenticated writes to
+the decision table are revoked, preventing a forged learner, class, unit or topic
+relationship from becoming professional evidence.
+
 ## Verification
 
 - TypeScript: passed.
 - ESLint: passed.
-- Full suite after the slices: 323 unique tests passed, with 3 opt-in artifact-generation tests skipped by default.
-- PostgreSQL contract: 45 independent journeys passed from clean databases,
+- Full suite after the slices: 327 unique tests passed, with 3 opt-in artifact-generation tests skipped by default.
+- PostgreSQL contract: 46 independent journeys passed from clean databases,
   including sent-versus-accepted activation, invitation cancellation/expiry,
-  exact allocation completion, allocation and configuration direct-mutation denial,
-  idempotence, auditing, the current tutor-owned group-creation boundary and
-  class-scoped assessment dates and staff-only interventions.
+  controlled registration-link opening, joining and closing, exact allocation
+  completion, allocation and configuration direct-mutation denial,
+  server-authoritative workbook decisions, idempotence, auditing, the current
+  tutor-owned group-creation boundary and class-scoped assessment dates and
+  staff-only interventions.
 - Student/teacher next-action, invitation presentation, saved curriculum position,
   curriculum, permission, role-navigation and sign-in coverage passed.
 - Next.js production build: passed; all 25 static-generation tasks completed and
@@ -496,11 +527,9 @@ only be changed through an explicitly authorised server workflow.
 
 ## Recommended next slices
 
-1. Open only the newest controlled-student email sent after the Supabase Auth Site URL
-   and callback allow list were corrected to the canonical SCCB origin. Complete the
-   hosted acceptance journey with distinct teacher and student accounts. The database
-   acceptance/activation contract and live URL configuration are covered; the newest
-   email link and authenticated browser journey are not yet proven.
+1. Deploy the locally verified controlled-registration-link slice, then complete one
+   hosted registration through a fresh link and close it from the teacher page.
+   Confirm that reuse fails and that the student lands on the assigned starting point.
 2. Move secondary teacher analytics behind class/unit drill-downs after observing
    the new priority action with real tutors.
 3. Pilot and approve one complete module/lesson sequence per selected unit before

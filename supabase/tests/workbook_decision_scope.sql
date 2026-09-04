@@ -31,14 +31,29 @@ insert into public.user_profiles(id,organisation_id,role,display_name) values
 
 set request.jwt.claim.sub='90000000-0000-0000-0000-000000000001';
 set local role authenticated;
-insert into public.workbook_teacher_decisions(
-  learner_id,teacher_id,organisation_id,unit_code,decision_type,reason
-) values(
-  '90000000-0000-0000-0000-000000000002',auth.uid(),
-  '10000000-0000-0000-0000-000000000001','6','feedback',
-  'The owning teacher recorded a scoped evidence decision.'
+select public.teacher_record_workbook_decision(
+  '90000000-0000-0000-0000-000000000002','6',null,'feedback',
+  null,null,'The owning teacher recorded a scoped evidence decision.',null
 );
+do $$
+begin
+  if has_table_privilege('authenticated','public.workbook_teacher_decisions','INSERT') then
+    raise exception 'browser role retained direct workbook-decision insert permission';
+  end if;
+end $$;
 reset role;
+
+do $$
+begin
+  if not exists(
+    select 1 from public.audit_logs
+    where action='learner.workbook_decision_recorded'
+      and after_data->>'learner_id'='90000000-0000-0000-0000-000000000002'
+      and after_data->>'unit_code'='6'
+  ) then
+    raise exception 'workbook decision did not create its audit fact';
+  end if;
+end $$;
 
 -- A different teacher in the same organisation cannot read or write the
 -- learner's workbook decisions without an active class relationship.
@@ -50,12 +65,9 @@ begin
     raise exception 'unrelated teacher could read a learner workbook decision';
   end if;
   begin
-    insert into public.workbook_teacher_decisions(
-      learner_id,teacher_id,organisation_id,unit_code,decision_type,reason
-    ) values(
-      '90000000-0000-0000-0000-000000000002',auth.uid(),
-      '10000000-0000-0000-0000-000000000001','6','feedback',
-      'An unrelated teacher must not create this workbook decision.'
+    perform public.teacher_record_workbook_decision(
+      '90000000-0000-0000-0000-000000000002','6',null,'feedback',
+      null,null,'An unrelated teacher must not create this workbook decision.',null
     );
     raise exception 'unrelated teacher created a learner workbook decision';
   exception when sqlstate '42501' then null;
@@ -94,6 +106,10 @@ begin
     ) then
     raise exception 'authorised co-teacher lost scoped class access';
   end if;
+  perform public.teacher_record_workbook_decision(
+    '90000000-0000-0000-0000-000000000002','6',null,'reflection_review',
+    null,null,'The co-teacher recorded a valid scoped reflection review.',null
+  );
 end $$;
 reset role;
 

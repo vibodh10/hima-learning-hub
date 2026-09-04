@@ -15,7 +15,7 @@ describe("ClassOnboardingPanel", () => {
 
     const panel = screen.getByTestId("class-onboarding-panel");
     expect(panel).not.toHaveAttribute("open");
-    expect(screen.getByText("Invite more students and manage invitations")).toBeInTheDocument();
+    expect(screen.getByText("Add more students and manage access")).toBeInTheDocument();
     expect(screen.getByText("2 awaiting response")).toBeInTheDocument();
   });
 });

@@ -11,15 +11,21 @@ If a shorter answer is needed:
 ## What the main technology does
 
 - **Next.js, React and TypeScript** provide the website, lessons, adaptive questions, practical papers and teacher screens.
-- **Supabase Auth** provides secure sign-in and email invitations.
+- **Supabase Auth** provides secure sign-in, email invitations and controlled
+  class-link registration.
 - **PostgreSQL and row-level security** keep each learner's evidence within the correct organisation and class.
 - **The Hima question engine** generates original comparable practice from controlled templates. It stores marks, hints, time and question evidence.
 - **Reports** turn stored evidence into strengths, support needs, targets, progress history and recommended next steps.
 - **Automated tests plus browser testing** check the curriculum map, question coverage, security rules and important navigation journeys.
 
-# Student registration: invitation only
+# Student registration: controlled access only
 
-Open student self-registration should remain disabled. Hima should invite each student using a known college or verified personal email. This is safer than publishing a reusable class code because an invitation is tied to one email account.
+Open student self-registration remains disabled. Hima can use a one-person email
+invitation or generate one temporary registration link for an exact published group.
+The class link is designed for cases where college email filtering blocks invitation
+messages. It is unguessable, expires after seven days, accepts at most 100 successful
+registrations and can be closed immediately. It must be shared only with the intended
+class through a college-approved channel.
 
 ## One-time setup
 
@@ -34,6 +40,19 @@ Open student self-registration should remain disabled. Hima should invite each s
 5. Set server-only `APP_URL=https://YOUR-DOMAIN` to the same public HTTPS origin. Do not use Railway's internal localhost address.
 6. Keep `SUPABASE_SERVICE_ROLE_KEY` only in the server's environment settings. Never place it in a variable beginning `NEXT_PUBLIC_`, in browser code, screenshots or emails.
 7. Confirm that the public `/register` page is used only for controlled teaching-staff requests. Students must not use it.
+
+## Recommended route when college email blocks invitations
+
+1. Sign in as the teacher and open the intended group.
+2. Under **Student registration link**, select **Create registration link**.
+3. Copy the displayed link and share it only with that class.
+4. Ask learners to open it, confirm the group shown and register with their own email.
+5. Once the intended learners have joined, select **Close registration link**.
+6. Confirm the group count and invitation/join evidence before using reports.
+
+The link contains the secret. Do not post it publicly or reuse it for another class.
+Creating a replacement closes the earlier link. Closing it blocks further joins but
+does not remove learners who have already registered or their evidence.
 
 ## How Hima invites a student
 
@@ -55,6 +74,13 @@ Open student self-registration should remain disabled. Hima should invite each s
    failure is retried on the next valid sign-in. The student does not need a public
    enrolment code.
 
+For the class-link route, the learner opens the shared link, sees the exact group and
+course, then either creates a student account or signs in to an existing student
+account. Successful registration creates the exact class enrolment and approved
+journey together. The dashboard then presents the assigned starting-point assessment
+as the first action. A staff account, archived account or account belonging to a
+different organisation cannot use the link as a student.
+
 Teachers can cancel or mark an unaccepted invitation as expired from the class
 ledger. Either state prevents subsequent application provisioning. **Send another
 access email** creates a fresh invite or recovery path without storing or displaying
@@ -67,3 +93,4 @@ an Auth token.
 - Complete one lesson and practical paper, then confirm the evidence appears in Hima's learner report.
 - Confirm that a student cannot open another learner's report or any Hima-only page.
 - Only after this test should real student invitations be sent.
+- If using a class link, confirm it cannot be used again after the teacher closes it.

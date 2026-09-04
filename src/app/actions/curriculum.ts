@@ -9,6 +9,7 @@ import { isConfiguredUnitCode } from "@/lib/curriculum-unit-code";
 import { gradeStartingPointResponses } from "@/lib/starting-point-grading";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { curriculumPositionSection } from "@/lib/curriculum-position";
+import { revalidatePath } from "next/cache";
 
 const configuredUnitCodeSchema = z.string().refine(isConfiguredUnitCode);
 
@@ -117,17 +118,19 @@ export async function recordWorkbookTeacherDecision(_previous: CurriculumActionS
   const unit = configuredUnits.find(item => item.code === parsed.data.unitCode);
   if (!unit || (parsed.data.topicCode && !unit.topics.some(item => item.code === parsed.data.topicCode))) return { ok: false, message: "Choose a configured unit and topic." };
   const supabase = await createClient();
-  const { data: canManage, error: scopeError } = await supabase.rpc("can_manage_workbook_learner_unit", {
+  const { error } = await supabase.rpc("teacher_record_workbook_decision", {
     learner_uuid: parsed.data.learnerId,
     unit_code_value: parsed.data.unitCode,
+    topic_code_value: parsed.data.topicCode ?? null,
+    decision_type_value: parsed.data.decisionType,
+    original_route_value: parsed.data.originalRoute ?? null,
+    new_route_value: parsed.data.newRoute ?? null,
+    reason_value: parsed.data.reason,
+    review_on_value: parsed.data.reviewOn ?? null,
   });
-  if (scopeError || !canManage) {
-    return { ok: false, message: "You can record a decision only for a learner and unit in one of your active groups." };
+  if (error) {
+    return { ok: false, message: "The decision could not be saved safely. Refresh the learner record and try again." };
   }
-  const { error } = await supabase.from("workbook_teacher_decisions").insert({
-    learner_id: parsed.data.learnerId, teacher_id: actor.id, unit_code: parsed.data.unitCode, topic_code: parsed.data.topicCode ?? null,
-    decision_type: parsed.data.decisionType, original_route: parsed.data.originalRoute ?? null, new_route: parsed.data.newRoute ?? null,
-    reason: parsed.data.reason, review_on: parsed.data.reviewOn ?? null,
-  });
-  return error ? { ok: false, message: "The decision could not be saved safely. Refresh the learner record and try again." } : { ok: true, message: "Workbook decision recorded with teacher, timestamp and reason." };
+  revalidatePath(`/teacher/learners/${parsed.data.learnerId}`);
+  return { ok: true, message: "Workbook decision recorded with teacher, timestamp and reason." };
 }

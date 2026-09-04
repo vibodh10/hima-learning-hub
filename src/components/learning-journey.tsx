@@ -21,6 +21,7 @@ import {
 } from "@/lib/learning-progress";
 import { academicProgress, levelChoiceWarning, visualPathStatuses, type SkillEvidence } from "@/lib/adaptive-workbook";
 import type { PearsonTopic, PearsonUnit } from "@/lib/pearson-curriculum";
+import { capitaliseFirst } from "@/lib/display-text";
 
 const emptyProgress: LearningProgress = { topics: {} };
 
@@ -97,9 +98,9 @@ export function UnitOverview({ unit, initialProgress = null, storageKey = progre
         const status = !loaded ? "Loading progress…" : evidence.masteryScore != null ? `Mastery ${evidence.masteryScore}%` : evidence.lessonCompletedAt ? "Lesson complete · mastery due" : evidence.startedAt ? "In progress" : "Not started";
         return <Link href={topicHref(unit.code, topic.code)} className="card group hover:border-teal-400 hover:bg-teal-50" key={topic.code}>
           <p className="text-xs font-bold uppercase tracking-wide text-teal-700">Module {index + 1} · Pearson topic {topic.code}</p>
-          <h3 className="mt-2 text-xl font-bold group-hover:text-teal-800">{topic.title}</h3>
+          <h3 className="mt-2 text-xl font-bold group-hover:text-teal-800">{capitaliseFirst(topic.title)}</h3>
           <span className="mt-3 inline-block rounded-full bg-white px-3 py-1 text-xs font-bold">{pathStatus}</span>
-          <p className="mt-2 text-sm text-slate-600">{topic.content.slice(0, 3).join(" · ")}</p>
+          <p className="mt-2 text-sm text-slate-600">{topic.content.slice(0, 3).map(capitaliseFirst).join(" · ")}</p>
           <p className="mt-4 text-sm font-semibold">{status} →</p>
         </Link>;
       })}</div>
@@ -225,7 +226,7 @@ export function TopicLesson({ unit, topic, previousTopic, nextTopic, initialProg
   }
 
   return <div className="grid gap-8">
-    <nav className="card" aria-label="Workbook navigation"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Workbook contents</p><p className="mt-1 font-bold">Current position: Unit {unit.code} · {topic.code} {topic.title}</p><p className="mt-1 text-sm text-slate-600">Topic {unit.topics.findIndex(item => item.code === topic.code) + 1} of {unit.topics.length} · Unit progress is based on independent evidence.</p></div><div className="flex flex-wrap gap-2">{previousTopic && <Link className="button-secondary" href={topicHref(unit.code, previousTopic.code)}>← Previous topic</Link>}<Link className="button-secondary" href={`/curriculum/units/${unit.code}`}>Workbook contents</Link>{nextTopic && <Link className="button" href={topicHref(unit.code, nextTopic.code)}>Save and continue →</Link>}</div></div></nav>
+    <nav className="card" aria-label="Workbook navigation"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Workbook contents</p><p className="mt-1 font-bold">Current position: Unit {unit.code} · {topic.code} {capitaliseFirst(topic.title)}</p><p className="mt-1 text-sm text-slate-600">Topic {unit.topics.findIndex(item => item.code === topic.code) + 1} of {unit.topics.length} · Unit progress is based on independent evidence.</p></div><div className="flex flex-wrap gap-2">{previousTopic && <Link className="button-secondary" href={topicHref(unit.code, previousTopic.code)}>← Previous topic</Link>}<Link className="button-secondary" href={`/curriculum/units/${unit.code}`}>Workbook contents</Link>{nextTopic && <Link className="button" href={topicHref(unit.code, nextTopic.code)}>Save and continue →</Link>}</div></div></nav>
     <section className="card border-blue-200 bg-blue-50">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="eyebrow">Expertise and route</p><h2 className="mt-2 text-2xl font-bold">Choose how you learn</h2><p className="mt-2 text-sm text-slate-700">Recommended from current evidence: <strong>{systemRecommendation}</strong>. Your saved choice: <strong>{level}</strong>.</p></div><span className="rounded-full bg-white px-3 py-2 text-sm font-bold">{evidence.masteryScore == null ? "No independent score yet" : `${evidence.masteryScore}% mastery evidence`}</span></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{expertiseLevels.map(item => <button type="button" onClick={() => chooseLevel(item)} className={`rounded-xl border p-4 text-left ${level === item ? "border-teal-600 bg-white" : "border-blue-200"}`} key={item}><strong>{item}</strong><span className="mt-1 block text-xs text-slate-600">{item === "Support" ? "Small steps, extra examples, guidance and hints" : item === "Core" ? "Standard teaching with balanced guidance" : item === "Stretch" ? "Less scaffolding and transfer to unfamiliar contexts" : "Advanced synoptic application and project readiness"}</span></button>)}</div>
@@ -271,7 +272,7 @@ export function ProjectJourney({ unit, initialProgress = null }: { unit: Pearson
     <Info title="Project brief"><p>{meta.project.brief}</p></Info>
     <Info title="Required deliverables"><List items={meta.project.deliverables}/></Info>
     <div className="grid gap-6 md:grid-cols-2"><Info title="Pearson learning aims"><List items={meta.project.aims}/></Info><Info title="Relevant criteria"><List items={meta.project.criteria}/></Info></div>
-    <Info title="Skills and knowledge to apply"><List items={unit.topics.map(topic => `${topic.code} ${topic.title}: ${topic.content.slice(0, 3).join(", ")}`)}/></Info>
+    <Info title="Skills and knowledge to apply"><List items={unit.topics.map(topic => `${topic.code} ${capitaliseFirst(topic.title)}: ${topic.content.slice(0, 3).map(capitaliseFirst).join(", ")}`)}/></Info>
     <Info title="Additional extension knowledge"><p>{meta.project.extension}</p></Info>
     <Info title="Suggested stages"><ol className="grid gap-2">{meta.project.stages.map((item, index) => <li key={item}><strong>{index + 1}.</strong> {item}</li>)}</ol></Info>
     <Info title="Evidence requirements"><List items={meta.project.evidence}/></Info>

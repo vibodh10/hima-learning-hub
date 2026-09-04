@@ -8,7 +8,7 @@ begin
     'attempts','attempt_answers','organisations','deadlines','reminders','audit_logs',
     'interventions',
     'learner_curriculum_progress','learner_curriculum_attempts',
-    'workbook_teacher_decisions'
+    'workbook_teacher_decisions','class_registration_links'
   ] loop
     if to_regclass('public.'||checked_table) is null then
       raise exception 'required table public.% is missing',checked_table;
@@ -72,6 +72,20 @@ begin
     or has_table_privilege('authenticated','public.interventions','DELETE') then
     raise exception 'browser role can rewrite professional intervention history';
   end if;
+  if has_table_privilege('authenticated','public.workbook_teacher_decisions','INSERT')
+    or has_table_privilege('authenticated','public.workbook_teacher_decisions','UPDATE')
+    or has_table_privilege('authenticated','public.workbook_teacher_decisions','DELETE') then
+    raise exception 'browser role can bypass the audited workbook decision function';
+  end if;
+  if has_table_privilege('authenticated','public.class_registration_links','INSERT')
+    or has_table_privilege('authenticated','public.class_registration_links','UPDATE')
+    or has_table_privilege('authenticated','public.class_registration_links','DELETE')
+    or has_table_privilege('anon','public.class_registration_links','SELECT')
+    or has_table_privilege('anon','public.class_registration_links','INSERT')
+    or has_table_privilege('anon','public.class_registration_links','UPDATE')
+    or has_table_privilege('anon','public.class_registration_links','DELETE') then
+    raise exception 'registration links expose unsafe browser privileges';
+  end if;
   if has_column_privilege('authenticated','public.questions','correct_answer','SELECT') then
     raise exception 'correct answers are directly readable by browser users';
   end if;
@@ -94,6 +108,25 @@ begin
     from pg_proc
     where oid='public.can_read_class_intervention(uuid,uuid)'::regprocedure
   ) then raise exception 'intervention scope helper is not security-definer with an empty search path'; end if;
+  if not (
+    select prosecdef and proconfig @> array['search_path=""']
+    from pg_proc
+    where oid='public.teacher_record_workbook_decision(uuid,text,text,text,text,text,text,date)'::regprocedure
+  ) then raise exception 'workbook decision function is not security-definer with an empty search path'; end if;
+  if not (
+    select prosecdef and proconfig @> array['search_path=""']
+    from pg_proc
+    where oid='public.consume_class_registration_link(text,uuid,text,text)'::regprocedure
+  ) then raise exception 'registration-link consumption function is not security-definer with an empty search path'; end if;
+  if has_function_privilege('authenticated','public.consume_class_registration_link(text,uuid,text,text)','EXECUTE')
+    or has_function_privilege('anon','public.consume_class_registration_link(text,uuid,text,text)','EXECUTE') then
+    raise exception 'registration-link consumption function is browser executable';
+  end if;
+  if not (
+    select prosecdef and proconfig @> array['search_path=""']
+    from pg_proc
+    where oid='public.student_join_class_registration_link(text)'::regprocedure
+  ) then raise exception 'existing-student registration function is not security-definer with an empty search path'; end if;
 end $$;
 
 select 'security invariants passed' as result;

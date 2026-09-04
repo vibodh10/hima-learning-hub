@@ -31,8 +31,11 @@ values('90000000-0000-0000-0000-000000000002','6','A1','Core',now(),90,90,now(),
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',true);
-insert into public.workbook_teacher_decisions(learner_id,teacher_id,organisation_id,unit_code,decision_type,original_route,new_route,reason)
-values('90000000-0000-0000-0000-000000000002','90000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','6','project_unlock','locked','teacher preview access','Approved for supervised project familiarisation; mastery is unchanged.');
+select public.teacher_record_workbook_decision(
+  '90000000-0000-0000-0000-000000000002','6',null,'project_unlock',
+  'locked','teacher preview access',
+  'Approved for supervised project familiarisation; mastery is unchanged.',null
+);
 
 do $$ begin
   if not exists(select 1 from public.workbook_teacher_decisions where learner_id='90000000-0000-0000-0000-000000000002' and teacher_id='90000000-0000-0000-0000-000000000001' and original_route='locked' and reason is not null) then raise exception 'audited teacher decision missing'; end if;

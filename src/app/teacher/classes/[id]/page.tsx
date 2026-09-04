@@ -6,6 +6,7 @@ import { formatWeeklyLearningDays } from "@/lib/weekly-schedule";
 import { AppHeader } from "@/components/app-header";
 import { ClassSettingsForm } from "@/components/class-forms";
 import { StudentInvitationForm } from "@/components/student-invitation-form";
+import { ClassRegistrationLinkPanel } from "@/components/class-registration-link-panel";
 import { InvitationLifecycleControls } from "@/components/invitation-lifecycle-controls";
 import { ClassOnboardingPanel } from "@/components/class-onboarding-panel";
 import { RoleBanner } from "@/components/role-banner";
@@ -25,11 +26,12 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     .select("id,name,course_id,academic_period_id,active_unit_id,starts_on,ends_on,weekly_learning_day,weekly_learning_days,published,enrolment_code_hint,courses(title),enrolments(student_id,archived_at,user_profiles!enrolments_student_id_fkey(display_name)),class_units(unit_id,active,archived_at)")
     .eq("id", id).single();
   if (!classData) notFound();
-  const [{ data: courses }, { data: units }, { data: periods }, {data:invitations}] = await Promise.all([
+  const [{ data: courses }, { data: units }, { data: periods }, {data:invitations}, {data:registrationLinks}] = await Promise.all([
     supabase.from("courses").select("id,title").eq("active", true).is("archived_at", null).order("title"),
     supabase.from("units").select("id,course_id,code,title,kind,initial_teaching").is("archived_at", null).order("sort_order"),
     supabase.from("academic_periods").select("id,name,kind,academic_years(name)").is("archived_at", null).order("starts_on"),
     supabase.from("student_invitations").select("id,email_normalized,display_name,status,auth_user_id,invited_at,last_sent_at,accepted_at,cancelled_at,expired_at,send_count,last_detail_code,updated_at").eq("class_id",id).order("updated_at",{ascending:false}).limit(50),
+    supabase.rpc("current_class_registration_link",{class_uuid:id}),
   ]);
   const selectedUnitIds = (classData.class_units ?? []).filter(unit => unit.active && !unit.archived_at).map(unit => unit.unit_id);
   const selectedUnits = (units ?? []).filter(unit => selectedUnitIds.includes(unit.id));
@@ -157,6 +159,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   }).filter((score): score is number => score != null);
   const average = latestScores.length ? Math.round(latestScores.reduce((sum, score) => sum + score, 0) / latestScores.length) : null;
   const awaitingInvitationCount=invitations?.filter(invitation=>["pending","sent"].includes(invitation.status)).length??0;
+  const activeRegistrationLink=registrationLinks?.[0];
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <RoleBanner role={actor.role}/>
@@ -178,12 +181,19 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
 
     {actor.role==="administrator"&&<details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Administrator group setup</summary><p className="mt-2 text-sm text-slate-600">Teachers do not see or manage these settings.</p><ClassSettingsForm classData={classData} courses={courses ?? []} units={units ?? []} periods={periods ?? []} selectedUnitIds={selectedUnitIds}/></details>}
     <ClassOnboardingPanel studentCount={studentIds.length} awaitingCount={awaitingInvitationCount}>
-      {!studentIds.length&&<section className="card mt-6 border-blue-200 bg-blue-50"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold">Invite your first student</h2><p className="mt-3 max-w-3xl text-slate-700">Once your units are saved, send a secure invitation to the student&apos;s college email. Their programme and units are assigned automatically. Results remain at zero until genuine work is completed.</p></section>}
       {selectedUnitIds.length>0&&classData.published&&learningReady
-        ? <StudentInvitationForm classId={id}/>
+        ? <>
+          <ClassRegistrationLinkPanel classId={id} activeLink={activeRegistrationLink ? {
+            id:activeRegistrationLink.id,
+            expiresAt:activeRegistrationLink.expires_at,
+            registrationCount:Number(activeRegistrationLink.registration_count),
+            maxRegistrations:Number(activeRegistrationLink.max_registrations),
+          } : null}/>
+          <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Email invitation, if college email allows it</summary><p className="mt-3 text-sm text-slate-600">You can ignore this option when college mail filters block invitations.</p><StudentInvitationForm classId={id}/></details>
+        </>
         : <section className="card mt-6 border-amber-200 bg-amber-50"><p className="eyebrow">Invitation paused</p><h2 className="mt-2 text-xl font-bold">{!learningReady?"Learning journey not release-ready":"Save and make your units visible first"}</h2><p className="mt-2 text-sm text-amber-950">{!learningReady?"This active unit does not yet have both verified portal content and an approved automatic journey. Invitations stay disabled so students cannot enter an incomplete learning experience.":"Complete the group settings, including making the units visible, before inviting students."}</p></section>}
 
-      <section className={`card mt-6 ${learningReady?"border-teal-200 bg-teal-50":"border-amber-200 bg-amber-50"}`} aria-labelledby="automation-status-title"><p className="eyebrow">Learning setup</p><h2 className="mt-2 text-2xl font-bold" id="automation-status-title">{learningReady?"Ready. Nothing else to configure":"Do not invite students to this unit yet"}</h2><p className="mt-3 text-sm text-slate-700">{learningReady?"Invite students when you are ready. The portal starts their assessment, adapts practice inside the class topic and updates their progress report automatically.":"This unit is missing verified content or an approved learning journey. An administrator must complete it first."}</p>{learningReady&&<details className="mt-4 rounded-xl bg-white/70 p-4"><summary className="cursor-pointer text-sm font-bold">How the automatic learning works</summary><div className="mt-3 grid gap-2 text-sm text-slate-700"><p>✓ The unit starting point is each student&apos;s first action.</p><p>✓ Adaptation changes support and challenge, not the group timetable.</p><p>✓ Mistakes lead to explanations and further practice.</p><p>✓ Reports update from genuine stored activity.</p><p>✓ Teachers do not configure thresholds, weekly plans, rewards or adaptive homework.</p></div><p className="mt-3 text-xs text-slate-600">Practical work is never labelled as teacher feedback unless a teacher reviewed it.</p></details>}</section>
+      <details className={`card mt-6 ${learningReady?"border-teal-200 bg-teal-50":"border-amber-200 bg-amber-50"}`} aria-labelledby="automation-status-title"><summary className="cursor-pointer text-lg font-bold" id="automation-status-title">{learningReady?"Learning is ready and automatic":"Learning setup needs attention"}</summary><p className="mt-3 text-sm text-slate-700">{learningReady?"The starting point, adaptive practice and progress reports begin automatically after a student joins.":"This unit is missing verified content or an approved learning journey. An administrator must complete it first."}</p>{learningReady&&<div className="mt-3 grid gap-2 text-sm text-slate-700"><p>✓ Adaptation changes support and challenge, not the group timetable.</p><p>✓ Mistakes lead to explanations and further practice.</p><p>✓ Reports update from genuine stored activity.</p><p>✓ Teachers do not configure thresholds, weekly plans, rewards or adaptive homework.</p></div>}</details>
 
       {Boolean(invitations?.length)&&<section className="card mt-6" aria-labelledby="invitation-status-title">
       <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Student onboarding</p><h2 className="mt-2 text-2xl font-bold" id="invitation-status-title">Invitation status</h2><p className="mt-2 text-sm text-slate-600">This is the durable invitation record. “Invitation sent” is not the same as “Joined”.</p></div><span className="text-sm text-slate-500">{invitations?.filter(invitation=>["pending","sent"].includes(invitation.status)).length??0} awaiting response</span></div>
