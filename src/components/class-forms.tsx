@@ -49,8 +49,8 @@ export function ClassSettingsForm({
     classData.weekly_learning_day,
   );
   return <details className="card mt-6 border-teal-200" id="unit-settings" open={!selectedUnitIds.length}>
-    <summary className="cursor-pointer text-xl font-bold">1. Choose the units you teach</summary>
-    <p className="mt-2 text-sm text-slate-600">Select only the units this student group should see. You can return here whenever your teaching allocation changes.</p>
+    <summary className="cursor-pointer text-xl font-bold">Group units and teaching days</summary>
+    <p className="mt-2 text-sm text-slate-600">Choose what you teach this group and on which days. These settings apply only to this group.</p>
     <form action={action} className="mt-5 grid gap-5">
       <input type="hidden" name="classId" value={classData.id}/>
       <div className="grid gap-4 md:grid-cols-2">

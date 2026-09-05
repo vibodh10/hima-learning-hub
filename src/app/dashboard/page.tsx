@@ -430,9 +430,11 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
 
 async function TeacherHomeDashboard() {
   const supabase = await createClient();
-  const [{ data: classes }, { data: journeyTemplates }] = await Promise.all([
+  const [{ data: classes }, { data: journeyTemplates }, {data:courses}, {data:years}] = await Promise.all([
     supabase.from("classes").select("id,name,active_unit_id,weekly_learning_day,weekly_learning_days,published,enrolments(count),class_enrolments:enrolments(student_id),student_invitations(status),class_units(unit_id,active,archived_at,units(code,title,status,archived_at))").is("archived_at", null).order("name"),
     supabase.from("learning_journey_templates").select("unit_id").eq("status", "approved").is("archived_at", null),
+    supabase.from("courses").select("id,title").eq("active",true).is("archived_at",null).order("title"),
+    supabase.from("academic_years").select("id,name").is("archived_at",null).order("starts_on",{ascending:false}),
   ]);
   const classSignals = await Promise.all((classes ?? []).map(async item => {
     const [{ data }, { data: weeklyGaps }] = await Promise.all([
@@ -481,7 +483,7 @@ async function TeacherHomeDashboard() {
       status: item.attention_status,
       reason: item.attention_reason,
     })),
-    canManageGroupSetup: false,
+    canManageGroupSetup: true,
   });
   const studentIds = new Set((classes ?? []).flatMap(item => (item.class_enrolments ?? []).map(row => row.student_id)));
   const actionableStatuses = new Set(["intervention_required", "action_required", "catch_up_required"]);
@@ -512,8 +514,9 @@ async function TeacherHomeDashboard() {
         studentCount={item.enrolments?.[0]?.count ?? 0}
         unitTitles={(item.class_units ?? []).filter(unit => unit.active && !unit.archived_at)
           .map(unit => related(unit.units)?.title).filter((title): title is string => Boolean(title))}
-      />) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">No group has been assigned to you yet. There is nothing for you to configure.</p>}</div>
+      />) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">You do not have a group yet. Create one below, then choose its units and teaching days.</p>}</div>
     </section>
+    <CreateClassForm courses={courses??[]} years={years??[]}/>
     <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Teacher overview">
       <Metric label="Groups" value={String(classes?.length ?? 0)}/>
       <Metric label="Students" value={String(studentIds.size)}/>

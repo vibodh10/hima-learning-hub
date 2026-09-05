@@ -31,19 +31,10 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const selectedUnitIds = (classData.class_units ?? [])
     .filter(unit => unit.active && !unit.archived_at)
     .map(unit => unit.unit_id);
-  const administrator = actor.role === "administrator";
   const [{ data: courses }, { data: units }, { data: periods }, {data:invitations}, {data:registrationLinks}] = await Promise.all([
-    administrator
-      ? supabase.from("courses").select("id,title").eq("active", true).is("archived_at", null).order("title")
-      : Promise.resolve({ data: [] }),
-    administrator
-      ? supabase.from("units").select("id,course_id,code,title,kind,initial_teaching").is("archived_at", null).order("sort_order")
-      : selectedUnitIds.length
-        ? supabase.from("units").select("id,course_id,code,title,kind,initial_teaching").in("id", selectedUnitIds).is("archived_at", null).order("sort_order")
-        : Promise.resolve({ data: [] }),
-    administrator
-      ? supabase.from("academic_periods").select("id,name,kind,academic_years(name)").is("archived_at", null).order("starts_on")
-      : Promise.resolve({ data: [] }),
+    supabase.from("courses").select("id,title").eq("active", true).is("archived_at", null).order("title"),
+    supabase.from("units").select("id,course_id,code,title,kind,initial_teaching").is("archived_at", null).order("sort_order"),
+    supabase.from("academic_periods").select("id,name,kind,academic_years(name)").is("archived_at", null).order("starts_on"),
     supabase.from("student_invitations").select("id,email_normalized,display_name,status,auth_user_id,invited_at,last_sent_at,accepted_at,cancelled_at,expired_at,send_count,last_detail_code,updated_at").eq("class_id",id).order("updated_at",{ascending:false}).limit(50),
     supabase.rpc("current_class_registration_link",{class_uuid:id}),
   ]);
@@ -203,7 +194,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       <div className="mt-5 grid gap-3">{selectedUnits.map(unit=><article className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 p-4" key={unit.id}><div><h3 className="font-bold">Unit {unit.code}: {unit.title}</h3><p className="mt-1 text-xs text-slate-500">Class-unit cohort evidence</p></div><div className="flex flex-wrap gap-2"><a className="button-secondary" href={`/api/reports/classes/${id}/units/${unit.id}?format=csv`}>Unit CSV</a><a className="button" href={`/api/reports/classes/${id}/units/${unit.id}`}>Unit PDF</a></div></article>)}</div>
     </details>}
 
-    {actor.role==="administrator"&&<details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Administrator group setup</summary><p className="mt-2 text-sm text-slate-600">Teachers do not see or manage these settings.</p><ClassSettingsForm classData={classData} courses={courses ?? []} units={units ?? []} periods={periods ?? []} selectedUnitIds={selectedUnitIds}/></details>}
+    <ClassSettingsForm classData={classData} courses={courses ?? []} units={units ?? []} periods={periods ?? []} selectedUnitIds={selectedUnitIds}/>
     <ClassOnboardingPanel studentCount={studentIds.length} awaitingCount={awaitingInvitationCount}>
       {selectedUnitIds.length>0&&classData.published&&learningReady
         ? <>
