@@ -245,6 +245,12 @@ a static module position and database activity position exist, their persisted u
 times decide which was most recently used. No partial answer, attempt, mark or
 completion is fabricated merely because a learner opened a page.
 
+The learner dashboard now keeps that authoritative next action as its only primary
+learning control. The current unit, teaching week, progress and topic appear in a
+compact read-only learning plan. Detailed milestones and evidence remain available
+under an optional disclosure, but no duplicate lesson or portfolio buttons compete
+with Continue.
+
 ### Unit-scoped evidence reports
 
 Teachers can now export a selected unit for one class as private, non-cached PDF or
