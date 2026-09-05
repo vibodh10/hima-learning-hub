@@ -30,7 +30,7 @@ export function StudentUnitOverview({
       </div>
     </section>
 
-    {!access&&startingPointComplete&&<section className="card border-amber-200 bg-amber-50"><p className="eyebrow">Weekly learning</p><h2 className="mt-2 text-2xl font-bold">Your teacher is preparing this unit</h2><p className="mt-3 text-slate-700">No weekly journey is active yet. Future modules remain hidden until the class plan is ready.</p></section>}
+    {!access&&startingPointComplete&&<section className="card border-amber-200 bg-amber-50"><p className="eyebrow">Weekly learning</p><h2 className="mt-2 text-2xl font-bold">Your teacher is preparing this unit</h2><p className="mt-3 text-slate-700">No weekly journey is active yet. Future weeks remain hidden until the class plan is ready.</p></section>}
 
     {access&&startingPointComplete&&access.focus.week>1&&focusTopic&&<section className={`card ${access.currentWeekBlocked||unfinishedStartedWeek?"border-red-300 bg-red-50":"border-violet-200 bg-violet-50"}`}>
       <p className="eyebrow">{access.currentWeekBlocked||unfinishedStartedWeek?"Work unfinished":`This week · Week ${access.focus.week}`}</p>
