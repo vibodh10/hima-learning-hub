@@ -70,11 +70,26 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     achievement_level:achievementByLearner.get(row.learner_id)?.achievement_level??null,
   }));
   const studentIds = activeEnrolments.map(enrolment => enrolment.student_id);
-  const [{ data: mastery }, { data: misconceptions }, { data: curriculumAttempts, error: curriculumAttemptsError }] = studentIds.length ? await Promise.all([
-    supabase.from("skill_mastery").select("learner_id,mastery_score,current_pathway,skills(title)").in("learner_id", studentIds),
-    supabase.from("learner_misconceptions").select("learner_id,occurrence_count,resolved_at,misconceptions(title,skills(title))").in("learner_id", studentIds).order("occurrence_count", { ascending: false }),
-    supabase.from("learner_curriculum_attempts").select("learner_id,kind,unit_code,paper_mode,percentage,teacher_mark,max_mark,completed_at").in("learner_id", studentIds).order("completed_at"),
-  ]) : [{ data: [] }, { data: [] }, { data: [], error: null }];
+  const [
+    { data: mastery, error: masteryError },
+    { data: misconceptions, error: misconceptionsError },
+    { data: curriculumAttempts, error: curriculumAttemptsError },
+  ] = studentIds.length && overviewUnit ? await Promise.all([
+    supabase.from("skill_mastery")
+      .select("learner_id,mastery_score,current_pathway,skills!inner(title,topics!inner(unit_id))")
+      .in("learner_id", studentIds).eq("skills.topics.unit_id", overviewUnit.id),
+    supabase.from("learner_misconceptions")
+      .select("learner_id,occurrence_count,resolved_at,misconceptions!inner(title,skills!inner(title,topics!inner(unit_id)))")
+      .in("learner_id", studentIds).eq("misconceptions.skills.topics.unit_id", overviewUnit.id)
+      .order("occurrence_count", { ascending: false }),
+    supabase.from("learner_curriculum_attempts")
+      .select("learner_id,kind,unit_code,paper_mode,percentage,teacher_mark,max_mark,completed_at")
+      .in("learner_id", studentIds).eq("unit_code", overviewUnit.code).order("completed_at"),
+  ]) : [
+    { data: [], error: null },
+    { data: [], error: null },
+    { data: [], error: null },
+  ];
   const [progressResult,assessmentResult,targetResult] = studentIds.length ? await Promise.all([
     overviewUnit
       ? supabase.from("learner_curriculum_progress").select(
@@ -123,6 +138,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     .map(code => ({ code, title: code }));
   const curriculumOverviewError = attentionError ?? curriculumAttemptsError ?? curriculumOverviewProgressError
     ?? curriculumOverviewAssessmentsError ?? curriculumOverviewTargetsError;
+  const classAnalysisError = masteryError ?? misconceptionsError;
   const curriculumOverview = curriculumOverviewError ? [] : projectClassCurriculumOverview({
     generatedAt: new Date().toISOString(),
     learners: activeEnrolments.map(enrolment => ({
@@ -236,10 +252,12 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
         : <ClassCurriculumOverviewTable classId={id} unit={overviewUnit} rows={curriculumOverview}/>
     )}</details>}
     {studentIds.length>0&&!overviewUnit&&<section className="card mt-8 border-amber-200 bg-amber-50"><p className="eyebrow">Class curriculum</p><h2 className="mt-2 text-2xl font-bold">Select an active unit</h2><p className="mt-3 text-sm text-amber-950">The curriculum overview remains unavailable until an administrator selects an active unit for this group. No progress state has been inferred.</p></section>}
-    {studentIds.length>0&&<details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">More class analysis</summary><section className="mt-5 grid gap-6 lg:grid-cols-2">
+    {studentIds.length>0&&<details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">More class analysis</summary>{classAnalysisError
+      ? <section className="mt-5 rounded-xl border border-red-200 bg-red-50 p-5" role="alert"><h2 className="font-bold">Class analysis is temporarily unavailable</h2><p className="mt-2 text-sm text-red-900">No mastery or misconception totals have been inferred. Try again later.</p></section>
+      : <section className="mt-5 grid gap-6 lg:grid-cols-2">
       <div className="card"><h2 className="text-2xl font-bold">Mastery distribution</h2><p className="mt-2 text-sm text-slate-600">Number of learner-skill records at each current pathway.</p><div className="mt-5 grid grid-cols-2 gap-3">{["Support","Core","Stretch","Mastery"].map(pathway => <Metric key={pathway} label={pathway} value={String(mastery?.filter(skill => skill.current_pathway === pathway).length ?? 0)}/>)}</div></div>
       <div className="card"><h2 className="text-2xl font-bold">Common misconceptions</h2><p className="mt-2 text-sm text-slate-600">Repeated patterns support re-teaching decisions and intervention review.</p><div className="mt-5 grid gap-3">{misconceptions?.length ? misconceptions.slice(0, 6).map((row, index) => <div className="rounded-xl bg-amber-50 p-4" key={index}><p className="font-semibold">{related(row.misconceptions)?.title}</p><p className="mt-1 text-sm text-amber-900">{related(related(row.misconceptions)?.skills)?.title} · {row.occurrence_count} occurrences · {row.resolved_at ? "resolved" : "open"}</p></div>) : <p className="text-slate-600">No tagged misconception evidence yet.</p>}</div></div>
-    </section></details>}
+    </section>}</details>}
   </main></>;
 }
 
