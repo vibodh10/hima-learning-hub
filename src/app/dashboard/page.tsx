@@ -29,6 +29,7 @@ import { StudentEnrolmentSummary } from "@/components/student-enrolment-summary"
 import { capitaliseFirst } from "@/lib/display-text";
 import { TeacherPriorityList } from "@/components/teacher-priority-list";
 import { StudentLearningPlan } from "@/components/student-learning-plan";
+import { applyWeeklyLearningGaps } from "@/lib/teacher-weekly-attention";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -434,8 +435,11 @@ async function TeacherHomeDashboard() {
     supabase.from("learning_journey_templates").select("unit_id").eq("status", "approved").is("archived_at", null),
   ]);
   const classSignals = await Promise.all((classes ?? []).map(async item => {
-    const { data } = await supabase.rpc("class_learner_attention", { class_uuid: item.id });
-    return ((data ?? []) as TeacherAttentionDb[]).map(row => ({
+    const [{ data }, { data: weeklyGaps }] = await Promise.all([
+      supabase.rpc("class_learner_attention", { class_uuid: item.id }),
+      supabase.rpc("class_learner_weekly_gaps", { class_uuid: item.id }),
+    ]);
+    return applyWeeklyLearningGaps((data ?? []) as TeacherAttentionDb[], weeklyGaps ?? []).map(row => ({
       ...row,
       classId: item.id,
       className: item.name,

@@ -10,6 +10,7 @@ import { gradeStartingPointResponses } from "@/lib/starting-point-grading";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { curriculumPositionSection } from "@/lib/curriculum-position";
 import { revalidatePath } from "next/cache";
+import { canStudentAccessCurriculumTopic } from "@/lib/student-week-access-server";
 
 const configuredUnitCodeSchema = z.string().refine(isConfiguredUnitCode);
 
@@ -43,7 +44,7 @@ export async function saveCurriculumProgress(input: {
   const unit = configuredUnits.find(item => item.code === parsed.data.unitCode);
   const topic = unit?.topics.find(item => item.code === parsed.data.topicCode);
   if (!unit || !topic) return { ok: false, message: "This topic is not part of the configured curriculum." };
-  if (!await hasAssignedCurriculumUnit(parsed.data.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
+  if (!await canStudentAccessCurriculumTopic(actor.id, parsed.data.unitCode, parsed.data.topicCode)) return { ok: false, message: "Complete the required earlier week before opening this topic." };
   const admin = createAdminClient();
   const { data: existing } = await admin.from("learner_curriculum_progress")
     .select("selected_level,topic_started_at")
@@ -84,17 +85,23 @@ export async function saveStartingPoint(input: {
   if (!await hasAssignedCurriculumUnit(parsed.data.unitCode)) return { ok: false, message: "This unit is not assigned to your student group." };
   const grade = gradeStartingPointResponses(unit, parsed.data.responses, new Date().toISOString());
   if (!grade.ok) return { ok: false, message: "Complete every starting-point question once before saving." };
-  const supabase = createAdminClient();
-  const rows = unit.topics.map(topic => ({
-    learner_id: actor.id, unit_code: unit.code, topic_code: topic.code, selected_level: grade.recommendedLevel,
-    independent_attempts: 0,
-    evidence: grade.evidence.filter(item => item.topicCode === topic.code),
-  }));
-  const [{ error }, { error: backgroundError }] = await Promise.all([
-    supabase.from("learner_curriculum_progress").upsert(rows, { onConflict: "learner_id,unit_code,topic_code" }),
-    supabase.from("learner_workbook_background").upsert({ learner_id: actor.id, experience: parsed.data.background.experience ?? null, support_needs: parsed.data.background.supportNeeds ?? null, updated_at: new Date().toISOString() }, { onConflict: "learner_id" }),
-  ]);
-  if (error || backgroundError) return { ok: false, message: "Starting point is saved on this device; account sync requires the adaptive workbook migrations." };
+  const correctCount = grade.evidence.filter(item => item.correct).length;
+  const { error } = await createAdminClient().rpc("record_unit_starting_point_once", {
+    learner_uuid: actor.id,
+    unit_code_value: unit.code,
+    recommended_level_value: grade.recommendedLevel,
+    correct_count_value: correctCount,
+    question_count_value: grade.evidence.length,
+    responses_value: parsed.data.responses,
+    evidence_value: grade.evidence,
+    experience_value: parsed.data.background.experience ?? "",
+    support_needs_value: parsed.data.background.supportNeeds ?? "",
+  });
+  if (error) return { ok: false, message: error.message.includes("starting_point_already_recorded")
+    ? "Your starting point is already recorded and cannot be retaken. Later checks are saved as progress points."
+    : "The starting point could not be stored safely. Ask your teacher to check the portal update." };
+  revalidatePath("/dashboard");
+  revalidatePath(`/curriculum/units/${unit.code}`);
   return { ok: true, message: "Starting-point evidence graded and synced to your learner account.", recommendedLevel: grade.recommendedLevel };
 }
 

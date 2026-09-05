@@ -65,19 +65,21 @@ export function StartingPointAssessment({ unit, storageKey }: { unit: PearsonUni
       background: { ...(current.background ?? {}), experience, supportNeeds },
       topics,
     };
-    localStorage.setItem(storageKey, JSON.stringify(next));
     startSync(async () => {
       const result = await saveStartingPoint({
         unitCode: unit.code,
         background: { experience, supportNeeds },
         responses: nextResponses,
       });
-      if (result.ok && result.recommendedLevel && result.recommendedLevel !== next.recommendedLevel) {
-        localStorage.setItem(storageKey, JSON.stringify({ ...next, recommendedLevel: result.recommendedLevel }));
+      if (result.ok) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          ...next,
+          recommendedLevel: result.recommendedLevel ?? next.recommendedLevel,
+        }));
+        setComplete(true);
       }
       setSyncMessage(result.message);
     });
-    setComplete(true);
   }
 
   if (complete) {
@@ -96,9 +98,9 @@ export function StartingPointAssessment({ unit, storageKey }: { unit: PearsonUni
     </div>;
   }
 
-  return <AssessmentQuestion question={question} choice={choice} setChoice={setChoice} submit={answer} position={index + 1} total={questions.length}/>;
+  return <AssessmentQuestion question={question} choice={choice} setChoice={setChoice} submit={answer} position={index + 1} total={questions.length} pending={syncPending} message={syncMessage}/>;
 }
 
-function AssessmentQuestion({ question, choice, setChoice, submit, position, total }: { question: ReturnType<typeof diagnosticQuestionsFor>[number]; choice: number | null; setChoice: (value: number) => void; submit: () => void; position: number; total: number }) {
-  return <section className="card"><div className="flex justify-between gap-4 text-sm"><strong>Question {position} of {total}</strong><span>Topic {question.topicCode} · difficulty {question.difficulty}</span></div><div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-teal-600" style={{ width: `${(position / total) * 100}%` }}/></div><h2 className="mt-6 text-2xl font-bold">{question.prompt}</h2><div className="mt-5 grid gap-3">{question.options.map((option, optionIndex) => <label className={`rounded-xl border p-4 ${choice === optionIndex ? "border-teal-600 bg-teal-50" : "border-slate-200"}`} key={option}><input className="mr-3" type="radio" checked={choice === optionIndex} onChange={() => setChoice(optionIndex)}/>{option}</label>)}</div><button className="button mt-5" disabled={choice == null} type="button" onClick={submit}>Save answer and continue</button><p className="mt-3 text-xs text-slate-500">No hints are available because this is independent starting-point evidence.</p></section>;
+function AssessmentQuestion({ question, choice, setChoice, submit, position, total, pending, message }: { question: ReturnType<typeof diagnosticQuestionsFor>[number]; choice: number | null; setChoice: (value: number) => void; submit: () => void; position: number; total: number; pending: boolean; message: string }) {
+  return <section className="card"><div className="flex justify-between gap-4 text-sm"><strong>Question {position} of {total}</strong><span>Topic {question.topicCode} · difficulty {question.difficulty}</span></div><div className="mt-3 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-teal-600" style={{ width: `${(position / total) * 100}%` }}/></div><h2 className="mt-6 text-2xl font-bold">{question.prompt}</h2><div className="mt-5 grid gap-3">{question.options.map((option, optionIndex) => <label className={`rounded-xl border p-4 ${choice === optionIndex ? "border-teal-600 bg-teal-50" : "border-slate-200"}`} key={option}><input className="mr-3" type="radio" checked={choice === optionIndex} disabled={pending} onChange={() => setChoice(optionIndex)}/>{option}</label>)}</div><button className="button mt-5" disabled={choice == null||pending} type="button" onClick={submit}>{pending?"Protecting your baseline…":position===total?"Save my starting point":"Save answer and continue"}</button>{message&&<p className="mt-3 text-sm font-semibold text-red-700" role="status">{message}</p>}<p className="mt-3 text-xs text-slate-500">No hints are available because this is independent starting-point evidence.</p></section>;
 }

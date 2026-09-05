@@ -22,6 +22,7 @@ import {
 import { academicProgress, levelChoiceWarning, visualPathStatuses, type SkillEvidence } from "@/lib/adaptive-workbook";
 import type { PearsonTopic, PearsonUnit } from "@/lib/pearson-curriculum";
 import { capitaliseFirst } from "@/lib/display-text";
+import { isExternalAssessmentUnit } from "@/lib/unit-assessment-kind";
 
 const emptyProgress: LearningProgress = { topics: {} };
 
@@ -83,8 +84,8 @@ export function UnitOverview({ unit, initialProgress = null, storageKey = progre
   const pathStatuses = visualPathStatuses(decisions);
   const unitProgress = academicProgress(decisions);
   return <div>
-    <section className="card mb-6 border-violet-200 bg-violet-50"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Test</p><h2 className="mt-2 text-2xl font-bold">Unit {unit.code} practice papers</h2><p className="mt-2 text-sm text-slate-700">Mixed questions from every topic, instant marking and worked explanations.</p></div><Link className="button" href={`/curriculum/units/${unit.code}/papers`}>Choose a paper →</Link></div></section>
-    <section className="card mb-6 border-blue-200 bg-blue-50"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Adaptive starting point</p><h2 className="mt-2 text-2xl font-bold">{progress.diagnosticCompletedAt ? "Your evidence-based route is ready" : "Complete this before receiving a recommended route"}</h2><p className="mt-2 text-sm text-slate-700">Three independent questions per topic are used. Self-reported experience is stored separately.</p></div><Link className="button" href={`/curriculum/units/${unit.code}/starting-point`}>{progress.diagnosticCompletedAt ? "Retake starting point" : "Start assessment"} →</Link></div></section>
+    {isExternalAssessmentUnit(unit)&&<section className="card mb-6 border-violet-200 bg-violet-50"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">External assessment practice</p><h2 className="mt-2 text-2xl font-bold">Unit {unit.code} practice papers</h2><p className="mt-2 text-sm text-slate-700">Optional mixed-topic practice for an external assessment unit.</p></div><Link className="button" href={`/curriculum/units/${unit.code}/papers`}>Choose a paper</Link></div></section>}
+    <section className="card mb-6 border-blue-200 bg-blue-50"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Starting point preview</p><h2 className="mt-2 text-2xl font-bold">Independent baseline assessment</h2><p className="mt-2 text-sm text-slate-700">A student completes this once. Later comparable checks are recorded as progress points.</p></div><Link className="button" href={`/curriculum/units/${unit.code}/starting-point`}>Preview starting point →</Link></div></section>
     <section className="card mb-6"><div className="flex justify-between gap-4"><div><p className="eyebrow">Workbook progress</p><h2 className="mt-2 text-2xl font-bold">Unit {unit.code}: {unitProgress}% independently secure</h2></div><strong>{decisions.filter(item => item.status === "Independently mastered").length}/{unit.topics.length} mastered</strong></div><div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-teal-600" style={{ width: `${unitProgress}%` }}/></div></section>
     <section className="grid gap-4 md:grid-cols-2">
       <div className="card"><p className="eyebrow">Pearson learning aims</p><ul className="mt-4 grid gap-2 text-sm">{meta.aims.map(aim => <li key={aim}>✓ {aim}</li>)}</ul></div>

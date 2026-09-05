@@ -1,39 +1,131 @@
 "use client";
 
 import Link from "next/link";
-import {useEffect,useMemo,useState,useTransition} from "react";
-import {saveCurriculumProgress} from "@/app/actions/curriculum";
-import type {ExpertiseLevel} from "@/lib/learning-catalog";
-import {routeForTopic,topicKey,type LearningProgress,type TopicEvidence} from "@/lib/learning-progress";
-import {teachingSequenceFor} from "@/lib/btec-teaching";
-import type {PearsonTopic,PearsonUnit} from "@/lib/pearson-curriculum";
-import {TopicWorksheet} from "@/components/topic-worksheet";
-import {TopicExplainer} from "@/components/topic-explainer";
-import {capitaliseFirst} from "@/lib/display-text";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { saveCurriculumProgress } from "@/app/actions/curriculum";
+import type { ExpertiseLevel } from "@/lib/learning-catalog";
+import { routeForTopic, topicKey, type LearningProgress, type TopicEvidence } from "@/lib/learning-progress";
+import { teachingSequenceFor } from "@/lib/btec-teaching";
+import type { PearsonTopic, PearsonUnit } from "@/lib/pearson-curriculum";
 
-export function AtomTopicHub({unit,topic,storageKey,catchUp=false,evidenceStage="learning",initialEvidence,initialLevel}:{unit:PearsonUnit;topic:PearsonTopic;storageKey:string;catchUp?:boolean;evidenceStage?:"before"|"learning"|"progress_check_1"|"progress_check_2"|"after";initialEvidence?:TopicEvidence;initialLevel?:ExpertiseLevel}){
- const [level,setLevel]=useState<ExpertiseLevel>("Core"),[part,setPart]=useState(0),[answerShown,setAnswerShown]=useState(false),[score,setScore]=useState<number|null>(null);
- const [positionPending,startPositionSync]=useTransition();
- const cards=useMemo(()=>teachingSequenceFor(unit,topic,level),[unit,topic,level]),card=cards[part];
- useEffect(()=>{let active=true;queueMicrotask(()=>{if(!active)return;const saved=readProgress(storageKey),key=topicKey(unit.code,topic.code),localSection=saved.topics[key]?.currentSection,selectedLevel=routeForTopic(initialEvidence).recommendedLevel??initialLevel??"Core",section=initialEvidence?.currentSection??localSection??"lesson:1";setLevel(selectedLevel);setPart(lessonPart(section,cards.length));setScore(initialEvidence?.practiceScore??null);if(!initialEvidence?.startedAt){localStorage.setItem(storageKey,JSON.stringify({...saved,recommendedLevel:selectedLevel,currentPosition:{unitCode:unit.code,topicCode:topic.code,section},topics:{...saved.topics,[key]:{currentSection:section}}}));startPositionSync(async()=>{await saveCurriculumProgress({unitCode:unit.code,topicCode:topic.code,currentSection:section})})}});return()=>{active=false}},[cards.length,initialEvidence,initialLevel,storageKey,topic.code,unit.code]);
- function saveSection(section:string){const saved=readProgress(storageKey),key=topicKey(unit.code,topic.code);localStorage.setItem(storageKey,JSON.stringify({...saved,currentPosition:{unitCode:unit.code,topicCode:topic.code,section},topics:{...saved.topics,[key]:{currentSection:section}}}));startPositionSync(async()=>{await saveCurriculumProgress({unitCode:unit.code,topicCode:topic.code,currentSection:section})})}
- function move(next:number){const selected=Math.max(0,Math.min(cards.length-1,next));setPart(selected);setAnswerShown(false);saveSection(`lesson:${selected+1}`)}
- const practiceHref=`/curriculum/units/${unit.code}/topics/${encodeURIComponent(topic.code)}/practice`;
- const supportedUnitCode=worksheetUnitCode(unit.code);
- return <div className="grid gap-6">
-  <section className="card border-teal-200 bg-gradient-to-br from-teal-950 to-teal-700 text-slate-950"><div className="flex flex-wrap items-start justify-between gap-5"><div className="max-w-2xl"><p className="text-sm font-bold uppercase tracking-widest text-teal-800">Learn · Practice · Master</p><h2 className="mt-3 text-3xl font-bold">Learn every concept, then prove it</h2><p className="mt-3 text-slate-700">Short lesson cards, vocational examples and pause-and-check questions lead into adaptive practice and papers.</p>{positionPending&&<p className="mt-2 text-xs text-teal-900" role="status">Saving your exact lesson position…</p>}</div><div className="rounded-2xl bg-teal-50 p-4"><p className="text-xs uppercase tracking-wide text-teal-900">Current module evidence</p><p className="mt-1 text-2xl font-bold">{score==null?"New module":`${score}%`}</p></div></div></section>
-  <section className="card border-blue-200 bg-blue-50"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="eyebrow">System-managed adaptation</p><h2 className="mt-2 text-2xl font-bold">{level} learning depth for this topic</h2><p className="mt-2 max-w-3xl text-sm text-slate-700">Your independent evidence adjusts explanations, scaffolding and question difficulty inside <strong>{capitaliseFirst(topic.title)}</strong>. Everyone remains on the group&apos;s current teaching topic and completes the required unit evidence.</p></div><span className="rounded-full bg-white px-3 py-2 text-sm font-bold text-blue-900">No teacher setup required</span></div>{supportedUnitCode&&!catchUp&&<Link className="button-secondary button-small mt-4" href={`/curriculum/units/${unit.code}/topics/${encodeURIComponent(topic.code)}?catchup=1#worksheet`}>I missed this lesson</Link>}</section>
-  <TopicExplainer topicTitle={capitaliseFirst(topic.title)} cards={cards}/>
-  <section className="grid gap-5 lg:grid-cols-[1fr_18rem]"><article className="card"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="eyebrow">Quick lesson · {part+1} of {cards.length}</p><h2 className="mt-2 text-2xl font-bold">{card.title}</h2><p className="mt-2 text-sm text-slate-600">{card.purpose}</p></div><span className="rounded-full bg-teal-100 px-3 py-2 text-sm font-bold text-teal-900">2 to 4 min</span></div>
-    <div className="mt-6 grid gap-4">{card.points.map(point=><section className="rounded-2xl bg-slate-50 p-5" key={point.concept}><h3 className="text-lg font-bold">{point.concept}</h3><p className="mt-3 leading-7 text-slate-700">{point.explanation}</p><div className="mt-4 rounded-xl border-l-4 border-blue-500 bg-white p-4"><p className="text-xs font-bold uppercase tracking-wide text-blue-800">Vocational example</p><p className="mt-2 text-sm leading-6">{point.example}</p></div></section>)}</div>
-    {card.workedSteps&&<div className="mt-5 rounded-xl bg-blue-50 p-5"><p className="font-bold">Worked step by step</p><ol className="mt-3 grid gap-2 text-sm">{card.workedSteps.map((step,index)=><li key={step}><strong>{index+1}.</strong> {step}</li>)}</ol></div>}
-    <div className="mt-5 rounded-xl bg-amber-50 p-4 text-sm text-amber-950"><strong>Common mistake:</strong> {card.misconception}</div>
-    <div className="mt-5 rounded-xl border border-violet-200 p-5"><p className="text-xs font-bold uppercase tracking-wide text-violet-800">Pause and check</p><p className="mt-2 font-semibold">{card.checkQuestion}</p>{answerShown?<p className="mt-3 rounded-xl bg-violet-50 p-4 text-sm"><strong>Check answer:</strong> {card.checkAnswer}</p>:<button className="button-secondary button-small mt-4" onClick={()=>setAnswerShown(true)}>Reveal check answer</button>}</div>
-    <div className="mt-6 flex flex-wrap gap-3"><button className="button-secondary" disabled={part===0} onClick={()=>move(part-1)}>Previous</button>{part<cards.length-1?<button className="button" onClick={()=>move(part+1)}>Continue lesson →</button>:<Link className="button" href={practiceHref} onClick={()=>saveSection("practice")}>Start adaptive questions →</Link>}</div>
-   </article><aside className="grid content-start gap-4"><div className="card"><p className="eyebrow">Lesson map</p><ol className="mt-3 grid gap-2 text-sm">{cards.map((item,index)=><li key={item.id}><button className={`w-full rounded-lg p-2 text-left ${index===part?"bg-teal-50 font-bold text-teal-900":"hover:bg-slate-50"}`} onClick={()=>move(index)}>{index+1}. {item.title}</button></li>)}</ol></div><Link className="card hover:border-teal-400" href={practiceHref}><p className="eyebrow">Practice</p><h3 className="mt-2 text-xl font-bold">Adaptive questions</h3><p className="mt-2 text-sm text-slate-600">Hints, mark schemes and model answers.</p></Link><Link className="card hover:border-violet-400" href={`/curriculum/units/${unit.code}/papers`}><p className="eyebrow">Test</p><h3 className="mt-2 text-xl font-bold">Unit papers</h3><p className="mt-2 text-sm text-slate-600">Knowledge, applied and assignment rehearsal.</p></Link><Link className="card hover:border-blue-400" href="/progress"><p className="eyebrow">Track</p><h3 className="mt-2 text-xl font-bold">My progress</h3><p className="mt-2 text-sm text-slate-600">Strengths, needs and next steps.</p></Link></aside></section>
-  {supportedUnitCode&&<TopicWorksheet unitCode={supportedUnitCode} topicCode={topic.code} topicTitle={capitaliseFirst(topic.title)} catchUp={catchUp} evidenceStage={evidenceStage}/>}
-  </div>
- }
-function readProgress(storageKey:string):LearningProgress{try{return JSON.parse(localStorage.getItem(storageKey)??"") as LearningProgress}catch{return{topics:{}}}}
-function lessonPart(section:string,cardCount:number){const match=/^lesson:(\d+)$/.exec(section);return Math.max(0,Math.min(cardCount-1,Number(match?.[1]??1)-1))}
-function worksheetUnitCode(value:string):"2"|"4"|"6"|"10"|"14"|null{return value==="2"||value==="4"||value==="6"||value==="10"||value==="14"?value:null}
+export function AtomTopicHub({
+  unit,
+  topic,
+  storageKey,
+  initialEvidence,
+  initialLevel,
+}: {
+  unit: PearsonUnit;
+  topic: PearsonTopic;
+  storageKey: string;
+  catchUp?: boolean;
+  evidenceStage?: "before" | "learning" | "progress_check_1" | "progress_check_2" | "after";
+  initialEvidence?: TopicEvidence;
+  initialLevel?: ExpertiseLevel;
+}) {
+  const [level, setLevel] = useState<ExpertiseLevel>("Core");
+  const [part, setPart] = useState(0);
+  const [answerShown, setAnswerShown] = useState(false);
+  const [positionPending, startPositionSync] = useTransition();
+  const cards = useMemo(() => teachingSequenceFor(unit, topic, level), [unit, topic, level]);
+  const card = cards[part];
+  const practiceHref = `/curriculum/units/${unit.code}/topics/${encodeURIComponent(topic.code)}/practice`;
+
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      const saved = readProgress(storageKey);
+      const key = topicKey(unit.code, topic.code);
+      const section = initialEvidence?.currentSection ?? saved.topics[key]?.currentSection ?? "lesson:1";
+      const selectedLevel = routeForTopic(initialEvidence).recommendedLevel ?? initialLevel ?? "Core";
+      setLevel(selectedLevel);
+      setPart(lessonPart(section, cards.length));
+      if (!initialEvidence?.startedAt) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          ...saved,
+          recommendedLevel: selectedLevel,
+          currentPosition: { unitCode: unit.code, topicCode: topic.code, section },
+          topics: { ...saved.topics, [key]: { currentSection: section } },
+        }));
+        startPositionSync(async () => {
+          await saveCurriculumProgress({ unitCode: unit.code, topicCode: topic.code, currentSection: section });
+        });
+      }
+    });
+    return () => { active = false; };
+  }, [cards.length, initialEvidence, initialLevel, storageKey, topic.code, unit.code]);
+
+  function saveSection(section: string) {
+    const saved = readProgress(storageKey);
+    const key = topicKey(unit.code, topic.code);
+    localStorage.setItem(storageKey, JSON.stringify({
+      ...saved,
+      currentPosition: { unitCode: unit.code, topicCode: topic.code, section },
+      topics: { ...saved.topics, [key]: { ...saved.topics[key], currentSection: section } },
+    }));
+    startPositionSync(async () => {
+      await saveCurriculumProgress({ unitCode: unit.code, topicCode: topic.code, currentSection: section });
+    });
+  }
+
+  function move(next: number) {
+    const selected = Math.max(0, Math.min(cards.length - 1, next));
+    setPart(selected);
+    setAnswerShown(false);
+    saveSection(`lesson:${selected + 1}`);
+  }
+
+  return <div className="grid gap-6">
+    <section className="card border-teal-200 bg-teal-50">
+      <p className="eyebrow">This week</p>
+      <h2 className="mt-2 text-3xl font-bold">Learn, practise, test, done</h2>
+      <ol className="mt-5 grid gap-2 sm:grid-cols-4" aria-label="Weekly learning steps">
+        <Step current label="1. Learn"/>
+        <Step label="2. Practice"/>
+        <Step label="3. Test"/>
+        <Step label="4. Done"/>
+      </ol>
+      {positionPending && <p className="mt-3 text-sm text-teal-900" role="status">Saving your place...</p>}
+    </section>
+
+    <article className="card mx-auto w-full max-w-4xl">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><p className="eyebrow">Short lesson {part + 1} of {cards.length}</p><h2 className="mt-2 text-2xl font-bold">{card.title}</h2></div>
+        <span className="rounded-full bg-teal-100 px-3 py-2 text-sm font-bold text-teal-900">2 to 4 minutes</span>
+      </div>
+      <p className="mt-3 text-slate-600">{card.purpose}</p>
+      <div className="mt-6 grid gap-4">{card.points.map(point => <section className="rounded-2xl bg-slate-50 p-5" key={point.concept}>
+        <h3 className="text-lg font-bold">{point.concept}</h3>
+        <p className="mt-3 leading-7 text-slate-700">{point.explanation}</p>
+        <p className="mt-4 rounded-xl bg-white p-4 text-sm"><strong>Example:</strong> {point.example}</p>
+      </section>)}</div>
+      <section className="mt-5 rounded-xl border border-violet-200 p-5">
+        <p className="font-semibold">{card.checkQuestion}</p>
+        {answerShown
+          ? <p className="mt-3 rounded-xl bg-violet-50 p-4 text-sm"><strong>Check:</strong> {card.checkAnswer}</p>
+          : <button className="button-secondary button-small mt-4" onClick={() => setAnswerShown(true)}>Check my understanding</button>}
+      </section>
+      <div className="mt-6 flex flex-wrap gap-3">
+        {part > 0 && <button className="button-secondary" onClick={() => move(part - 1)}>Previous</button>}
+        {part < cards.length - 1
+          ? <button className="button" onClick={() => move(part + 1)}>Continue</button>
+          : <Link className="button" href={practiceHref} onClick={() => saveSection("practice")}>Start practice and test</Link>}
+      </div>
+    </article>
+  </div>;
+}
+
+function Step({ label, current = false }: { label: string; current?: boolean }) {
+  return <li className={`rounded-xl px-4 py-3 text-sm font-bold ${current ? "bg-white text-teal-950" : "bg-teal-100 text-teal-900"}`}>{label}</li>;
+}
+
+function readProgress(storageKey: string): LearningProgress {
+  try { return JSON.parse(localStorage.getItem(storageKey) ?? "") as LearningProgress; }
+  catch { return { topics: {} }; }
+}
+
+function lessonPart(section: string, cardCount: number) {
+  const match = /^lesson:(\d+)$/.exec(section);
+  return Math.max(0, Math.min(cardCount - 1, Number(match?.[1] ?? 1) - 1));
+}

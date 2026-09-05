@@ -16,6 +16,7 @@ import { projectClassCurriculumOverview, projectCurriculumPaperAssessments } fro
 import { averageCurrentClassScore } from "@/lib/class-progress-summary";
 import { ClassCurriculumOverviewTable } from "@/components/class-curriculum-overview-table";
 import { summariseWorkbookStartingPoint } from "@/lib/workbook-starting-point";
+import { applyWeeklyLearningGaps } from "@/lib/teacher-weekly-attention";
 
 type AttentionRow={learner_id:string;display_name:string;starting_score:number|null;current_score:number|null;progress_points:number|null;catch_up_status:string;outstanding_count:number;attention_status:string;attention_reason:string;ap_total:number;achievement_level:string|null};
 
@@ -49,7 +50,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const selectedUnits = (units ?? []).filter(unit => selectedUnitIds.includes(unit.id));
   const overviewUnit = selectedUnits.find(unit => unit.id === classData.active_unit_id) ?? selectedUnits[0];
   const activeEnrolments = (classData.enrolments ?? []).filter(enrolment => !enrolment.archived_at);
-  const [{ data: journeyTemplates }, { data: journeyPositions }, {data:attentionRows,error:attentionError},{data:achievementRows}] = await Promise.all([
+  const [{ data: journeyTemplates }, { data: journeyPositions }, {data:attentionRows,error:attentionError},{data:weeklyGapRows,error:weeklyGapError},{data:achievementRows}] = await Promise.all([
     selectedUnitIds.length
       ? supabase.from("learning_journey_templates")
         .select("id,unit_id,title,version_number,total_teaching_weeks,units(code,title)")
@@ -58,6 +59,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
       : Promise.resolve({ data: [] }),
     supabase.rpc("current_class_learning_journey", { class_uuid: id }),
     supabase.rpc("class_learner_attention",{class_uuid:id}),
+    supabase.rpc("class_learner_weekly_gaps",{class_uuid:id}),
     supabase.rpc("class_learner_achievement",{class_uuid:id}),
   ]);
   const journeyPosition = journeyPositions?.[0];
@@ -65,7 +67,10 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     template => template.unit_id === classData.active_unit_id,
   );
   const achievementByLearner=new Map(((achievementRows??[]) as {learner_id:string;ap_total:number;achievement_level:string|null}[]).map(row=>[row.learner_id,row]));
-  const attention=((attentionRows??[]) as Omit<AttentionRow,"ap_total"|"achievement_level">[]).map(row=>({...row,
+  const attention=applyWeeklyLearningGaps(
+    (attentionRows??[]) as Omit<AttentionRow,"ap_total"|"achievement_level">[],
+    weeklyGapRows??[],
+  ).map(row=>({...row,
     ap_total:achievementByLearner.get(row.learner_id)?.ap_total??0,
     achievement_level:achievementByLearner.get(row.learner_id)?.achievement_level??null,
   }));
@@ -136,7 +141,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     code: topic.code, title: topic.title,
   })) ?? [...new Set((curriculumOverviewProgress ?? []).map(row => row.topic_code))]
     .map(code => ({ code, title: code }));
-  const curriculumOverviewError = attentionError ?? curriculumAttemptsError ?? curriculumOverviewProgressError
+  const curriculumOverviewError = attentionError ?? weeklyGapError ?? curriculumAttemptsError ?? curriculumOverviewProgressError
     ?? curriculumOverviewAssessmentsError ?? curriculumOverviewTargetsError;
   const classAnalysisError = masteryError ?? misconceptionsError;
   const curriculumOverview = curriculumOverviewError ? [] : projectClassCurriculumOverview({

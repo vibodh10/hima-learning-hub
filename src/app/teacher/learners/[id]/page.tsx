@@ -12,6 +12,9 @@ import {
 import { configuredUnits } from "@/lib/learning-catalog";
 import { RecognitionForm } from "@/components/recognition-form";
 import { TeacherSecondaryPanel } from "@/components/teacher-secondary-panel";
+import { TeacherLearnerSummary } from "@/components/teacher-learner-summary";
+import { currentCalendarQuarter, currentTeachingWeek } from "@/lib/report-periods";
+import { applyWeeklyLearningGaps } from "@/lib/teacher-weekly-attention";
 import {
   conciseCurrentJudgement, evidenceCounts, groupByTopic, hasValidComparableProgress,
   isPriorExperienceSkill, learnerReflectionLabel, reportTargetStatus, topicAssessmentStatus,
@@ -41,6 +44,78 @@ export default async function LearnerPage({
   const { id } = await params;
   const requestedClassId = (await searchParams).classId;
   const supabase = await createClient();
+  if (actor.role === "teacher") {
+    const [{ data: compactLearner, error: learnerError }, { data: compactEnrolments, error: enrolmentError }] = await Promise.all([
+      supabase.from("user_profiles").select("id,display_name").eq("id", id).eq("role", "student").single(),
+      supabase.from("enrolments")
+        .select("enrolled_at,classes(id,name,course_id,active_unit_id,courses(id,title))")
+        .eq("student_id", id).is("archived_at", null),
+    ]);
+    if (learnerError || enrolmentError || !compactLearner) notFound();
+    const compactChoices = (compactEnrolments ?? []).flatMap(enrolment => {
+      const linkedClass = related(enrolment.classes);
+      return linkedClass ? [{ classId: String(linkedClass.id), enrolment, linkedClass }] : [];
+    });
+    const compactSelection = requestedClassId
+      ? selectReportEnrolment(compactChoices, requestedClassId)
+      : compactChoices[0] ?? null;
+    if (!compactSelection) notFound();
+    const compactClass = compactSelection.linkedClass;
+    const [journeyResult, attentionResult, gapResult, unitResult, targetResult] = await Promise.all([
+      supabase.rpc("current_class_learning_journey", { class_uuid: compactClass.id }),
+      supabase.rpc("class_learner_attention", { class_uuid: compactClass.id }),
+      supabase.rpc("class_learner_weekly_gaps", { class_uuid: compactClass.id }),
+      supabase.from("class_units").select("unit_id,active,units(id,code,title,archived_at)")
+        .eq("class_id", compactClass.id).eq("active", true).is("archived_at", null),
+      supabase.from("targets").select("id,status").eq("learner_id", id)
+        .eq("class_id", compactClass.id).is("archived_at", null),
+    ]);
+    if (journeyResult.error || attentionResult.error || gapResult.error || unitResult.error || targetResult.error) {
+      throw new Error("The student progress summary could not be loaded safely.");
+    }
+    const compactUnit = related(unitResult.data?.find(unit => unit.unit_id === compactClass.active_unit_id)?.units)
+      ?? related(unitResult.data?.[0]?.units);
+    const compactUnitCode = String(compactUnit?.code ?? "");
+    const [baselineResult, attemptResult] = compactUnit ? await Promise.all([
+      supabase.from("unit_starting_point_baselines")
+        .select("percentage,recommended_level,completed_at").eq("learner_id", id)
+        .eq("unit_id", compactUnit.id).maybeSingle(),
+      supabase.from("learner_curriculum_attempts")
+        .select("kind,topic_code,percentage,completed_at").eq("learner_id", id)
+        .eq("unit_code", compactUnitCode).order("completed_at", { ascending: false }).limit(1),
+    ]) : [{ data: null, error: null }, { data: [], error: null }];
+    if (baselineResult.error || attemptResult.error) {
+      throw new Error("The student unit summary could not be loaded safely.");
+    }
+    const compactAttention = applyWeeklyLearningGaps(
+      (attentionResult.data ?? []).filter((row: { learner_id: string }) => row.learner_id === id),
+      (gapResult.data ?? []).filter((row: { learner_id: string }) => row.learner_id === id),
+    )[0];
+    const latestAttempt = attemptResult.data?.[0];
+    const activeTargets = (targetResult.data ?? []).filter(target => ["approved", "active", "extended"].includes(target.status));
+    const week = currentTeachingWeek(new Date());
+    const quarter = currentCalendarQuarter(new Date());
+    const reportBase = `/api/reports/learners/${id}?classId=${compactClass.id}`;
+
+    return <><AppHeader name={actor.display_name} role={actor.role}/><TeacherLearnerSummary
+      attentionReason={compactAttention?.attention_reason ?? "The portal has not recorded a concern for this student."}
+      attentionStatus={compactAttention?.attention_status ?? "on_track"}
+      classChoices={compactChoices.map(choice => ({ id: choice.classId, name: String(choice.linkedClass.name) }))}
+      courseTitle={String(related(compactClass.courses)?.title ?? "Course not recorded")}
+      currentWeek={journeyResult.data?.[0]?.teaching_week == null ? null : Number(journeyResult.data[0].teaching_week)}
+      groupHref={`/teacher/classes/${compactClass.id}`}
+      groupName={String(compactClass.name)}
+      latestTest={latestAttempt ? `${Number(latestAttempt.percentage)}% on ${formatDate(latestAttempt.completed_at)}` : "Not completed"}
+      learnerHref={reportBase}
+      learnerId={id}
+      learnerName={compactLearner.display_name}
+      quarterlyPeriod={quarter}
+      startingPoint={baselineResult.data ? `${Number(baselineResult.data.percentage)}% ${baselineResult.data.recommended_level}` : "Not completed"}
+      targetSummary={activeTargets.length ? `${activeTargets.length} active` : "No active target"}
+      unitTitle={compactUnit ? `Unit ${compactUnit.code}: ${compactUnit.title}` : "No active unit"}
+      weeklyPeriod={week}
+    /></>;
+  }
   const evidenceResults = await Promise.all([
     supabase.from("user_profiles").select("id,display_name").eq("id", id).eq("role", "student").single(),
     supabase.from("enrolments").select("enrolled_at,classes(id,name,course_id,courses(id,title),teachers:teacher_id(display_name))").eq("student_id", id).is("archived_at", null),
