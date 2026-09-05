@@ -140,7 +140,9 @@ export async function configureClass(_: ActionState, formData: FormData): Promis
   });
   if (error) {
     console.error("teacher_configure_class failed", { code: error.code, message: error.message });
-    return { message: "The class configuration could not be saved." };
+    return { message: error.message.includes("active_journey_has_learners")
+      ? "This group already has active learners. Finish the current unit journey before changing the starting unit."
+      : "The class configuration could not be saved." };
   }
   revalidatePath("/dashboard");
   revalidatePath(`/teacher/classes/${parsed.data.classId}`);
