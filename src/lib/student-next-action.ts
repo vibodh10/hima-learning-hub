@@ -8,6 +8,11 @@ export type StudentNextAction = {
   meta?: string;
 };
 
+export function isStudentNextActionUrgent(action: StudentNextAction | null) {
+  return action?.kind === "catch_up"
+    || (action?.kind === "allocation" && action.meta?.startsWith("Overdue") === true);
+}
+
 type CatchUpCandidate = {
   title: string;
   href: string;

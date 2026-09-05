@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectStudentNextAction } from "./student-next-action";
+import { isStudentNextActionUrgent, selectStudentNextAction } from "./student-next-action";
 
 const now = new Date("2026-08-27T12:00:00Z").getTime();
 const journey = { title: "Variables and data types", detail: "Continue the current topic.", href: "/unit/4/variables" };
@@ -66,5 +66,20 @@ describe("selectStudentNextAction", () => {
 
   it("returns no action when no stored or assigned learning is available", () => {
     expect(selectStudentNextAction({ catchUps: [], allocations: [], now })).toBeNull();
+  });
+
+  it("marks catch-up and overdue work as urgent without alarming ordinary learning", () => {
+    expect(isStudentNextActionUrgent({
+      kind: "catch_up", eyebrow: "Continue", title: "Catch-up", detail: "Finish it",
+      href: "/catch-up", label: "Continue", meta: "Catch-up required",
+    })).toBe(true);
+    expect(isStudentNextActionUrgent({
+      kind: "allocation", eyebrow: "Continue", title: "Late work", detail: "Finish it",
+      href: "/late", label: "Continue", meta: "Overdue 01/09/2026",
+    })).toBe(true);
+    expect(isStudentNextActionUrgent({
+      kind: "journey", eyebrow: "Continue", title: "This week", detail: "Keep going",
+      href: "/week", label: "Continue", meta: "Current unit",
+    })).toBe(false);
   });
 });

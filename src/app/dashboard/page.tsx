@@ -13,7 +13,7 @@ import { latestIncompleteCurriculumPosition } from "@/lib/learning-progress";
 import { evidenceStageForMilestone, journeyWeekFor, nextJourneyMilestone } from "@/lib/unit-journeys";
 import { scopedTeacherAttention, selectTeacherDashboardLearners } from "@/lib/teacher-dashboard-filters";
 import { summariseTeacherOverview } from "@/lib/dashboard-summary";
-import { selectStudentNextAction } from "@/lib/student-next-action";
+import { isStudentNextActionUrgent, selectStudentNextAction } from "@/lib/student-next-action";
 import { selectTeacherNextAction } from "@/lib/teacher-next-action";
 import {
   latestSavedLearningResume,
@@ -242,10 +242,6 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
   const linkedTargetLessonId=related(nextTarget?.activities)?.lesson_id??(recommendedUnit4Activity?pilotLessonId:null);
   const savedCurriculumPosition=latestIncompleteCurriculumPosition(curriculumProgressRows??[]);
   const savedCurriculumTopic=savedCurriculumPosition?topicByCode(savedCurriculumPosition.unitCode,savedCurriculumPosition.topicCode):undefined;
-  const savedCurriculumUnit=savedCurriculumPosition?unitByCode(savedCurriculumPosition.unitCode):undefined;
-  const savedModuleNumber=savedCurriculumUnit&&savedCurriculumTopic
-    ? savedCurriculumUnit.topics.findIndex(item=>item.code===savedCurriculumTopic.code)+1
-    : null;
   const savedSection=savedCurriculumPosition?.section??"lesson:1";
   const savedCurriculumHref=savedCurriculumPosition
     ? savedSection==="practice"
@@ -253,10 +249,10 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       : `/curriculum/units/${savedCurriculumPosition.unitCode}/topics/${encodeURIComponent(savedCurriculumPosition.topicCode)}`
     : null;
   const curriculumResume=savedCurriculumPosition&&savedCurriculumTopic&&savedCurriculumHref?{
-    title:`Continue Module ${savedModuleNumber}: ${capitaliseFirst(savedCurriculumTopic.title)}`,
+    title:`Continue: ${capitaliseFirst(savedCurriculumTopic.title)}`,
     detail:savedSection==="practice"
-      ? "Resume the adaptive questions from your saved module position."
-      : `Resume ${savedSection.startsWith("lesson:")?`lesson card ${savedSection.slice(7)}`:"this module"} from your saved account position.`,
+      ? "Resume the practice questions from your saved position."
+      : "Resume this week from your saved position.",
     href:savedCurriculumHref,
     updatedAt:savedCurriculumPosition.updatedAt,
   }:undefined;
@@ -315,7 +311,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     }:undefined,
     unit:activeUnit?{
       title:`Unit ${activeUnit.code}: ${capitaliseFirst(activeUnit.title)}`,
-      detail:"Open your assigned unit to choose the next available topic and continue from your saved position.",
+      detail:"Open your assigned unit to continue the one week available now.",
       href:isConfiguredUnitCode(activeUnit.code)?`/curriculum/units/${activeUnit.code}`:"/curriculum",
     }:undefined,
     lesson:pilot&&activeUnitCode==="4"?{
@@ -325,6 +321,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     }:undefined,
     now,
   });
+  const urgentNextAction=isStudentNextActionUrgent(studentNextAction);
 
   return <main className="shell py-10">
     {unseenBadges.length>0&&<NewBadgeNotifications awards={unseenBadges}/>}
@@ -340,13 +337,13 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       courseTitle={capitaliseFirst(related(course.courses)?.title ?? "Your assigned course")}
     />
 
-    {studentNextAction?<section className="card mt-8 border-teal-200 bg-teal-50" aria-labelledby="continue-learning-title">
+    {studentNextAction?<section className={`card mt-8 ${urgentNextAction?"border-red-300 bg-red-50":"border-teal-200 bg-teal-50"}`} aria-labelledby="continue-learning-title" role={urgentNextAction?"alert":undefined}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-3xl"><p className="eyebrow">{studentNextAction.eyebrow}</p><h2 className="mt-2 text-3xl font-bold" id="continue-learning-title">{studentNextAction.title}</h2><p className="mt-3 leading-7 text-slate-700">{studentNextAction.detail}</p></div>
-        {studentNextAction.meta&&<span className="rounded-full bg-white px-3 py-2 text-sm font-bold text-teal-900">{studentNextAction.meta}</span>}
+        {studentNextAction.meta&&<span className={`rounded-full bg-white px-3 py-2 text-sm font-bold ${urgentNextAction?"text-red-900":"text-teal-900"}`}>{studentNextAction.meta}</span>}
       </div>
       <Link className="button mt-6 min-w-40 text-center" href={studentNextAction.href}>{studentNextAction.label} →</Link>
-      <p className="mt-3 text-xs text-slate-600">Your completed work and saved lesson, module or activity position are stored with your account.</p>
+      <p className="mt-3 text-xs text-slate-600">Your completed work and saved learning position are stored with your account.</p>
     </section>:<section className="card mt-8 border-blue-200 bg-blue-50" aria-labelledby="learning-preparation-title"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold" id="learning-preparation-title">Your teacher is preparing your learning</h2><p className="mt-3 text-slate-700">Your account and course are active, but no starting point, allocated activity, active journey or published lesson is available yet.</p><Link className="link mt-4 inline-block" href="/curriculum">View my assigned units →</Link></section>}
 
     {journeyPosition&&<StudentLearningPlan
@@ -359,8 +356,6 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       details={<>{activeUnitCode&&<ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Formal learning checkpoints">{milestoneStages.map(item=>{const evidence=journeyWorksheets?.find(row=>row.unit_code===activeUnitCode&&row.evidence_stage===item.stage);return <li className={`rounded-xl border p-4 ${evidence?"border-teal-300 bg-teal-50":"border-slate-200 bg-white"}`} key={item.stage}><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Teaching Week {item.week}</p><p className="mt-2 font-bold">{item.label}</p><p className="mt-2 text-sm text-slate-600">{evidence?`Evidence preserved · ${new Date(evidence.submitted_at).toLocaleDateString("en-GB")}`:"Not yet recorded"}</p></li>})}</ol>}<div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><JourneyFact label="Unit starting point" value={unitStartingPoint?.percentage==null?"Not yet recorded":`${Math.round(Number(unitStartingPoint.percentage))}% · ${new Date(unitStartingPoint.completed_at).toLocaleDateString("en-GB")}`}/><JourneyFact label="Current topic position" value={currentCurriculumProgress?.practice_score==null?"Not yet recorded":`${currentCurriculumProgress.practice_score}% practice · ${currentCurriculumProgress.independent_attempts} independent attempt${Number(currentCurriculumProgress.independent_attempts)===1?"":"s"}`}/><JourneyFact label="Verified skill comparison" value={comparisons?.[0]?.improvement_points==null?"Not yet comparable":`${Number(comparisons[0].improvement_points)>=0?"+":""}${comparisons[0].improvement_points} percentage points`}/><JourneyFact label="Achievement Points" value={`${achievement.ap_total} AP`}/><JourneyFact label="Achievement level" value={achievement.current_level_title??"Building toward Bronze"}/><JourneyFact label="Next achievement milestone" value={achievement.next_level_title?`${achievement.points_to_next} AP to ${achievement.next_level_title}`:"Highest configured level reached"}/><JourneyFact label="Upcoming progress check" value={upcomingProgressCheck?`${journeyMilestoneLabel(upcomingProgressCheck.milestone)} · Teaching Week ${upcomingProgressCheck.week}`:"No further checkpoint in this journey"}/><JourneyFact label="Missed learning" value={catchUps.filter(item=>item.status!=="completed").length?`${catchUps.filter(item=>item.status!=="completed").length} catch-up item${catchUps.filter(item=>item.status!=="completed").length===1?"":"s"}`:"No catch-up recorded"}/></div>{achievement.certificate_status&&<p className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-950"><strong>Certificate eligible:</strong> awaiting authorised staff review.</p>}</>}
     />}
 
-    {catchUps.some(item=>item.status!=="completed")&&<section className="card mt-6 border-amber-200" aria-labelledby="catch-up-title"><p className="eyebrow">Missed learning</p><h2 className="mt-2 text-2xl font-bold" id="catch-up-title">Catch-up</h2><div className="mt-5 grid gap-3">{catchUps.filter(item=>item.status!=="completed").map(item=>{const topic=topicByCode(item.unit_code,item.topic_code);return <Link className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 hover:bg-amber-50" href={`/curriculum/units/${item.unit_code}/topics/${encodeURIComponent(item.topic_code)}?catchup=1#worksheet`} key={item.catch_up_id}><div><p className="font-semibold">Unit {item.unit_code} · {capitaliseFirst(topic?.title??item.topic_code)}</p><p className="mt-1 text-sm text-slate-600">Opened in Teaching Week {item.opened_teaching_week} · now Week {item.current_teaching_week}</p></div><span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-950">{item.status.replaceAll("_"," ")}</span></Link>})}</div></section>}
-
     {Boolean(recentFeedback?.length)&&<section className="card mt-6" aria-labelledby="recent-feedback-title"><p className="eyebrow">Feedback</p><h2 className="mt-2 text-2xl font-bold" id="recent-feedback-title">What to improve next</h2><div className="mt-5 grid gap-3">{recentFeedback?.map(review=>{const answer=related(review.attempt_answers);const attempt=related(answer?.attempts);return <article className="rounded-xl border border-slate-200 p-4" key={review.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{capitaliseFirst(related(attempt?.activities)?.title??"Reviewed learning")}</h3><p className="mt-1 text-xs text-slate-500">Checked {review.reviewed_at?new Date(review.reviewed_at).toLocaleDateString("en-GB"):"date not recorded"}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold capitalize text-blue-900">{review.status.replaceAll("_"," ")}</span></div><p className="mt-3 text-sm leading-6 text-slate-700">{review.feedback??answer?.feedback??"No feedback text was recorded."}</p></article>})}</div></section>}
 
     <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">My progress and achievements</summary><p className="mt-2 text-sm text-slate-600">Optional detail. Your next learning action always remains at the top of this page.</p><div className="mt-5">
@@ -372,7 +367,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       <Metric label="Practice streak" value={streak ? `${streak.current_count} learning days` : "Not started"}/>
     </section>
 
-    {course&&<section className="card mt-6"><p className="eyebrow">Assigned curriculum</p><h2 className="mt-2 text-2xl font-bold">Your Units / Content Areas</h2><div className="mt-4 flex flex-wrap gap-2">{((course.class_units??[]) as {active:boolean;units:{id:string;code:string;title:string;kind:string}|{id:string;code:string;title:string;kind:string}[]|null}[]).filter(item=>item.active).map((item,index)=>{const unit=related(item.units);return unit&&isConfiguredUnitCode(unit.code)?<Link className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold hover:bg-teal-100" href={`/curriculum/units/${unit.code}`} key={index}>{`Unit ${unit.code}: `}{capitaliseFirst(unit.title)} →</Link>:<span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold" key={index}>{unit?.code.match(/^\d+$/)?`Unit ${unit.code}: `:""}{capitaliseFirst(unit?.title??"")}</span>})}</div><p className="mt-3 text-sm text-slate-500">Open any active unit to continue its current module and practice.</p></section>}
+    {course&&<section className="card mt-6"><p className="eyebrow">Assigned curriculum</p><h2 className="mt-2 text-2xl font-bold">Your Units / Content Areas</h2><div className="mt-4 flex flex-wrap gap-2">{((course.class_units??[]) as {active:boolean;units:{id:string;code:string;title:string;kind:string}|{id:string;code:string;title:string;kind:string}[]|null}[]).filter(item=>item.active).map((item,index)=>{const unit=related(item.units);return unit&&isConfiguredUnitCode(unit.code)?<Link className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold hover:bg-teal-100" href={`/curriculum/units/${unit.code}`} key={index}>{`Unit ${unit.code}: `}{capitaliseFirst(unit.title)} →</Link>:<span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold" key={index}>{unit?.code.match(/^\d+$/)?`Unit ${unit.code}: `:""}{capitaliseFirst(unit?.title??"")}</span>})}</div><p className="mt-3 text-sm text-slate-500">Open your active unit to continue the current week.</p></section>}
 
     <section className="card mt-6">
         <h2 className="text-xl font-bold">Your next target</h2>
