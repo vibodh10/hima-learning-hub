@@ -120,7 +120,10 @@ queries run. It shows one next action, assigned groups, four plain totals and at
 five students whose stored evidence requires help. Full filtering, department
 analytics and curriculum reference remain on the administrator dashboard. Group
 pages retain the complete learner evidence and report tools, so simplifying the
-teacher home does not remove professional records.
+teacher home does not remove professional records. The group page also uses a
+role-specific server data path: an ordinary teacher loads only the units selected for
+that group, while the complete course, unit and academic-period configuration
+catalogue is queried only for an administrator.
 
 ### Durable invitation monitoring
 

@@ -26,14 +26,25 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     .select("id,name,course_id,academic_period_id,active_unit_id,starts_on,ends_on,weekly_learning_day,weekly_learning_days,published,enrolment_code_hint,courses(title),enrolments(student_id,archived_at,user_profiles!enrolments_student_id_fkey(display_name)),class_units(unit_id,active,archived_at)")
     .eq("id", id).single();
   if (!classData) notFound();
+  const selectedUnitIds = (classData.class_units ?? [])
+    .filter(unit => unit.active && !unit.archived_at)
+    .map(unit => unit.unit_id);
+  const administrator = actor.role === "administrator";
   const [{ data: courses }, { data: units }, { data: periods }, {data:invitations}, {data:registrationLinks}] = await Promise.all([
-    supabase.from("courses").select("id,title").eq("active", true).is("archived_at", null).order("title"),
-    supabase.from("units").select("id,course_id,code,title,kind,initial_teaching").is("archived_at", null).order("sort_order"),
-    supabase.from("academic_periods").select("id,name,kind,academic_years(name)").is("archived_at", null).order("starts_on"),
+    administrator
+      ? supabase.from("courses").select("id,title").eq("active", true).is("archived_at", null).order("title")
+      : Promise.resolve({ data: [] }),
+    administrator
+      ? supabase.from("units").select("id,course_id,code,title,kind,initial_teaching").is("archived_at", null).order("sort_order")
+      : selectedUnitIds.length
+        ? supabase.from("units").select("id,course_id,code,title,kind,initial_teaching").in("id", selectedUnitIds).is("archived_at", null).order("sort_order")
+        : Promise.resolve({ data: [] }),
+    administrator
+      ? supabase.from("academic_periods").select("id,name,kind,academic_years(name)").is("archived_at", null).order("starts_on")
+      : Promise.resolve({ data: [] }),
     supabase.from("student_invitations").select("id,email_normalized,display_name,status,auth_user_id,invited_at,last_sent_at,accepted_at,cancelled_at,expired_at,send_count,last_detail_code,updated_at").eq("class_id",id).order("updated_at",{ascending:false}).limit(50),
     supabase.rpc("current_class_registration_link",{class_uuid:id}),
   ]);
-  const selectedUnitIds = (classData.class_units ?? []).filter(unit => unit.active && !unit.archived_at).map(unit => unit.unit_id);
   const selectedUnits = (units ?? []).filter(unit => selectedUnitIds.includes(unit.id));
   const overviewUnit = selectedUnits.find(unit => unit.id === classData.active_unit_id) ?? selectedUnits[0];
   const activeEnrolments = (classData.enrolments ?? []).filter(enrolment => !enrolment.archived_at);
