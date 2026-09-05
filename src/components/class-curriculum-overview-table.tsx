@@ -3,6 +3,7 @@ import type {
   ClassCurriculumOverviewRow,
   CurriculumOverviewCell,
 } from "@/lib/class-curriculum-overview";
+import { capitaliseFirst } from "@/lib/display-text";
 
 export function ClassCurriculumOverviewTable({
   classId,unit,rows,
@@ -14,7 +15,7 @@ export function ClassCurriculumOverviewTable({
   return <section className="card mt-8 overflow-x-auto p-0" aria-labelledby="curriculum-overview-title">
     <div className="p-5">
       <p className="eyebrow">Class curriculum</p>
-      <h2 className="mt-2 text-2xl font-bold" id="curriculum-overview-title">Unit {unit.code}: {unit.title}</h2>
+      <h2 className="mt-2 text-2xl font-bold" id="curriculum-overview-title">Unit {unit.code}: {capitaliseFirst(unit.title)}</h2>
       <p className="mt-2 max-w-4xl text-sm text-slate-600">Learners are rows and the teaching decisions requested in the class overview are columns. Every cell uses stored class or active-unit evidence; selecting a cell opens that learner&apos;s evidence record.</p>
     </div>
     <table className="w-full min-w-[1480px] text-left">

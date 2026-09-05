@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { capitaliseFirst } from "@/lib/display-text";
 
 type TeachingScreen = {
   id: string; sort_order: number; title: string; body: string; example: string | null;
@@ -65,9 +66,9 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <Link className="link" href="/dashboard">← Dashboard</Link>
     <header className="mt-8 max-w-4xl">
-      <p className="eyebrow">{course?.title} · {unit?.code} {unit?.title}</p>
-      <h1 className="mt-3 text-4xl font-bold">{data.title}</h1>
-      <p className="mt-3 text-lg leading-8 text-slate-600">{topic?.title}</p>
+      <p className="eyebrow">{course?.title} · {unit?.code} {capitaliseFirst(unit?.title ?? "")}</p>
+      <h1 className="mt-3 text-4xl font-bold">{capitaliseFirst(data.title)}</h1>
+      <p className="mt-3 text-lg leading-8 text-slate-600">{capitaliseFirst(topic?.title ?? "")}</p>
       <div className="mt-5 flex flex-wrap gap-3 text-sm"><Pill>{data.language ?? "Learning"} lesson</Pill><Pill>About {data.estimated_minutes} minutes</Pill><Pill>{screens.length} teaching screens</Pill><Pill>{activities.reduce((sum, activity) => sum + Number(activity.activity_questions?.[0]?.count ?? 0), 0)} practice interactions</Pill></div>
     </header>
 
@@ -81,7 +82,7 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
       <p className="eyebrow">Learn</p><h2 className="mt-2 text-3xl font-bold">Build the ideas first</h2>
       <div className="mt-6 grid gap-6">{screens.map((screen, index) => <article className="card" key={screen.id}>
         <p className="text-sm font-bold text-teal-700">Screen {index + 1} of {screens.length}</p>
-        <h3 className="mt-2 text-2xl font-bold">{screen.title}</h3>
+        <h3 className="mt-2 text-2xl font-bold">{capitaliseFirst(screen.title)}</h3>
         <p className="mt-4 leading-7 text-slate-700">{screen.body}</p>
         {screen.definition && <p className="mt-4 rounded-xl bg-teal-50 p-4"><strong>Definition:</strong> {screen.definition}</p>}
         {screen.code_sample && <pre className="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-5 text-sm text-slate-50"><code>{screen.code_sample}</code></pre>}
@@ -94,8 +95,8 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
     <section className="mt-12">
       <p className="eyebrow">Worked examples</p><h2 className="mt-2 text-3xl font-bold">See the process step by step</h2>
       <div className="mt-6 grid gap-6">{examples.map(example => <article className="card" key={example.id}>
-        <p className="text-sm font-bold text-teal-700">{related(example.skills)?.title}</p>
-        <h3 className="mt-2 text-2xl font-bold">{example.title}</h3>
+        <p className="text-sm font-bold text-teal-700">{capitaliseFirst(related(example.skills)?.title ?? "")}</p>
+        <h3 className="mt-2 text-2xl font-bold">{capitaliseFirst(example.title)}</h3>
         <p className="mt-4"><strong>Problem:</strong> {example.problem}</p>
         <p className="mt-3"><strong>Plan:</strong> {example.planned_solution}</p>
         <ol className="mt-4 grid gap-2 rounded-xl bg-slate-50 p-5">{asStringArray(example.worked_steps).map((step, index) => <li key={step}><strong>{index + 1}.</strong> {step}</li>)}</ol>
@@ -112,7 +113,7 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
         const state=statesByActivity.get(activity.id);
         const open=actor.role!=="student"||!state||["Available","Completed","Mastery Demonstrated","Additional Practice Required"].includes(state.state);
         return <article className="card flex flex-wrap items-center justify-between gap-5" key={activity.id}>
-          <div><p className="text-sm font-bold text-teal-700">{activityLabel(activity)} · {activity.pathway}</p><h3 className="mt-1 text-xl font-bold">{activity.title}</h3><p className="mt-2 text-sm text-slate-600">{activity.instructions}</p>{activity.learning_stage==="mastery_check"&&!activity.assessment_kind&&<p className="mt-2 text-sm font-semibold text-amber-900">Independent check with no hints. This confirms whether you are ready to move ahead.</p>}<p className="mt-2 text-xs text-slate-500">{activity.activity_questions?.[0]?.count ?? 0} questions · about {activity.estimated_minutes} minutes {activity.required ? "· required" : "· optional"}</p></div>
+          <div><p className="text-sm font-bold text-teal-700">{activityLabel(activity)} · {activity.pathway}</p><h3 className="mt-1 text-xl font-bold">{capitaliseFirst(activity.title)}</h3><p className="mt-2 text-sm text-slate-600">{activity.instructions}</p>{activity.learning_stage==="mastery_check"&&!activity.assessment_kind&&<p className="mt-2 text-sm font-semibold text-amber-900">Independent check with no hints. This confirms whether you are ready to move ahead.</p>}<p className="mt-2 text-xs text-slate-500">{activity.activity_questions?.[0]?.count ?? 0} questions · about {activity.estimated_minutes} minutes {activity.required ? "· required" : "· optional"}</p></div>
           <div className="text-right"><span className={`mb-2 block rounded-full px-3 py-1 text-sm font-bold ${open?"bg-teal-50 text-teal-900":"bg-slate-100 text-slate-600"}`}>{state?.status_detail??(actor.role==="student"?"Available":"Staff preview")}</span>{open?<Link className="button" href={`/learn/${data.id}/activities/${activity.id}`}>{state?.state==="Completed"?"Review":"Open"} activity →</Link>:<span className="button-secondary cursor-not-allowed opacity-60">Locked</span>}</div>
         </article>;
       })}</div>

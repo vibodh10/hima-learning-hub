@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { TestModePanel } from "@/components/test-mode-panel";
 import { ActivityPositionTracker } from "@/components/activity-position-tracker";
+import { capitaliseFirst } from "@/lib/display-text";
 
 type ActivityQuestionRow = { sort_order: number; questions: PracticeQuestion | PracticeQuestion[] | null };
 type ActivityState = { activity_id: string; state: string; status_detail: string };
@@ -45,8 +46,8 @@ export default async function ActivityPage({ params }: { params: Promise<{ lesso
     {actor.role==="student"&&<ActivityPositionTracker lessonId={lessonId} activityId={activityId}/>}
     <Link className="link" href={`/learn/${lessonId}`}>← Back to lesson</Link>
     <header className="mt-8 max-w-4xl">
-      <p className="eyebrow">{topic?.title} · {formatStage(data.learning_stage)}</p>
-      <h1 className="mt-3 text-4xl font-bold">{data.title}</h1>
+      <p className="eyebrow">{capitaliseFirst(topic?.title ?? "Learning topic")} · {formatStage(data.learning_stage)}</p>
+      <h1 className="mt-3 text-4xl font-bold">{capitaliseFirst(data.title)}</h1>
       <p className="mt-3 leading-7 text-slate-600">{data.instructions}</p>
       <div className="mt-5 flex flex-wrap gap-3 text-sm">
         <Pill>{questions.length} questions</Pill><Pill>About {data.estimated_minutes} minutes</Pill><Pill>{data.pathway} pathway</Pill><Pill>Up to {data.max_attempts} attempts</Pill>

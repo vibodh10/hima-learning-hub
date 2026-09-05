@@ -174,9 +174,10 @@ schema compatibility. This makes the teacher's Close registration link control a
 genuine access boundary rather than leaving a second reusable code path open.
 
 The teacher group page now puts this primary route first, moves email invitation into
-an optional fallback and collapses secondary setup detail. Learner-facing topic and
-activity phrases are normalised to begin with a capital letter without changing
-their stored curriculum identifiers.
+an optional fallback and collapses secondary setup detail. The shared display-text
+rule normalises unit, topic, lesson, activity and skill labels across the student
+dashboard, curriculum, portfolio and learning pages. It changes presentation only;
+stored curriculum identifiers, authored answers and assessment wording are preserved.
 
 ### Automatic first-student journey activation
 

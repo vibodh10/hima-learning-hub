@@ -11,6 +11,7 @@ import {
   type LearningQuestion,
   type PaperMode,
 } from "@/lib/atom-question-bank";
+import { capitaliseFirst } from "@/lib/display-text";
 import type { PearsonUnit } from "@/lib/pearson-curriculum";
 
 export function PracticePaper({ unit }: { unit: PearsonUnit }) {
@@ -49,7 +50,7 @@ export function PracticePaper({ unit }: { unit: PearsonUnit }) {
     </section>
     <section className="card max-w-3xl">
       <p className="eyebrow">{blueprint.title} · Version {version + 1}</p>
-      <h2 className="mt-2 text-3xl font-bold">Unit {unit.code}: {unit.title}</h2>
+      <h2 className="mt-2 text-3xl font-bold">Unit {unit.code}: {capitaliseFirst(unit.title)}</h2>
       <p className="mt-4 text-slate-600">{questions.length} {practical ? "practical activities" : "questions"} · {marks} marks · suggested time {blueprint.suggestedMinutes} minutes. {practical ? "The activities cover the unit through produced database, code, design and testing evidence." : "Every topic in this unit is sampled."}</p>
       {unit.code === "2" && mode === "assignment" && <p className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-950"><strong>External-assessment rehearsal:</strong> this is an original practice task, not a live or copied Pearson assessment. It mirrors the practical evidence pattern: database structure, queries, interface, testing and evaluation.</p>}
       <div className="mt-6 flex flex-wrap gap-3">

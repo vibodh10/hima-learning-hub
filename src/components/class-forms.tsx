@@ -7,6 +7,7 @@ import {
   startGroupLearningJourney, type ActionState,
 } from "@/app/actions/learning";
 import { ISO_WEEKDAYS, normaliseWeeklyLearningDays } from "@/lib/weekly-schedule";
+import { capitaliseFirst } from "@/lib/display-text";
 
 export function CreateClassForm({ courses, years }: { courses: { id: string; title: string }[]; years: { id: string; name: string }[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(createClass, {});
@@ -86,14 +87,14 @@ export function ClassSettingsForm({
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           {visibleUnits.map(unit => <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm" key={unit.id}>
             <input className="mt-1" type="checkbox" name="unitIds" value={unit.id} defaultChecked={selectedUnitIds.includes(unit.id)}/>
-            <span><strong>{unit.code.match(/^\d+$/) ? `Unit ${unit.code}: ` : ""}{unit.title}</strong><span className="block text-slate-500">{unit.kind.replaceAll("_"," ")}{unit.initial_teaching ? " · suggested initial unit" : ""}</span></span>
+            <span><strong>{unit.code.match(/^\d+$/) ? `Unit ${unit.code}: ` : ""}{capitaliseFirst(unit.title)}</strong><span className="block text-slate-500">{unit.kind.replaceAll("_"," ")}{unit.initial_teaching ? " · suggested initial unit" : ""}</span></span>
           </label>)}
         </div>
       </fieldset>
       <label className="grid gap-2 text-sm font-semibold">Unit students should start with
         <select className="input" name="activeUnitId" defaultValue={classData.active_unit_id ?? ""} required>
           <option value="" disabled>Select current focus</option>
-          {visibleUnits.map(unit => <option value={unit.id} key={unit.id}>{unit.code.match(/^\d+$/) ? `${unit.code} · ` : ""}{unit.title}</option>)}
+          {visibleUnits.map(unit => <option value={unit.id} key={unit.id}>{unit.code.match(/^\d+$/) ? `${unit.code} · ` : ""}{capitaliseFirst(unit.title)}</option>)}
         </select>
       </label>
       <label className="flex items-center gap-3 text-sm font-semibold">
@@ -180,7 +181,7 @@ export function AdaptiveHomeworkForm({classId,topics}:{classId:string;topics:{id
   const[state,action,pending]=useActionState<ActionState,FormData>(allocateAdaptiveHomework,{});
   return <form action={action} className="card mt-6 grid gap-4">
     <input type="hidden" name="classId" value={classId}/><div><p className="eyebrow">Adaptive homework</p><h2 className="mt-2 text-2xl font-bold">Allocate learner-specific practice</h2><p className="mt-2 text-sm text-slate-600">Auto uses each learner’s weakest current skill pathway; the class can receive different approved activities for the same topic.</p></div>
-    <div className="grid gap-4 md:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">Topic<select className="input" name="topicId">{topics.map(topic=><option value={topic.id} key={topic.id}>{topic.unitTitle} · {topic.title}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Pathway allocation<select className="input" name="pathwayMode" defaultValue="Auto">{["Auto","Support","Core","Stretch","Mastery"].map(value=><option key={value}>{value}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Release<input className="input" type="datetime-local" name="releaseAt" required/></label><label className="grid gap-1 text-sm font-semibold">Deadline<input className="input" type="datetime-local" name="deadlineAt" required/></label><label className="grid gap-1 text-sm font-semibold">Expected minutes<input className="input" type="number" name="expectedMinutes" min="5" max="120" defaultValue="15" required/></label><label className="flex items-center gap-2 self-end pb-3 text-sm font-semibold"><input type="checkbox" name="required" defaultChecked/>Required homework</label></div>
+    <div className="grid gap-4 md:grid-cols-2"><label className="grid gap-1 text-sm font-semibold">Topic<select className="input" name="topicId">{topics.map(topic=><option value={topic.id} key={topic.id}>{capitaliseFirst(topic.unitTitle)} · {capitaliseFirst(topic.title)}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Pathway allocation<select className="input" name="pathwayMode" defaultValue="Auto">{["Auto","Support","Core","Stretch","Mastery"].map(value=><option key={value}>{value}</option>)}</select></label><label className="grid gap-1 text-sm font-semibold">Release<input className="input" type="datetime-local" name="releaseAt" required/></label><label className="grid gap-1 text-sm font-semibold">Deadline<input className="input" type="datetime-local" name="deadlineAt" required/></label><label className="grid gap-1 text-sm font-semibold">Expected minutes<input className="input" type="number" name="expectedMinutes" min="5" max="120" defaultValue="15" required/></label><label className="flex items-center gap-2 self-end pb-3 text-sm font-semibold"><input type="checkbox" name="required" defaultChecked/>Required homework</label></div>
     <button className="button justify-self-start" disabled={pending||!topics.length}>{pending?"Allocating…":"Allocate adaptive homework"}</button>{state.message&&<p className={`text-sm ${state.ok?"text-teal-800":"text-red-700"}`}>{state.message}</p>}
   </form>;
 }

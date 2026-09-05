@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { capitaliseFirst } from "@/lib/display-text";
 
 export default async function PortfolioPage() {
   const actor = await requireRole("student");
@@ -24,7 +25,7 @@ export default async function PortfolioPage() {
     <section className="mt-8 grid gap-4">
       {artifacts?.length ? artifacts.map(artifact => {
         const worksheet = artifact.source_id ? worksheetById.get(artifact.source_id) : undefined;
-        return <article className="card" key={artifact.id}><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Unit {artifact.unit_code}{artifact.topic_code?` · ${artifact.topic_code}`:""} · {artifact.stage.replaceAll("_"," ")}</p><h2 className="mt-2 text-xl font-bold">{artifact.title}</h2><p className="mt-1 text-sm text-slate-500">{new Date(artifact.recorded_at).toLocaleString("en-GB")} · version {artifact.version_number}</p></div><span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-bold">{artifact.source_type.replaceAll("_"," ")}</span></div>
+        return <article className="card" key={artifact.id}><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Unit {artifact.unit_code}{artifact.topic_code?` · ${artifact.topic_code}`:""} · {artifact.stage.replaceAll("_"," ")}</p><h2 className="mt-2 text-xl font-bold">{capitaliseFirst(artifact.title)}</h2><p className="mt-1 text-sm text-slate-500">{new Date(artifact.recorded_at).toLocaleString("en-GB")} · version {artifact.version_number}</p></div><span className="rounded-full bg-slate-100 px-3 py-2 text-sm font-bold">{capitaliseFirst(artifact.source_type.replaceAll("_"," "))}</span></div>
           {worksheet&&<details className="mt-5 rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer font-semibold">View submitted worksheet evidence</summary><dl className="mt-4 grid gap-4">{Object.entries(asRecord(worksheet.responses)).map(([key,value])=><div key={key}><dt className="text-xs font-bold uppercase tracking-wide text-slate-500">{formatKey(key)}</dt><dd className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{String(value)||"No response recorded"}</dd></div>)}</dl><p className="mt-4 text-sm font-semibold">Confidence: {worksheet.confidence}/5 · {worksheet.evidence_stage.replaceAll("_"," ")} · {worksheet.mode.replaceAll("_"," ")}</p></details>}
         </article>;
       }) : <div className="card"><h2 className="text-xl font-bold">Your portfolio is ready</h2><p className="mt-2 text-slate-600">Your first saved worksheet or assessment evidence will appear here. No result has been invented.</p></div>}
@@ -33,5 +34,5 @@ export default async function PortfolioPage() {
 }
 
 function asRecord(value:unknown):Record<string,unknown>{return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};}
-function formatKey(value:string){return value.replace(/([a-z])([A-Z])/g,"$1 $2").replaceAll("_"," ");}
+function formatKey(value:string){return capitaliseFirst(value.replace(/([a-z])([A-Z])/g,"$1 $2").replaceAll("_"," "));}
 function PortfolioStage({title,worksheet}:{title:string;worksheet?:{responses:unknown;submitted_at:string;confidence:number}}){const responses=asRecord(worksheet?.responses);return <div className="rounded-xl border border-slate-200 p-4"><h4 className="font-bold">{title}</h4>{worksheet?<><p className="mt-1 text-xs text-slate-500">{new Date(worksheet.submitted_at).toLocaleString("en-GB")} · confidence {worksheet.confidence}/5</p><p className="mt-3 whitespace-pre-wrap text-sm"><strong>Main evidence:</strong> {String(responses.mainTask??responses.practicalApplication??"No main-task response recorded")}</p></>:<p className="mt-3 text-sm text-slate-600">Not yet submitted.</p>}</div>}

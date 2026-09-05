@@ -5,5 +5,7 @@ describe("capitaliseFirst", () => {
   it("gives displayed topic details a consistent capital letter", () => {
     expect(capitaliseFirst("data-informed planning")).toBe("Data-informed planning");
     expect(capitaliseFirst("IT service delivery")).toBe("IT service delivery");
+    expect(capitaliseFirst("  3. database relationships  ")).toBe("3. Database relationships");
+    expect(capitaliseFirst("42")).toBe("42");
   });
 });

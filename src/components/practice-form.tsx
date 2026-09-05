@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { submitPractice, type ActionState } from "@/app/actions/learning";
+import { capitaliseFirst } from "@/lib/display-text";
 
 export type PracticeQuestion = {
   id: string;
@@ -30,7 +31,7 @@ export function PracticeForm({ activityId, questions, assessmentKind }: { activi
       <legend className="px-2 font-bold">
         <span className="text-teal-700">Question {index + 1}</span> · {question.marks} {Number(question.marks) === 1 ? "mark" : "marks"}
       </legend>
-      <p className="mt-2 text-xs font-bold uppercase tracking-wide text-slate-500">{related(question.skills)?.title ?? "Applied skill"}</p>
+      <p className="mt-2 text-xs font-bold uppercase tracking-wide text-slate-500">{capitaliseFirst(related(question.skills)?.title ?? "Applied skill")}</p>
       <p className="mt-3 whitespace-pre-wrap text-lg font-semibold">{question.question_text}</p>
       <QuestionInput question={question}/>
       {question.hint && <div className="mt-4">
@@ -88,7 +89,7 @@ function Result({ result }: { result: NonNullable<ActionState["result"]> }) {
     {result.skillMastery?.length ? <div className="card mt-6">
       <h3 className="text-xl font-bold">Skill progress</h3>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">{result.skillMastery.map(skill => <div className="rounded-xl bg-slate-50 p-4" key={skill.skillId}>
-        <p className="font-semibold">{skill.title}</p>
+        <p className="font-semibold">{capitaliseFirst(skill.title)}</p>
         <p className="mt-1 text-sm text-slate-600">{Math.round(Number(skill.masteryScore))}% mastery · {skill.pathway}</p>
       </div>)}</div>
     </div> : null}
