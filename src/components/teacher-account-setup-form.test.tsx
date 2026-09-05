@@ -14,8 +14,9 @@ describe("secure teacher account setup", () => {
     for (const name of requestedTeacherNames) expect(screen.getByRole("option", { name })).toBeInTheDocument();
     expect(screen.getByLabelText("Verified college email")).toHaveAttribute("type", "email");
     expect(screen.getByLabelText("Verified college email")).toHaveAttribute("placeholder", "name@sccb.ac.uk");
-    expect(screen.getByRole("button", { name: "Create or resend" })).toBeInTheDocument();
-    expect(screen.getByText(/creates no shared or visible password/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Email setup link" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy link for Teams" })).toBeInTheDocument();
+    expect(screen.getByText(/tutor chooses their own password/i)).toBeInTheDocument();
   });
 
   it("shows which requested tutors already have access and their login email", () => {

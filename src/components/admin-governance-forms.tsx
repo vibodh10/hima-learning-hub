@@ -10,17 +10,19 @@ import {
 
 export function ProfileManagementForm({profile}:{profile:{id:string;display_name:string;role:string;archived_at:string|null}}){
   const[state,action,pending]=useActionState<ActionState,FormData>(manageProfile,{});
-  return <form action={action} className="rounded-xl border border-slate-200 p-4">
-    <input type="hidden" name="profileId" value={profile.id}/>
-    <strong>{profile.display_name}</strong>
-    <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-      <label className="grid gap-1 text-sm font-semibold">Role<select className="input" name="role" defaultValue={profile.role}>{["student","teacher","administrator"].map(role=><option value={role} key={role}>{role}</option>)}</select></label>
-      <label className="flex items-center gap-2 pb-3 text-sm font-semibold"><input type="checkbox" name="archived" defaultChecked={Boolean(profile.archived_at)}/>Archived</label>
-      <button className="button-secondary" disabled={pending}>{pending?"Saving...":"Save user"}</button>
-    </div>
+  return <article className="rounded-xl border border-slate-200 p-4">
+    <form action={action}>
+      <input type="hidden" name="profileId" value={profile.id}/>
+      <strong>{profile.display_name}</strong>
+      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+        <label className="grid gap-1 text-sm font-semibold">Role<select className="input" name="role" defaultValue={profile.role}>{["student","teacher","administrator"].map(role=><option value={role} key={role}>{role}</option>)}</select></label>
+        <label className="flex items-center gap-2 pb-3 text-sm font-semibold"><input type="checkbox" name="archived" defaultChecked={Boolean(profile.archived_at)}/>Archived</label>
+        <button className="button-secondary" disabled={pending}>{pending?"Saving...":"Save user"}</button>
+      </div>
+      {state.message&&<p className={`mt-2 text-sm ${state.ok?"text-teal-800":"text-red-700"}`}>{state.message}</p>}
+    </form>
     {profile.role==="student"&&<><div className="mt-3 text-sm"><a className="link" href={`/teacher/learners/${profile.id}`}>Open learner record to choose a class and export evidence</a></div><LearnerDeletionRequestForm learnerId={profile.id}/></>}
-    {state.message&&<p className={`mt-2 text-sm ${state.ok?"text-teal-800":"text-red-700"}`}>{state.message}</p>}
-  </form>;
+  </article>;
 }
 
 export function AcademicYearCreateForm(){
@@ -67,7 +69,7 @@ export function CourseStatusForm({courseId,active}:{courseId:string;active:boole
 
 export function LearnerDeletionRequestForm({learnerId}:{learnerId:string}){
   const[state,action,pending]=useActionState<ActionState,FormData>(requestLearnerDataDeletion,{});
-  return <details className="mt-3 rounded-lg border border-red-200 p-3"><summary className="cursor-pointer text-sm font-bold text-red-800">Request personal-data deletion</summary><form action={action} className="mt-3 grid gap-3"><input type="hidden" name="learnerId" value={learnerId}/><p className="text-xs text-slate-600">Export the learner’s evidence first. This creates a pending request and does not delete anything yet.</p><label className="grid gap-1 text-sm font-semibold">Authorised reason<textarea className="input min-h-20" name="reason" minLength={10} required/></label><button className="button-secondary justify-self-start" disabled={pending}>{pending?"Requesting...":"Create deletion request"}</button>{state.message&&<p className={`text-sm ${state.ok?"text-teal-800":"text-red-700"}`}>{state.message}</p>}</form></details>;
+  return <details className="mt-3 rounded-lg border border-red-200 p-3"><summary className="cursor-pointer text-sm font-bold text-red-800">Request personal-data deletion</summary><form action={action} className="mt-3 grid gap-3"><input type="hidden" name="learnerId" value={learnerId}/><p className="text-xs text-slate-600">Export the learner’s evidence first. This creates a pending request and does not delete anything yet.</p><label className="grid gap-1 text-sm font-semibold">Authorised reason<textarea className="input min-h-20" name="reason" placeholder="For example: confirmed test account" required/></label><p className="text-xs text-slate-500">Enter at least 10 characters. If anything is missing, an error will appear here.</p><button className="button-secondary justify-self-start" disabled={pending}>{pending?"Requesting...":"Create deletion request"}</button>{state.message&&<p role="status" className={`text-sm ${state.ok?"text-teal-800":"text-red-700"}`}>{state.message}</p>}</form></details>;
 }
 
 export function LearnerDeletionExecuteForm({request}:{request:{id:string;reason:string;requested_at:string;user_profiles:{display_name:string}|{display_name:string}[]|null}}){

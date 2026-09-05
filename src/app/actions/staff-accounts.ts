@@ -17,12 +17,14 @@ export type StaffAccountState = {
   ok?: boolean;
   message?: string;
   errors?: Record<string, string[]>;
+  setupUrl?: string;
 };
 
 const teacherAccount = z.object({
   name: z.enum(requestedTeacherNames),
   email: z.email("Enter the tutor's verified email address.").trim().toLowerCase()
     .refine(isSccbStaffEmail, "Use the tutor's verified @sccb.ac.uk email address."),
+  delivery: z.enum(["email", "manual"]).default("email"),
 });
 
 export async function setupTeacherAccount(
@@ -91,25 +93,44 @@ export async function setupTeacherAccount(
     }
   }
 
-  const sessionClient = await createClient();
-  const { error: emailError } = await sessionClient.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${origin}/auth/callback?next=/update-password`,
-  });
-  if (emailError) {
-    return { message: created
-      ? "The tutor account was created, but its password-setup email was not delivered. Submit this form again to retry safely."
-      : "The tutor account already exists, but another password-setup email could not be sent yet." };
+  const redirectTo = `${origin}/auth/callback?next=/update-password`;
+  let setupUrl: string | undefined;
+  if (parsed.data.delivery === "manual") {
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email: parsed.data.email,
+      options: { redirectTo },
+    });
+    if (linkError || !linkData.properties.action_link) {
+      return { message: "The tutor account is ready, but a secure setup link could not be generated. Try again." };
+    }
+    setupUrl = linkData.properties.action_link;
+  } else {
+    const sessionClient = await createClient();
+    const { error: emailError } = await sessionClient.auth.resetPasswordForEmail(parsed.data.email, {
+      redirectTo,
+    });
+    if (emailError) {
+      return { message: created
+        ? "The tutor account was created, but its password-setup email was not delivered. Use Copy link for Teams instead."
+        : "The tutor account already exists, but another password-setup email could not be sent. Use Copy link for Teams instead." };
+    }
   }
 
   await admin.from("audit_logs").insert({
     organisation_id: actor.organisation_id,
     actor_id: actor.id,
-    action: created ? "teacher.account_created" : "teacher.password_setup_resent",
+    action: created ? "teacher.account_created" : setupUrl ? "teacher.password_setup_link_generated" : "teacher.password_setup_resent",
     entity_type: "user_profile",
     entity_id: userId,
     after_data: { display_name: parsed.data.name, role: "teacher" },
   });
   revalidatePath("/admin");
+  if (setupUrl) return {
+    ok: true,
+    setupUrl,
+    message: `${parsed.data.name}'s private setup link is ready. Send it only to that tutor through their verified SCCB Teams account.`,
+  };
   return { ok: true, message: created
     ? `${parsed.data.name}'s teacher account was created. A secure first-password link has been sent.`
     : `${parsed.data.name}'s account already existed. A fresh password-setup link has been sent.` };

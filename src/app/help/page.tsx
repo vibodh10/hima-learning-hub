@@ -18,7 +18,7 @@ const studentSteps = [
 
 const administratorSteps = [
   ["1", "Prepare access", "Create groups centrally when useful, or let each tutor create a group and choose its approved programme, units and teaching days."],
-  ["2", "Give tutors access", "Open Administration and send each tutor their own secure password-setup link."],
+  ["2", "Give tutors access", "Open Administration and create each tutor's secure password-setup link. Send it by SCCB email, or copy it privately to their verified SCCB Teams account."],
   ["3", "Tutors add students", "Tutors open their groups and share a temporary registration link. They close it after registration. Thresholds, rewards and learning automation remain centrally controlled."],
   ["4", "Use advanced setup only when needed", "Curriculum, calendar, privacy and recognition controls stay collapsed on the administrator page."],
 ];
