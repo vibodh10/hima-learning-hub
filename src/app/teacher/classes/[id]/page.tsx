@@ -13,6 +13,7 @@ import { RoleBanner } from "@/components/role-banner";
 import { presentInvitationStatus } from "@/lib/invitation-status";
 import { unitByCode } from "@/lib/learning-catalog";
 import { projectClassCurriculumOverview, projectCurriculumPaperAssessments } from "@/lib/class-curriculum-overview";
+import { averageCurrentClassScore } from "@/lib/class-progress-summary";
 import { ClassCurriculumOverviewTable } from "@/components/class-curriculum-overview-table";
 import { summariseWorkbookStartingPoint } from "@/lib/workbook-starting-point";
 
@@ -69,12 +70,11 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     achievement_level:achievementByLearner.get(row.learner_id)?.achievement_level??null,
   }));
   const studentIds = activeEnrolments.map(enrolment => enrolment.student_id);
-  const [{ data: attempts }, { data: mastery }, { data: misconceptions }, { data: curriculumAttempts, error: curriculumAttemptsError }] = studentIds.length ? await Promise.all([
-    supabase.from("attempts").select("learner_id,activity_id,percentage,attempt_number,completed_at,activities(kind,learning_stage)").in("learner_id", studentIds).not("completed_at", "is", null).order("completed_at"),
+  const [{ data: mastery }, { data: misconceptions }, { data: curriculumAttempts, error: curriculumAttemptsError }] = studentIds.length ? await Promise.all([
     supabase.from("skill_mastery").select("learner_id,mastery_score,current_pathway,skills(title)").in("learner_id", studentIds),
     supabase.from("learner_misconceptions").select("learner_id,occurrence_count,resolved_at,misconceptions(title,skills(title))").in("learner_id", studentIds).order("occurrence_count", { ascending: false }),
     supabase.from("learner_curriculum_attempts").select("learner_id,kind,unit_code,paper_mode,percentage,teacher_mark,max_mark,completed_at").in("learner_id", studentIds).order("completed_at"),
-  ]) : [{ data: [] }, { data: [] }, { data: [] }, { data: [], error: null }];
+  ]) : [{ data: [] }, { data: [] }, { data: [], error: null }];
   const [progressResult,assessmentResult,targetResult] = studentIds.length ? await Promise.all([
     overviewUnit
       ? supabase.from("learner_curriculum_progress").select(
@@ -160,15 +160,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     })),
   });
 
-  const latestAttempts = latestByLearner(attempts ?? []);
-  const latestCurriculumAttempts = latestByLearner(curriculumAttempts ?? []);
-  const latestScores = studentIds.map(learnerId => {
-    const curriculumAttempt = latestCurriculumAttempts.find(attempt => attempt.learner_id === learnerId);
-    const legacyAttempt = latestAttempts.find(attempt => attempt.learner_id === learnerId);
-    const attempt = curriculumAttempt ?? legacyAttempt;
-    return attempt ? Number(attempt.percentage) : null;
-  }).filter((score): score is number => score != null);
-  const average = latestScores.length ? Math.round(latestScores.reduce((sum, score) => sum + score, 0) / latestScores.length) : null;
+  const average = averageCurrentClassScore(projectedAttention.map(row => ({ currentScore: row.current_score })));
   const awaitingInvitationCount=invitations?.filter(invitation=>["pending","sent"].includes(invitation.status)).length??0;
   const activeRegistrationLink=registrationLinks?.[0];
 
@@ -251,11 +243,6 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   </main></>;
 }
 
-function latestByLearner<T extends { learner_id: string; completed_at: string | null }>(attempts: T[]) {
-  const latest = new Map<string, T>();
-  for (const attempt of attempts) latest.set(attempt.learner_id, attempt);
-  return [...latest.values()];
-}
 function Metric({ label, value }: { label: string; value: string }) { return <div className="card"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold">{value}</p></div>; }
 function related<T>(value: T | T[] | null | undefined): T | undefined { return Array.isArray(value) ? value[0] : value ?? undefined; }
 function JourneyStatus({status}:{status:string}) {
