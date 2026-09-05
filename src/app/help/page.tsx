@@ -3,23 +3,23 @@ import { AppHeader } from "@/components/app-header";
 import { requireRole, type Role } from "@/lib/auth";
 
 const teacherSteps = [
-  ["1", "Open My groups", "Choose the group you teach. Its programme, units and timetable are already prepared for you."],
+  ["1", "Open or create a group", "Choose the programme, units and regular teaching days for the group you teach."],
   ["2", "Add students", "Create one temporary registration link on the group page and share it with that class. Close it when everyone has joined. Email invitation remains available if needed."],
   ["3", "Check progress", "The group page shows students needing help first. Open a student only when you want their full evidence."],
-  ["4", "Download a report", "Use Download progress report on the group page whenever you need a current evidence report."],
+  ["4", "Download a report", "Download a current group report, or open one student to download a full, weekly or selected-period report."],
 ];
 
 const studentSteps = [
   ["1", "Join your group", "Open the registration link shared by your teacher, check that the correct group is shown and create your student account. A secure email invitation may also be used."],
   ["2", "Start from Home", "Your Home page shows the unit, teaching week, next action, feedback and any catch-up that applies to you."],
   ["3", "Complete your starting point", "This records what you know before teaching. It is a baseline, not a grade."],
-  ["4", "Learn, improve and keep evidence", "Complete your lesson work, use feedback, submit improvements and review your own progress and portfolio."],
+  ["4", "Learn, practise, test and improve", "Finish the current teaching week in order. Future weeks stay hidden, and mistakes lead to feedback and targeted practice before the week is complete."],
 ];
 
 const administratorSteps = [
-  ["1", "Prepare groups", "Create each group once and attach its approved programme, units and teaching days."],
+  ["1", "Prepare access", "Create groups centrally when useful, or let each tutor create a group and choose its approved programme, units and teaching days."],
   ["2", "Give tutors access", "Open Administration and send each tutor their own secure password-setup link."],
-  ["3", "Tutors add students", "Tutors open their ready-made groups and share a temporary group registration link. They close it after registration and do not configure learning models."],
+  ["3", "Tutors add students", "Tutors open their groups and share a temporary registration link. They close it after registration. Thresholds, rewards and learning automation remain centrally controlled."],
   ["4", "Use advanced setup only when needed", "Curriculum, calendar, privacy and recognition controls stay collapsed on the administrator page."],
 ];
 
@@ -33,7 +33,7 @@ export default async function HelpPage() {
     ? "The portal keeps your assigned learning, progress, feedback and evidence together. You can only see your own record."
     : isAdministrator
       ? "Prepare groups and secure tutor access once. Tutors then add students, check progress and download reports from a short everyday workflow."
-      : "Open your group, share its temporary registration link and check progress. Programme and unit setup is handled by an administrator.";
+      : "Create or open your group, choose what you teach and share its temporary registration link. The portal handles weekly learning, feedback evidence and progress reporting automatically.";
 
   return <>
     <AppHeader name={actor.display_name} role={actor.role}/>

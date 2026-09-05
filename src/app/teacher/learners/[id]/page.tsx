@@ -261,7 +261,7 @@ export default async function LearnerPage({
     <Link className="link" href={classInfo ? `/teacher/classes/${classInfo.id}` : "/dashboard"}>← {classInfo?.name ?? "Teacher dashboard"}</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
       <div><p className="eyebrow">Learner evidence record</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-2 text-slate-600">{courseInfo?.title ?? "Course not recorded"}</p></div>
-      <div className="flex flex-wrap gap-3">{classInfo?<><Link className="button-secondary" href={`/teacher/learners/${id}/evidence?classId=${classInfo.id}`}>Evidence View</Link><a className="button-secondary" href={`/api/reports/learners/${id}?classId=${classInfo.id}&format=csv`}>Export CSV</a><a className="button" href={`/api/reports/learners/${id}?classId=${classInfo.id}`}>Export PDF</a></>:<span className="text-sm text-slate-500">No active class is available for evidence review.</span>}</div>
+      <div className="flex flex-wrap gap-3">{classInfo?<><a className="button-secondary" href={`/api/reports/learners/${id}?classId=${classInfo.id}&format=csv`}>Download spreadsheet</a><a className="button" href={`/api/reports/learners/${id}?classId=${classInfo.id}`}>Download learner report</a></>:<span className="text-sm text-slate-500">No active group is available for reporting.</span>}</div>
     </div>
 
     {enrolmentChoices.length>1&&<nav aria-label="Choose learner class" className="card mt-6"><p className="text-sm font-bold">Report programme</p><div className="mt-3 flex flex-wrap gap-2">{enrolmentChoices.map(choice=><Link className={choice.classId===classInfo?.id?"button":"button-secondary"} href={`/teacher/learners/${id}?classId=${choice.classId}`} key={choice.classId}>{choice.linkedClass.name}</Link>)}</div></nav>}
@@ -290,7 +290,9 @@ export default async function LearnerPage({
       </div>
     </section>
 
-    <section className="mt-6"><p className="eyebrow">2. Starting-point summary by topic</p><h2 className="mt-2 text-2xl font-bold">What the initial evidence shows</h2>
+    <TeacherSecondaryPanel>
+
+    <section><p className="eyebrow">2. Starting-point summary by topic</p><h2 className="mt-2 text-2xl font-bold">What the initial evidence shows</h2>
       <div className="mt-5 grid gap-5">
         {workbookStartingPoints.map(item => <WorkbookStartingPointCard key={item.unit.code} unit={item.unit} summary={item.summary}/>)}
         {topicGroups.map(group => <TopicSummaryCard key={`${group.unitTitle}-${group.topicTitle}`} group={group}/>)}
@@ -325,7 +327,6 @@ export default async function LearnerPage({
       })}</div>
     </section>
 
-    <TeacherSecondaryPanel>
       {classInfo&&<RecognitionForm learnerId={id} classId={classInfo.id} templates={recognitionTemplates??[]}/>}
 
     <section className="card"><p className="eyebrow">Atom-style practice evidence</p><h2 className="mt-2 text-2xl font-bold">Question sessions, papers and learning needs</h2>
