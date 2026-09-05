@@ -42,7 +42,7 @@ Test-PublicPage "/" "SCCB Digital Learning Hub"
 Test-PublicPage "/login" "One account has one role"
 Test-PublicPage "/forgot-password" "Reset your password"
 Test-PublicPage "/privacy" "How SCCB Digital Learning Hub handles learner data"
-Test-PublicPage "/register" "Student accounts are invitation only"
+Test-PublicPage "/register" "Student registration is controlled by your teacher"
 Test-PublicPage "/update-password" "Choose a new password"
 Test-PublicPage "/course-entry-readiness" "Course Entry &amp; Readiness Assessment"
 
