@@ -4,9 +4,9 @@ import {markQuestion,nextDifficulty,orderByTargetDifficulty,paperBlueprintsFor,p
 
 describe("Atom-style BTEC question bank",()=>{
  it("covers every configured Pearson topic with hints and explanations",()=>{
-  expect(configuredUnits.map(unit=>unit.code)).toEqual(["1","2","4","6","8","9","10","14"]);
-  expect(configuredUnits.reduce((sum,unit)=>sum+unit.topics.length,0)).toBe(62);
-  expect(configuredUnits.flatMap(unit=>unit.topics.map(topic=>questionsFor(unit,topic))).flat()).toHaveLength(496);
+  expect(configuredUnits.map(unit=>unit.code)).toEqual(["1","2","4","6","8","9","10","14","19"]);
+  expect(configuredUnits.reduce((sum,unit)=>sum+unit.topics.length,0)).toBe(72);
+  expect(configuredUnits.flatMap(unit=>unit.topics.map(topic=>questionsFor(unit,topic))).flat()).toHaveLength(576);
   for(const unit of configuredUnits)for(const topic of unit.topics){const questions=questionsFor(unit,topic);expect(questions).toHaveLength(8);expect(questions.every(item=>item.hint&&item.explanation&&item.modelAnswer&&item.misconception)).toBe(true);expect(questions.every(item=>item.markScheme.length>0&&item.markScheme.length<=item.marks)).toBe(true);expect(questions.some(item=>item.options)).toBe(true);expect(questions.some(item=>item.kind==="extended_response")).toBe(true);expect(new Set(questions.map(item=>item.commandWord))).toEqual(new Set(["Identify","Describe","Explain","Analyse","Justify","Evaluate"]));}
  });
   it("builds three assessment-appropriate paper types",()=>{for(const unit of configuredUnits){const blueprints=paperBlueprintsFor(unit);expect(blueprints.map(item=>item.mode)).toEqual(["knowledge","applied","assignment"]);expect(paperQuestions(unit,0,"knowledge")).toHaveLength(unit.topics.length*2);const applied=paperQuestions(unit,0,"applied"),assignment=paperQuestions(unit,0,"assignment");if(["2","4","6"].includes(unit.code)){expect(applied.every(item=>item.kind==="practical_response")).toBe(true);expect(assignment.every(item=>item.kind==="practical_response")).toBe(true);expect(new Set(assignment.map(item=>item.id)).size).toBe(assignment.length)}else{expect(applied).toHaveLength(unit.topics.length*2);expect(assignment).toHaveLength(unit.topics.length);expect(new Set(assignment.map(item=>item.id)).size).toBe(unit.topics.length)}}});

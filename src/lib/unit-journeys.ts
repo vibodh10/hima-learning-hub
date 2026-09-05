@@ -28,7 +28,7 @@ function weeks(rows: Array<[string, string, string]>): ConfiguredJourneyWeek[] {
   }));
 }
 
-export const configuredUnitJourneys: Record<"2" | "4" | "6" | "10" | "14", ConfiguredJourneyWeek[]> = {
+export const configuredUnitJourneys: Record<"2" | "4" | "6" | "10" | "14" | "19", ConfiguredJourneyWeek[]> = {
   "2": weeks([
     ["A1", "Database systems and starting point", "Establish prior understanding, then explain relational database purpose, structures and terminology."],
     ["A2", "SQL and relational data", "Retrieve and manipulate relational data using appropriate RDBMS tools and SQL."],
@@ -98,6 +98,20 @@ export const configuredUnitJourneys: Record<"2" | "4" | "6" | "10" | "14", Confi
     ["D3", "Progress Check 2: timed set-task rehearsal", "Complete a later comparable external-style task and diagnose evidenced strengths and gaps."],
     ["B3–B4", "Alternatives and justification", "Evaluate credible alternatives, implementation impact, operational management and prioritised improvement."],
     ["D3", "Final external-assessment readiness", "Complete a final original rehearsal covering all content areas without presenting it as Pearson's live task."],
+  ]),
+  "19": weeks([
+    ["A1", "IoT purpose and starting point", "Establish prior knowledge, then compare why connected systems are used and the benefits they offer in contrasting sectors."],
+    ["A2", "How IoT systems work", "Trace identification, sensing, communication, processing, services and actuation through a complete IoT data flow."],
+    ["A3", "IoT characteristics and implications", "Evaluate reliability, scalability, interoperability, accessibility, privacy, ethics, law and sustainability."],
+    ["A3", "Systems and services investigation", "Use evidence from contrasting IoT systems to reach supported conclusions for learning aim A."],
+    ["B1", "Define and design an IoT solution", "Turn a problem into users, requirements, constraints, success criteria, diagrams and reviewable design documentation."],
+    ["B2", "Progress Check 1: system architecture", "Design a comparable machine-to-machine architecture using sensors, actuators, devices, gateways, services and applications."],
+    ["B3", "Standards and interoperability", "Select compatible device, network, messaging, data and application standards for the proposed system."],
+    ["B4-B5", "Communication and security", "Balance range, bandwidth, latency, reliability and power while protecting devices, communications and data."],
+    ["C1", "Build the integrated prototype", "Connect sensing, processing, communication, storage, output and user notification into an end-to-end prototype."],
+    ["C2", "Progress Check 2: program the prototype", "Complete a later comparable programming task using suitable constructs, interfaces, validation and error handling."],
+    ["C3", "Test, analyse and optimise", "Use functional, performance, security and user tests plus recorded data and feedback to improve the prototype."],
+    ["C3", "Final IoT evidence and evaluation", "Preserve the final design, prototype, source, tests, analytics and evaluation as authentic internal-assessment evidence."],
   ]),
 };
 

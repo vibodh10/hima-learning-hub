@@ -13,7 +13,7 @@ describe("private page role boundaries", () => {
     ["teacher/sample-report/page.tsx", /requireRole\("teacher",\s*"administrator"\)/],
     ["teacher/classes/[id]/page.tsx", /requireRole\("teacher",\s*"administrator"\)/],
     ["teacher/learners/[id]/page.tsx", /requireRole\("teacher",\s*"administrator"\)/],
-    ["teacher/learners/[id]/evidence/page.tsx", /requireRole\("teacher",\s*"administrator"\)/],
+    ["teacher/learners/[id]/evidence/page.tsx", /requireRole\("administrator"\)/],
     ["learn/[lessonId]/page.tsx", /requireRole\("student",\s*"teacher",\s*"administrator"\)/],
     ["learn/[lessonId]/activities/[activityId]/page.tsx", /requireRole\("student",\s*"teacher",\s*"administrator"\)/],
     ["progress/page.tsx", /requireRole\("student"\)/],
@@ -35,10 +35,15 @@ describe("private page role boundaries", () => {
     "curriculum/units/[unitCode]/starting-point/page.tsx",
     "curriculum/units/[unitCode]/papers/page.tsx",
     "curriculum/units/[unitCode]/project/page.tsx",
-    "curriculum/units/[unitCode]/topics/[topicCode]/page.tsx",
-    "curriculum/units/[unitCode]/topics/[topicCode]/practice/page.tsx",
   ])("checks assigned-unit access in %s", (relativePath) => {
     expect(source(relativePath)).toMatch(/requireCurriculumUnitAccess\(/);
+  });
+
+  it.each([
+    "curriculum/units/[unitCode]/topics/[topicCode]/page.tsx",
+    "curriculum/units/[unitCode]/topics/[topicCode]/practice/page.tsx",
+  ])("checks assigned unit and current week access in %s", (relativePath) => {
+    expect(source(relativePath)).toMatch(/requireCurriculumTopicAccess\(/);
   });
 
   it("keeps audit internals out of the visible administration interface", () => {

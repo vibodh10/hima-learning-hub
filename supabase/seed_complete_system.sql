@@ -342,7 +342,7 @@ from public.units unit
 join public.courses course on course.id=unit.course_id
 left join public.curriculum_versions version
   on version.id=unit.curriculum_version_id and version.active and version.archived_at is null
-where unit.code in ('2','4','6','10','14') and unit.archived_at is null
+where unit.code in ('2','4','6','10','14','19') and unit.archived_at is null
   and (lower(coalesce(course.awarding_organisation,'')) like '%pearson%'
     or lower(course.title) like '%btec%')
 on conflict(unit_id,version_number) do nothing;
@@ -359,6 +359,7 @@ where template.status='approved' and template.archived_at is null
 on conflict(template_id,teaching_week) do nothing;
 
 select public.seed_initial_learning_journey_weeks();
+select public.seed_unit_19_learning_journey_weeks();
 
 insert into public.learning_journey_week_lessons(journey_week_id,lesson_id,sequence)
 select journey_week.id,lesson.id,

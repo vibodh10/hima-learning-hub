@@ -9,5 +9,6 @@ describe("unit assessment kind", () => {
     expect(isExternalAssessmentUnit(unitByCode("14")!)).toBe(true);
     expect(isExternalAssessmentUnit(unitByCode("4")!)).toBe(false);
     expect(isExternalAssessmentUnit(unitByCode("6")!)).toBe(false);
+    expect(isExternalAssessmentUnit(unitByCode("19")!)).toBe(false);
   });
 });

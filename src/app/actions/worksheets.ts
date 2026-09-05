@@ -11,7 +11,7 @@ export type WorksheetState = { ok?: boolean; message?: string; errors?: Record<s
 
 const response = z.string().trim().max(6000);
 const worksheet = z.object({
-  unitCode: z.enum(["2", "4", "6", "10", "14"]),
+  unitCode: z.enum(["2", "4", "6", "10", "14", "19"]),
   topicCode: z.string().trim().min(1).max(40),
   mode: z.enum(["standard", "catch_up", "improvement"]),
   evidenceStage: z.enum(["before", "learning", "progress_check_1", "progress_check_2", "after"]),

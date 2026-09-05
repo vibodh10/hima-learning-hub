@@ -10,7 +10,7 @@ export function TopicWorksheet({
   catchUp,
   evidenceStage,
 }: {
-  unitCode: "2" | "4" | "6" | "10" | "14";
+  unitCode: "2" | "4" | "6" | "10" | "14" | "19";
   topicCode: string;
   topicTitle: string;
   catchUp: boolean;

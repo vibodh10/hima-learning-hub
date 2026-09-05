@@ -30,6 +30,7 @@ function explainConcept(concept:string,unitCode:string,topicTitle:string,level:E
 
 function shortDefinition(concept:string,unitCode:string){
  const value=concept.toLowerCase();
+ if(unitCode==="19")return `${concept} is one part of an Internet of Things system. Explain how it connects sensing, processing, communication, data, output and the intended user need, then judge the choice against reliability, power, interoperability, security, privacy and measurable success criteria.`;
  if(/normalis|\b1nf\b|\b2nf\b|\b3nf\b|anomal/.test(value))return `${concept} controls how data is separated into related tables so each fact is stored once, dependencies are correct and insert, update or deletion anomalies are reduced.`;
  if(/primary|foreign|candidate|composite|referential|relationship|cardinality|entity|attribute|tuple|domain/.test(value))return `${concept} describes the structure and links in a relational model: identifiers must be unique, references must resolve to valid records and the permitted number of related records must match the business rule.`;
  if(/sql|quer|insert|update|delete|join|union|intersect|crud/.test(value))return `${concept} is used to define, retrieve or change data deliberately; criteria, joins and permissions must return the required result without damaging integrity or exposing unauthorised data.`;
@@ -65,6 +66,7 @@ function conceptExample(concept:string,unitCode:string){
  if(/html|semantic/.test(value))return "A page uses nav, main, headings and labelled form controls so keyboard and assistive-technology users can understand its structure.";
  if(/css|responsive|box model/.test(value))return "A mobile-first grid changes columns at a tested breakpoint while spacing and focus indicators remain readable at 200% zoom.";
  if(/javascript|script|event/.test(value)&&unitCode==="6")return "A submit event validates required fields, places an accessible error beside each problem and prevents submission only until errors are corrected.";
+ if(unitCode==="19")return `A room sensor records ${concept}, a controller validates and processes the reading, and the secured service stores the result before sending an alert or control instruction that can be tested against the requirement.`;
  if(unitCode==="8")return "A player test shows repeated failure at level two, so the collision window and feedback are adjusted and retested without removing the intended challenge.";
  if(unitCode==="9")return "A risk register records probability, impact, owner, mitigation and review date; the project manager escalates it when the trigger occurs.";
  return `A team records a requirement involving ${concept}, implements a suitable choice, then compares the measured result with the agreed success criterion.`;

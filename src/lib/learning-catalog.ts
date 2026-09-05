@@ -116,7 +116,25 @@ const unit14: PearsonUnit = {
   ],
 };
 
-export const configuredUnits: PearsonUnit[] = [unit1, ...pearsonUnits, unit8, unit9, unit10, unit14]
+const unit19: PearsonUnit = {
+  code: "19" as PearsonUnit["code"],
+  title: "The Internet of Things",
+  assessment: "Internally assessed. A maximum of two assignments covers learning aim A and combined learning aims B and C.",
+  topics: [
+    topic("A1", "Purpose and Applications of the Internet of Things", ["IoT systems and connected devices", "smart homes, cities, health, transport and industry", "business and social opportunities", "automation, monitoring and control", "benefits for users and organisations"], "Compare an environmental monitoring system with a smart transport service and trace the value each creates from connected data.", "Explain and evaluate why contrasting IoT systems are used and the benefits they offer."),
+    topic("A2", "Principles Underpinning the Internet of Things", ["connected objects and unique identification", "sensing, data collection and actuation", "device, edge and cloud processing", "networks, services and applications", "data flow through an IoT system"], "Trace temperature data from a sensor through a gateway and service to a dashboard and an automated response.", "Explain how connected components collect, communicate, process and act on data."),
+    topic("A3", "Characteristics and Implications of IoT Systems", ["reliability, availability and scalability", "interoperability and maintainability", "user experience and accessibility", "privacy, ethics and legal responsibilities", "environmental impact and sustainability"], "Evaluate a wearable health system from the viewpoints of its user, service provider and data controller.", "Evaluate the technical and wider implications of an IoT system for its intended purpose."),
+    topic("B1", "IoT Design Process and Documentation", ["problem definition and intended users", "functional and non-functional requirements", "constraints, risks and success criteria", "system diagrams, data flows and interface designs", "feedback, iteration and design justification"], "Turn a college room-monitoring problem into traceable requirements, a system diagram, data flow and reviewed design decisions.", "Produce and refine a feasible IoT design that is traceable to the problem and user requirements."),
+    topic("B2", "Machine-to-Machine Architecture", ["sensors, actuators and controllers", "devices, gateways and networks", "data stores, services and applications", "edge and cloud responsibilities", "interfaces between system components"], "Design the architecture for a greenhouse system that senses conditions, controls equipment and records evidence for staff.", "Select and justify an integrated machine-to-machine architecture."),
+    topic("B3", "Technical Standards and Interoperability", ["device and network standards", "messaging and application protocols", "data formats and application interfaces", "addressing and identification", "compatibility and interoperability"], "Compare two standards for connecting low-power room sensors and justify the combination that best fits the design constraints.", "Choose compatible standards and explain how they allow the IoT components to work together."),
+    topic("B4-B5", "Communication Requirements and Security", ["range, bandwidth, latency and reliability", "wired and wireless communication", "power and environmental constraints", "authentication, authorisation and encryption", "physical protection, secure updates and data minimisation"], "Secure a remote sensor network while balancing battery life, coverage, response time and protection of personal data.", "Justify communication and security controls against the system requirements and risks."),
+    topic("C1", "Integrated IoT Operations", ["sensor input and data acquisition", "processing and decision rules", "network communication and storage", "actuator output and user notification", "end-to-end functional operation"], "Build and trace a prototype that detects an unsafe room condition, records it and produces the required alert or control action.", "Integrate the designed components into a functioning end-to-end prototype."),
+    topic("C2", "Programming an IoT Prototype", ["variables, data types and operators", "selection, iteration and functions", "events, libraries and device interfaces", "validation and error handling", "readable, maintainable program structure"], "Program a sensor reading, validate it, apply a decision threshold and produce a safe output with clear failure handling.", "Use appropriate programming techniques to implement reliable prototype behaviour."),
+    topic("C3", "IoT Analytics, Testing and Optimisation", ["data validation and preparation", "real-time and stored-data analysis", "visualisation, patterns and anomalies", "functional, performance, security and user testing", "feedback-led optimisation and evaluation"], "Test a prototype with normal, boundary and failure conditions, analyse its recorded data and use the evidence to prioritise improvements.", "Optimise and evaluate the prototype using test results, analytics, feedback and the original requirements."),
+  ],
+};
+
+export const configuredUnits: PearsonUnit[] = [unit1, ...pearsonUnits, unit8, unit9, unit10, unit14, unit19]
   .sort((a, b) => Number(a.code) - Number(b.code));
 
 const unitMeta: Record<string, UnitMeta> = {
@@ -159,6 +177,11 @@ const unitMeta: Record<string, UnitMeta> = {
     aims: ["A Contextual factors driving IT needs and services", "B IT service delivery design", "C Information and data requirements", "D Facilitating IT service delivery"],
     criteria: ["AO1 knowledge and understanding", "AO2 application to IT service-delivery problems", "AO3 analysis of information, patterns and connections", "AO4 evaluation and reasoned decisions", "AO5 justified IT service solution design"],
     project: project("IT service delivery set-task rehearsal", "A multi-site organisation needs a resilient service that supports staff, customers and changing operational priorities.", "Analyse the organisation and its evidence, define requirements, design a justified IT service solution, compare alternatives and plan service management. This is practice, not a live Pearson task.", ["Organisation and stakeholder analysis", "Service strategy and catalogue", "Information and data requirements", "Hardware, software and connectivity design", "Alternative comparison", "Implementation, management and improvement plan"], ["Content areas A–D"], ["AO1–AO5 external set-task practice"], "Stress-test the design against a major incident, growth and a change in data jurisdiction.", ["Analyse the organisation", "Define and prioritise requirements", "Design the service", "Compare and justify alternatives", "Plan management and continual improvement"]),
+  },
+  "19": {
+    aims: ["A Examine systems and services that form the Internet of Things", "B Develop a design for an IoT system or device to solve a problem", "C Prototype an integrated IoT system or device to solve a problem"],
+    criteria: ["A.P1-A.P2, A.M1, A.D1", "B.P3-B.P4, B.M2", "C.P5-C.P6, C.M3", "BC.D2-BC.D3"],
+    project: project("Smart campus environment monitor", "A college needs a secure, low-cost way to monitor room conditions and alert staff when a space needs attention.", "Design, prototype, test and evaluate an integrated IoT solution using suitable off-the-shelf hardware or a faithful device simulation.", ["IoT systems and services investigation", "Requirements and system architecture", "Communication and security rationale", "Working prototype and source code", "Test and analytics evidence", "Optimisation and evaluation"], ["A, B and C"], ["Unit 19 pass, merit and distinction criteria"], "Add a second sensing input and justify how the system should scale across several buildings.", ["Investigate IoT applications", "Define and review the design", "Build the integrated prototype", "Test and optimise", "Evaluate against requirements"]),
   },
 };
 
@@ -391,6 +414,24 @@ form.addEventListener("submit", (event) => {
     ? "Details checked. Ready to submit."
     : "Correct the highlighted field.";
 });`,
+  };
+  if (unitCode === "19" && ["C1", "C2", "C3"].includes(topicCode)) return {
+    language: "Python",
+    caption: "The prototype validates the sensor reading, applies a clear decision rule and returns an explicit safe state when the device cannot provide trustworthy data.",
+    code: `def room_status(read_temperature):
+    try:
+        temperature = float(read_temperature())
+    except (TypeError, ValueError, OSError):
+        return {"state": "sensor_error", "alert": True}
+
+    if not -10 <= temperature <= 50:
+        return {"state": "invalid_reading", "alert": True}
+
+    return {
+        "state": "too_warm" if temperature > 27 else "comfortable",
+        "alert": temperature > 27,
+        "temperature": temperature,
+    }`,
   };
   if (unitCode === "8" && ["B1–B3", "C1–C3"].includes(topicCode)) return {
     language: "Game-loop pseudocode",

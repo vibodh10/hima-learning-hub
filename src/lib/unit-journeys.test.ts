@@ -3,7 +3,7 @@ import { configuredUnitJourneys, evidenceStageForMilestone, nextJourneyMilestone
 
 describe("preconfigured class-aligned teaching journeys", () => {
   it("maps every teaching week to a real configured topic", () => {
-    expect(Object.keys(configuredUnitJourneys)).toEqual(["2", "4", "6", "10", "14"]);
+    expect(Object.keys(configuredUnitJourneys)).toEqual(["2", "4", "6", "10", "14", "19"]);
     expect(validateConfiguredUnitJourneys()).toBe(true);
   });
 
