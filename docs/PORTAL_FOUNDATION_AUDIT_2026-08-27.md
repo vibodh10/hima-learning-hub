@@ -25,6 +25,9 @@ learner-facing unit/module/lesson hierarchy instead of creating parallel systems
 - Private pages perform server-side role checks. Student-only progress, portfolio
   and rewards pages reject staff accounts; teacher learner/class pages reject
   student accounts; administrator pages reject both ordinary roles.
+- The header navigation is role-specific and regression tested: students cannot see
+  group or administration links, teachers see only Home, My groups and Help, and
+  organisation controls appear only for administrators.
 - Mutating actions repeat identity/role checks and PostgreSQL row-level security is
   the final data boundary. A student cannot gain teacher access by entering a URL.
 
