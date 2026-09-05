@@ -70,10 +70,10 @@ describe("selectTeacherNextAction", () => {
   it("puts a genuine learner need before unfinished setup in another group", () => {
     const action = selectTeacherNextAction({
       classes: [readyClass, { ...readyClass, id: "draft", name: "Draft", activeUnitCount: 0, studentCount: 0 }],
-      attention: [{ learnerId: "learner-1", displayName: "Alex", status: "intervention_required", reason: "Repeated unsuccessful attempts." }],
+      attention: [{ classId: "class-1", learnerId: "learner-1", displayName: "Alex", status: "intervention_required", reason: "Repeated unsuccessful attempts." }],
     });
     expect(action).toMatchObject({
-      kind: "attention", title: "Review Alex", href: "/teacher/learners/learner-1",
+      kind: "attention", title: "Review Alex", href: "/teacher/learners/learner-1?classId=class-1",
     });
   });
 
@@ -81,17 +81,17 @@ describe("selectTeacherNextAction", () => {
     const action = selectTeacherNextAction({
       classes: [readyClass],
       attention: [
-        { learnerId: "catch-up", displayName: "Casey", status: "catch_up_required", reason: "Missed learning." },
-        { learnerId: "intervention", displayName: "Jordan", status: "intervention_required", reason: "Repeated unsuccessful attempts." },
+        { classId: "class-1", learnerId: "catch-up", displayName: "Casey", status: "catch_up_required", reason: "Missed learning." },
+        { classId: "class-2", learnerId: "intervention", displayName: "Jordan", status: "intervention_required", reason: "Repeated unsuccessful attempts." },
       ],
     });
-    expect(action).toMatchObject({ kind: "attention", href: "/teacher/learners/intervention" });
+    expect(action).toMatchObject({ kind: "attention", href: "/teacher/learners/intervention?classId=class-2" });
   });
 
   it("opens the largest active group when no learner needs attention", () => {
     const action = selectTeacherNextAction({
       classes: [readyClass, { ...readyClass, id: "class-2", name: "Group 2", studentCount: 18 }],
-      attention: [{ learnerId: "learner-1", displayName: "Alex", status: "on_track", reason: "On track." }],
+      attention: [{ classId: "class-1", learnerId: "learner-1", displayName: "Alex", status: "on_track", reason: "On track." }],
     });
     expect(action).toMatchObject({ kind: "monitor", href: "/teacher/classes/class-2", meta: "18 learners" });
   });

@@ -467,6 +467,7 @@ async function TeacherHomeDashboard() {
       pendingInvitationCount: (item.student_invitations ?? []).filter(invitation => ["pending", "sent"].includes(invitation.status)).length,
     })),
     attention: attention.map(item => ({
+      classId: item.classId,
       learnerId: item.learner_id,
       displayName: item.display_name,
       status: item.attention_status,
@@ -773,6 +774,7 @@ async function AdministratorDashboard({role,filters }: {role:"administrator";fil
       pendingInvitationCount:(item.student_invitations??[]).filter(invitation=>["pending","sent"].includes(invitation.status)).length,
     })),
     attention:allAttention.map(item=>({
+      classId:item.classId,
       learnerId:item.learner_id,
       displayName:item.display_name,
       status:item.attention_status,

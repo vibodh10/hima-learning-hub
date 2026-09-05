@@ -18,6 +18,7 @@ type TeacherClassSummary = {
 };
 
 type TeacherAttentionCandidate = {
+  classId: string;
   learnerId: string;
   displayName: string;
   status: string;
@@ -45,7 +46,7 @@ export function selectTeacherNextAction(input: {
       eyebrow: "Next teaching action",
       title: `Review ${attention.displayName}`,
       detail: attention.reason,
-      href: `/teacher/learners/${attention.learnerId}`,
+      href: `/teacher/learners/${attention.learnerId}?classId=${attention.classId}`,
       label: "Open learner evidence",
       meta: attentionLabels[attention.status],
     };
