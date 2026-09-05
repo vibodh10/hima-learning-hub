@@ -102,10 +102,11 @@ set request.jwt.claim.sub='90000000-0000-0000-0000-000000000002';
 set role authenticated;
 create temporary table safe_purchase as
 select public.purchase_reward_v2('67000000-0000-0000-0000-000000000001') payload;
-select public.equip_reward((payload->>'purchaseId')::uuid,true) from safe_purchase;
 do $$
 declare before_balance integer;
 begin
+  if not coalesce((select (payload->>'equipped')::boolean from safe_purchase),false)
+  then raise exception 'purchase response did not report immediate equipment';end if;
   if not exists(select 1 from public.reward_purchases where learner_id=auth.uid()
     and reward_id='67000000-0000-0000-0000-000000000001'
     and purchase_status='completed' and equipped_at is not null)
@@ -128,6 +129,13 @@ begin
   if (select coalesce(sum(amount),0) from public.coin_transactions where learner_id=auth.uid() and transaction_status='posted')<>before_balance
   then raise exception 'failed purchase changed the balance';end if;
 end $$;
+select public.equip_reward((payload->>'purchaseId')::uuid,false) from safe_purchase;
+do $$ begin
+  if exists(select 1 from public.reward_purchases where learner_id=auth.uid()
+    and reward_id='67000000-0000-0000-0000-000000000001' and equipped_at is not null)
+  then raise exception 'owned theme could not be unequipped';end if;
+end $$;
+select public.equip_reward((payload->>'purchaseId')::uuid,true) from safe_purchase;
 reset role;
 
 create temporary table reconciliation_balance as

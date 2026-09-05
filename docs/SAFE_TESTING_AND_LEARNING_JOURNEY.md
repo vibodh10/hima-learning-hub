@@ -49,10 +49,10 @@ Record the date, tester and result for each item.
     evidence, deadline, success criterion and linked activity.
 17. Earn a badge, close its notification, reload, and confirm the badge remains
     but confetti does not repeat.
-18. Preview a reward without a debit; buy it once; confirm immediate Owned
-    state, one ledger debit, and duplicate purchase rejection.
-19. Equip the reward, sign out/in, and confirm the theme/frame remains visibly
-    applied; unequip it and confirm removal.
+18. Preview a reward without a debit; buy it once; confirm immediate Owned and
+    Applied state, one ledger debit, and duplicate purchase rejection.
+19. Sign out/in and confirm the theme/frame remains visibly applied; unequip it
+    and confirm removal. A learner can equip it again without another debit.
 20. As administrator, run incomplete-purchase reconciliation and confirm every
     restored amount has a refund entry, before/after balances and status.
 

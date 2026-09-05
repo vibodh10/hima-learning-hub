@@ -274,7 +274,7 @@ export async function purchaseReward(_: ActionState, formData: FormData): Promis
   }
   revalidatePath("/rewards");
   revalidatePath("/dashboard");
-  return { ok: true, message: "Cosmetic reward purchased and added to your collection.",testData:data };
+  return { ok: true, message: "Cosmetic reward purchased and applied.",testData:data };
 }
 
 export async function recogniseLearner(_:ActionState,formData:FormData):Promise<ActionState>{

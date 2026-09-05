@@ -76,6 +76,16 @@ a,button,input { outline-offset:3px; }
   .shell { width:100%; }
   .card { break-inside:avoid; box-shadow:none; }
 }
-body[data-theme="ocean"] { background:linear-gradient(145deg,#eef8ff 0%,#f4efff 48%,#fff8ef 100%); }
-body[data-theme="ocean"] .card { border-color:#c5dff3;box-shadow:0 16px 45px rgb(47 123 189 / 12%); }
+body[data-theme="ocean"] {
+  background:
+    radial-gradient(circle at 6% 6%,rgb(0 166 166 / 22%),transparent 25rem),
+    radial-gradient(circle at 94% 12rem,rgb(28 105 181 / 18%),transparent 30rem),
+    linear-gradient(155deg,#e8fbfb 0%,#edf5ff 48%,#fbf7ff 100%);
+}
+body[data-theme="ocean"] .card {
+  border-color:#70c5d0;
+  border-top:4px solid #078f9b;
+  box-shadow:0 16px 45px rgb(9 112 128 / 16%);
+}
+body[data-theme="ocean"] .eyebrow { color:#087e91; }
 body[data-badge-frame="python"] [data-achievement-badge] { border:3px solid #2563eb;box-shadow:0 0 0 4px #facc15,0 8px 20px rgb(37 99 235 / 18%); }
