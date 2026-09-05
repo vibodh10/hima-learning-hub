@@ -114,9 +114,13 @@ projection chooses one real action:
 6. invite students where no invitation is pending;
 7. monitor the largest active group when no urgent action exists.
 
-The generic setup cards and duplicate zero-student prompt were removed. Live totals,
-the learner priority table and analytical evidence remain available below the one
-primary action.
+The generic setup cards and duplicate zero-student prompt were removed. The teacher
+role now branches into a lightweight home before organisation-wide analytical
+queries run. It shows one next action, assigned groups, four plain totals and at most
+five students whose stored evidence requires help. Full filtering, department
+analytics and curriculum reference remain on the administrator dashboard. Group
+pages retain the complete learner evidence and report tools, so simplifying the
+teacher home does not remove professional records.
 
 ### Durable invitation monitoring
 

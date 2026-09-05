@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { capitaliseFirst } from "@/lib/display-text";
 
 export function TeacherGroupCard({
   id,
@@ -32,7 +33,7 @@ export function TeacherGroupCard({
         {studentCount} student{studentCount === 1 ? "" : "s"}
       </p>
       <p className="mt-1 text-xs text-slate-500">
-        {schedule} · {unitTitles.join(", ") || "Unit setup in progress"}
+        {schedule} · {unitTitles.map(capitaliseFirst).join(", ") || "Unit setup in progress"}
       </p>
       {!invitationReady && <p className="mt-2 text-xs font-semibold text-amber-900">
         Students cannot join until an administrator completes this group.

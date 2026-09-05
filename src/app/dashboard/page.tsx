@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getSessionProfile, type Role } from "@/lib/auth";
+import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AppHeader } from "@/components/app-header";
 import { RoleBanner } from "@/components/role-banner";
@@ -27,6 +27,7 @@ import { classInvitationReadiness } from "@/lib/class-invitation-readiness";
 import { TeacherGroupCard } from "@/components/teacher-group-card";
 import { StudentEnrolmentSummary } from "@/components/student-enrolment-summary";
 import { capitaliseFirst } from "@/lib/display-text";
+import { TeacherPriorityList } from "@/components/teacher-priority-list";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -61,7 +62,9 @@ export default async function DashboardPage({searchParams}:{searchParams:Promise
   return <><AppHeader name={profile.display_name} role={profile.role}/>
     {profile.role === "student"
       ? <StudentDashboard id={profile.id} name={profile.display_name}/>
-      : <TeacherDashboard role={profile.role} filters={filters}/>}
+      : profile.role === "teacher"
+        ? <TeacherHomeDashboard/>
+        : <AdministratorDashboard role={profile.role} filters={filters}/>}
   </>;
 }
 
@@ -420,7 +423,106 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
   </main>;
 }
 
-async function TeacherDashboard({role,filters }: {role:Exclude<Role,"student">;filters:TeacherFilters }) {
+async function TeacherHomeDashboard() {
+  const supabase = await createClient();
+  const [{ data: classes }, { data: journeyTemplates }] = await Promise.all([
+    supabase.from("classes").select("id,name,active_unit_id,weekly_learning_day,weekly_learning_days,published,enrolments(count),class_enrolments:enrolments(student_id),student_invitations(status),class_units(unit_id,active,archived_at,units(code,title,status,archived_at))").is("archived_at", null).order("name"),
+    supabase.from("learning_journey_templates").select("unit_id").eq("status", "approved").is("archived_at", null),
+  ]);
+  const classSignals = await Promise.all((classes ?? []).map(async item => {
+    const { data } = await supabase.rpc("class_learner_attention", { class_uuid: item.id });
+    return ((data ?? []) as TeacherAttentionDb[]).map(row => ({
+      ...row,
+      classId: item.id,
+      className: item.name,
+    }));
+  }));
+  const attention = classSignals.flat();
+  const approvedJourneyUnitIds = new Set((journeyTemplates ?? []).map(template => template.unit_id));
+  const readinessByClass = new Map((classes ?? []).map(item => {
+    const activeClassUnits = (item.class_units ?? []).filter(unit => unit.active && !unit.archived_at);
+    const currentAssignment = activeClassUnits.find(unit => unit.unit_id === item.active_unit_id);
+    const currentUnit = related(currentAssignment?.units);
+    const configuredUnitCode = currentUnit
+      && currentUnit.status === "approved"
+      && !currentUnit.archived_at
+      && unitByCode(currentUnit.code)
+      ? currentUnit.code
+      : null;
+    return [item.id, classInvitationReadiness({
+      published: item.published,
+      activeUnitId: item.active_unit_id,
+      activeClassUnitIds: activeClassUnits.map(unit => unit.unit_id),
+      configuredUnitCode,
+      hasApprovedJourney: Boolean(item.active_unit_id && approvedJourneyUnitIds.has(item.active_unit_id)),
+    })] as const;
+  }));
+  const teacherNextAction = selectTeacherNextAction({
+    classes: (classes ?? []).map(item => ({
+      id: item.id,
+      name: item.name,
+      published: item.published,
+      activeUnitCount: (item.class_units ?? []).filter(unit => unit.active).length,
+      studentCount: item.enrolments?.[0]?.count ?? 0,
+      pendingInvitationCount: (item.student_invitations ?? []).filter(invitation => ["pending", "sent"].includes(invitation.status)).length,
+    })),
+    attention: attention.map(item => ({
+      learnerId: item.learner_id,
+      displayName: item.display_name,
+      status: item.attention_status,
+      reason: item.attention_reason,
+    })),
+    canManageGroupSetup: false,
+  });
+  const studentIds = new Set((classes ?? []).flatMap(item => (item.class_enrolments ?? []).map(row => row.student_id)));
+  const actionableStatuses = new Set(["intervention_required", "action_required", "catch_up_required"]);
+  const needAttention = attention.filter(item => actionableStatuses.has(item.attention_status)).length;
+  const readyForStudents = (classes ?? []).filter(item =>
+    readinessByClass.get(item.id)?.ready === true && (item.enrolments?.[0]?.count ?? 0) === 0
+  ).length;
+
+  return <main className="shell py-10">
+    <RoleBanner role="teacher"/>
+    <div className="mt-8"><p className="eyebrow">Teacher home</p><h1 className="mt-2 text-4xl font-bold">Your groups</h1><p className="mt-2 max-w-3xl text-slate-600">Choose a group, check who needs help and download reports from the group page.</p></div>
+    <section className={`card mt-8 ${teacherNextAction.kind === "attention" ? "border-amber-200 bg-amber-50" : "border-teal-200 bg-teal-50"}`} aria-labelledby="teacher-next-action-title">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-3xl"><p className="eyebrow">{teacherNextAction.eyebrow}</p><h2 className="mt-2 text-3xl font-bold" id="teacher-next-action-title">{teacherNextAction.title}</h2><p className="mt-3 leading-7 text-slate-700">{teacherNextAction.detail}</p></div>
+        {teacherNextAction.meta && <span className="rounded-full bg-white px-3 py-2 text-sm font-bold text-slate-900">{teacherNextAction.meta}</span>}
+      </div>
+      <Link className="button mt-6 min-w-40 text-center" href={teacherNextAction.href}>{teacherNextAction.label} →</Link>
+      <p className="mt-3 text-xs text-slate-600">The portal handles learning routes automatically. Act only when a student needs help.</p>
+    </section>
+    <section className="card mt-6" id="groups" aria-labelledby="groups-title">
+      <p className="eyebrow">My groups</p><h2 className="mt-2 text-2xl font-bold" id="groups-title">Choose a group</h2><p className="mt-2 text-sm text-slate-600">Each group contains its students, current progress and downloadable reports.</p>
+      <div className="mt-6 grid gap-3">{classes?.length ? classes.map(item => <TeacherGroupCard
+        id={item.id}
+        invitationReady={readinessByClass.get(item.id)?.ready === true}
+        key={item.id}
+        name={item.name}
+        schedule={formatWeeklyLearningDays(item.weekly_learning_days, item.weekly_learning_day)}
+        studentCount={item.enrolments?.[0]?.count ?? 0}
+        unitTitles={(item.class_units ?? []).filter(unit => unit.active && !unit.archived_at)
+          .map(unit => related(unit.units)?.title).filter((title): title is string => Boolean(title))}
+      />) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">No group has been assigned to you yet. There is nothing for you to configure.</p>}</div>
+    </section>
+    <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Teacher overview">
+      <Metric label="Groups" value={String(classes?.length ?? 0)}/>
+      <Metric label="Students" value={String(studentIds.size)}/>
+      <Metric label="Need attention" value={String(needAttention)}/>
+      <Metric label="Ready for students" value={String(readyForStudents)}/>
+    </section>
+    {studentIds.size > 0 && <TeacherPriorityList items={attention.map(item => ({
+      classId: item.classId,
+      className: item.className,
+      learnerId: item.learner_id,
+      learnerName: item.display_name,
+      status: item.attention_status,
+      reason: item.attention_reason,
+    }))}/>}
+  </main>;
+}
+
+async function AdministratorDashboard({role,filters }: {role:"administrator";filters:TeacherFilters }) {
   const supabase = await createClient();
   const now=await currentTimestamp();
   const classesQuery=supabase.from("classes").select("id,name,course_id,academic_year_id,academic_period_id,active_unit_id,weekly_learning_day,weekly_learning_days,published,enrolments(count),class_enrolments:enrolments(student_id),student_invitations(status),courses(title),class_units(unit_id,active,archived_at,units(code,title,status,archived_at))").is("archived_at", null);

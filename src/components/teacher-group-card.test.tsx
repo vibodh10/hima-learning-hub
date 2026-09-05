@@ -7,7 +7,7 @@ const base = {
   name: "Q0002098 · DG Diploma Y2 · Tue/Fri",
   studentCount: 0,
   schedule: "Tuesday / Friday",
-  unitTitles: ["Programming"],
+  unitTitles: ["programming"],
 };
 
 describe("teacher group card", () => {
