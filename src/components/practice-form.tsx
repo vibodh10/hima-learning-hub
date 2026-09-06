@@ -19,15 +19,37 @@ export function PracticeForm({ activityId, questions, assessmentKind }: { activi
   const [revealedHints, setRevealedHints] = useState<Set<string>>(() => new Set());
   const [startedAt]=useState(()=>Date.now());
   const secondsRef=useRef<HTMLInputElement>(null);
+  const formRef=useRef<HTMLFormElement>(null);
+  const [step,setStep]=useState(0);
+  const [stepMessage,setStepMessage]=useState("");
+  const finalStep=questions.length+1;
+
+  function continueFromQuestion(question:PracticeQuestion){
+    const values=new FormData(formRef.current??undefined).getAll(`q_${question.id}`);
+    if(!values.some(value=>String(value).trim())){
+      setStepMessage("Choose or write an answer before continuing.");
+      return;
+    }
+    setStepMessage("");
+    setStep(current=>current+1);
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function moveTo(nextStep:number){
+    setStepMessage("");
+    setStep(nextStep);
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
 
   if (state.result) return <Result result={state.result} />;
 
-  return <form action={action} className="grid gap-6" onSubmit={()=>{if(secondsRef.current)secondsRef.current.value=String(Math.max(1,Math.round((Date.now()-startedAt)/1000)));}}>
+  return <form ref={formRef} action={action} className="mx-auto grid max-w-3xl gap-6" onSubmit={()=>{if(secondsRef.current)secondsRef.current.value=String(Math.max(1,Math.round((Date.now()-startedAt)/1000)));}}>
     <input type="hidden" name="activityId" value={activityId}/>
     <input type="hidden" name="hintsUsed" value={revealedHints.size}/>
     <input ref={secondsRef} type="hidden" name="activeSeconds" defaultValue="1"/>
-    <section className="card bg-slate-50"><h2 className="text-lg font-bold">Before you begin</h2><label className="mt-3 grid gap-2 text-sm font-semibold">How confident do you feel about this topic?<select className="input" name="confidenceBefore" defaultValue="3">{[1,2,3,4,5].map(value=><option value={value} key={value}>{value} · {value===1?"not yet confident":value===5?"very confident":"developing confidence"}</option>)}</select></label>{assessmentKind&&<div className="mt-4 grid gap-3"><label className="grid gap-1 text-sm font-semibold">Relevant prior experience<textarea className="input min-h-16" name="priorExperience" placeholder="What have you studied or tried before?"/></label><label className="grid gap-1 text-sm font-semibold">Support that helps you learn<textarea className="input min-h-16" name="supportNeeds"/></label><label className="grid gap-1 text-sm font-semibold">Your course or career aspirations<textarea className="input min-h-16" name="aspirations"/></label></div>} {!assessmentKind&&<><input type="hidden" name="priorExperience" value=""/><input type="hidden" name="supportNeeds" value=""/><input type="hidden" name="aspirations" value=""/></>}</section>
-    {questions.map((question, index) => <fieldset key={question.id} className="card">
+    <div className="flex items-center gap-4 text-sm font-bold" aria-label={`Step ${step+1} of ${finalStep+1}`}><span>{step+1} of {finalStep+1}</span><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200"><div className="h-full bg-teal-600" style={{width:`${((step+1)/(finalStep+1))*100}%`}}/></div></div>
+    <section className="card bg-slate-50" hidden={step!==0}><p className="eyebrow">Before you begin</p><h2 className="mt-2 text-2xl font-bold">How confident do you feel?</h2><label className="mt-5 grid gap-2 text-sm font-semibold">Choose one<select className="input" name="confidenceBefore" defaultValue="3">{[1,2,3,4,5].map(value=><option value={value} key={value}>{value} · {value===1?"not yet confident":value===5?"very confident":"developing confidence"}</option>)}</select></label>{assessmentKind&&<details className="mt-5 rounded-xl border border-slate-200 bg-white p-4"><summary className="cursor-pointer font-semibold">Add optional information about me</summary><div className="mt-4 grid gap-3"><label className="grid gap-1 text-sm font-semibold">Relevant prior experience<textarea className="input min-h-16" name="priorExperience" placeholder="What have you studied or tried before?"/></label><label className="grid gap-1 text-sm font-semibold">Support that helps you learn<textarea className="input min-h-16" name="supportNeeds"/></label><label className="grid gap-1 text-sm font-semibold">Your course or career aspirations<textarea className="input min-h-16" name="aspirations"/></label></div></details>} {!assessmentKind&&<><input type="hidden" name="priorExperience" value=""/><input type="hidden" name="supportNeeds" value=""/><input type="hidden" name="aspirations" value=""/></>}<button className="button mt-5" type="button" onClick={()=>moveTo(1)}>Continue to question 1 →</button></section>
+    {questions.map((question, index) => <fieldset key={question.id} className="card" hidden={step!==index+1}>
       <legend className="px-2 font-bold">
         <span className="text-teal-700">Question {index + 1}</span> · {question.marks} {Number(question.marks) === 1 ? "mark" : "marks"}
       </legend>
@@ -39,10 +61,10 @@ export function PracticeForm({ activityId, questions, assessmentKind }: { activi
           ? <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-950"><strong>Hint:</strong> {question.hint}</p>
           : <button className="link text-sm" type="button" onClick={() => setRevealedHints(current => new Set(current).add(question.id))}>Show a hint</button>}
       </div>}
+      {stepMessage&&step===index+1&&<p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-800" role="alert">{stepMessage}</p>}
+      <div className="mt-6 flex flex-wrap gap-3"><button className="button" type="button" onClick={()=>continueFromQuestion(question)}>{index===questions.length-1?"Continue to finish":"Save answer and continue"} →</button><button className="button-secondary" type="button" onClick={()=>moveTo(index)}>Back</button></div>
     </fieldset>)}
-    <section className="card bg-slate-50"><label className="grid gap-2 text-sm font-semibold">After completing the questions, how confident do you feel?<select className="input" name="confidenceAfter" defaultValue="3">{[1,2,3,4,5].map(value=><option value={value} key={value}>{value} · {value===1?"not yet confident":value===5?"very confident":"developing confidence"}</option>)}</select></label></section>
-    {state.message && <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">{state.message}</p>}
-    <button className="button" disabled={pending}>{pending ? "Marking and saving…" : "Submit all answers"}</button>
+    <section className="card bg-slate-50" hidden={step!==finalStep}><p className="eyebrow">Last step</p><h2 className="mt-2 text-2xl font-bold">How confident do you feel now?</h2><label className="mt-5 grid gap-2 text-sm font-semibold">Choose one<select className="input" name="confidenceAfter" defaultValue="3">{[1,2,3,4,5].map(value=><option value={value} key={value}>{value} · {value===1?"not yet confident":value===5?"very confident":"developing confidence"}</option>)}</select></label>{state.message && <p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-red-800">{state.message}</p>}<div className="mt-6 flex flex-wrap gap-3"><button className="button" disabled={pending}>{pending ? "Marking and saving…" : "Finish and see my result"}</button><button className="button-secondary" type="button" onClick={()=>moveTo(finalStep-1)}>Back</button></div></section>
   </form>;
 }
 

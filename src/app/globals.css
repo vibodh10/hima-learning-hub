@@ -48,6 +48,8 @@ a,button,input { outline-offset:3px; }
 .site-header .site-nav { border-color:rgb(255 255 255 / 14%); }
 .site-header .site-nav a { color:#f8eefb; }
 .site-header .site-nav a:hover { color:#fff; text-decoration:underline; text-decoration-color:#f4a8d5; text-underline-offset:4px; }
+.site-header .site-nav .student-more-menu a { color:var(--primary-strong); }
+.site-header .site-nav .student-more-menu a:hover { color:var(--primary); text-decoration-color:var(--accent); }
 .role-chip { background:#fff; color:var(--primary); }
 .brand-band { background:linear-gradient(120deg,var(--primary-strong) 0%,var(--primary) 58%,#5b2b87 100%); color:#fff; }
 .brand-band .eyebrow,.brand-band .feature-number { color:#f4a8d5; }
@@ -56,6 +58,29 @@ a,button,input { outline-offset:3px; }
 .brand-splash { background:#e8e2f5; }
 .preview-progress { background:#f0ebf8; }
 .preview-progress-bar { background:linear-gradient(90deg,var(--primary),var(--accent)); }
+
+/* A deliberately low-complexity public entry point: one question, then clear choices. */
+.simple-portal { background:#f1f3f5; }
+.simple-portal-header { background:var(--primary); border-bottom:4px solid var(--accent); }
+.simple-portal-width { width:min(760px,calc(100% - 2rem)); margin-inline:auto; }
+.choice-list { display:grid; gap:.5rem; }
+.choice-link {
+  display:flex;
+  min-height:5.5rem;
+  align-items:center;
+  justify-content:space-between;
+  gap:1.5rem;
+  border:2px solid var(--primary);
+  border-radius:.25rem;
+  background:#fff;
+  padding:1rem 1.25rem;
+  color:var(--primary-strong);
+  text-decoration:none;
+  box-shadow:0 3px 0 rgb(36 24 79 / 16%);
+  transition:background-color .15s ease,color .15s ease,transform .15s ease;
+}
+.choice-link:hover { background:var(--primary); color:#fff; transform:translateY(-1px); }
+.choice-arrow { flex:none; font-size:2.25rem; font-weight:700; line-height:1; }
 
 /* Replace the old teal accent family without rewriting every established view. */
 .text-teal-700,.text-teal-800,.text-teal-900 { color:var(--primary-strong)!important; }

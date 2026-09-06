@@ -1,11 +1,13 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { TeacherLearnerSummary } from "./teacher-learner-summary";
 
 afterEach(cleanup);
 
 describe("teacher learner summary", () => {
-  it("keeps the teacher page focused on status and reports", () => {
+  it("keeps the teacher page focused on one action and hides secondary reports", async () => {
+    const user=userEvent.setup();
     render(<TeacherLearnerSummary
       attentionReason="Teaching Week 2 required work is incomplete."
       attentionStatus="action_required"
@@ -30,6 +32,9 @@ describe("teacher learner summary", () => {
       "href",
       "/api/reports/learners/learner-1?classId=class-1&from=2026-08-31&to=2026-09-06",
     );
+    expect(screen.getByRole("link", { name: "Open this week's evidence →" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Quarterly report" })).not.toBeVisible();
+    await user.click(screen.getByText("Download another report"));
     expect(screen.getByRole("link", { name: "Quarterly report" })).toBeVisible();
     expect(screen.queryByText("Teacher tools")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();

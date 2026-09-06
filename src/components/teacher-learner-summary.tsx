@@ -46,8 +46,8 @@ export function TeacherLearnerSummary({
 
     <header className="mt-8">
       <p className="eyebrow">Student progress</p>
-      <h1 className="mt-2 text-4xl font-bold">{learnerName}</h1>
-      <p className="mt-2 text-slate-600">{courseTitle}</p>
+      <h1 className="mt-2 text-4xl font-bold">Does {learnerName} need me?</h1>
+      <p className="mt-2 text-slate-600">{courseTitle} · {groupName}</p>
     </header>
 
     {classChoices.length > 1 && <nav aria-label="Choose learner group" className="mt-6 flex flex-wrap gap-2">
@@ -58,16 +58,17 @@ export function TeacherLearnerSummary({
       <p className="eyebrow">{needsAttention ? "Needs attention" : "On track"}</p>
       <h2 className="mt-2 text-2xl font-bold">{needsAttention ? "This student needs help" : "No teacher action is needed"}</h2>
       <p className="mt-3 max-w-3xl text-slate-700">{attentionReason}</p>
+      {needsAttention&&<a className="button mt-6" href={weeklyHref}>Open this week&apos;s evidence →</a>}
     </section>
 
-    <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Student summary">
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Show the student summary</summary><section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Student summary">
       <Fact label="Current unit" value={unitTitle}/>
       <Fact label="Teaching week" value={currentWeek ? `Week ${currentWeek}` : "Not started"}/>
       <Fact label="Starting point" value={startingPoint}/>
       <Fact label="Latest weekly test" value={latestTest}/>
-    </section>
+    </section></details>
 
-    <section className="card mt-6">
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Download another report</summary><section className="mt-5">
       <p className="eyebrow">Reports</p>
       <h2 className="mt-2 text-2xl font-bold">Download the evidence</h2>
       <p className="mt-2 max-w-3xl text-slate-600">Each report uses the work already stored by the portal, including starting point, tasks, feedback, improvements and targets. Nothing is invented.</p>
@@ -77,9 +78,9 @@ export function TeacherLearnerSummary({
         <a className="button-secondary" href={learnerHref}>Full report</a>
       </div>
       <p className="mt-4 text-sm text-slate-600">Current targets: {targetSummary}</p>
-    </section>
+    </section></details>
 
-    <section className="card mt-6">
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">How the portal handles routine work</summary><section className="mt-5">
       <p className="eyebrow">Automatic teacher assistant</p>
       <h2 className="mt-2 text-2xl font-bold">What happens without teacher admin</h2>
       <ol className="mt-5 grid gap-3 text-slate-700 sm:grid-cols-2">
@@ -88,7 +89,7 @@ export function TeacherLearnerSummary({
         <li className="rounded-xl bg-slate-50 p-4"><strong>3. Targeted redo</strong><p className="mt-1 text-sm">Only weak areas return for more practice.</p></li>
         <li className="rounded-xl bg-slate-50 p-4"><strong>4. Report ready</strong><p className="mt-1 text-sm">Feedback, improvement and targets are assembled from saved evidence.</p></li>
       </ol>
-    </section>
+    </section></details>
   </main>;
 }
 

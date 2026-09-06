@@ -1,38 +1,65 @@
 import Link from "next/link";
 import { Mark } from "@/components/icons";
 
-const features = [
-  ["01", "Know the starting point", "Topic-level diagnostics show what learners already know and where practice should begin."],
-  ["02", "Practise with purpose", "Short lessons, worked examples and immediate feedback make every attempt useful."],
-  ["03", "See the learning journey", "Teachers can follow factual evidence from starting point through practice, review and next target."],
-];
+const choices = [
+  {
+    href: "/login",
+    title: "Sign in",
+    description: "For students, teachers and administrators",
+  },
+  {
+    href: "/access",
+    title: "I need an account",
+    description: "Find out how students and staff get access",
+  },
+  {
+    href: "/privacy",
+    title: "Privacy and your information",
+    description: "See what the portal records and who can see it",
+  },
+] as const;
 
 export default function Home() {
-  return <main className="overflow-x-hidden">
-    <nav className="shell flex items-center justify-between py-6" aria-label="Main navigation">
-      <Link href="/" className="flex min-h-11 items-center gap-3 font-bold text-slate-950"><Mark>S</Mark><span className="sm:hidden">SCCB Hub</span><span className="hidden sm:inline">SCCB <span className="brand-highlight">Digital Learning Hub</span></span></Link>
-      <div className="flex items-center gap-3"><Link href="/privacy" className="nav-link inline-flex min-h-11 items-center">Privacy</Link><Link href="/login" className="button button-small">Sign in</Link></div>
-    </nav>
-    <section className="shell grid min-h-[72vh] items-center gap-12 py-16 lg:grid-cols-[1.15fr_.85fr]">
-      <div>
-        <p className="eyebrow">Level 3 Computing & Digital</p>
-        <h1 className="mt-5 max-w-3xl text-5xl font-bold leading-[1.04] tracking-[-.04em] text-slate-950 sm:text-7xl">Every learner&apos;s next step, made <span className="highlight-word">clear.</span></h1>
-        <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-600">Calm, focused learning practice for classwork, homework and revision, with progress grounded in each learner’s starting point.</p>
-        <div className="mt-9"><Link href="/login" className="button">Sign in <span aria-hidden>→</span></Link></div>
-        <p className="mt-4 text-sm text-slate-500">Your account opens the correct Student, Teacher or Administrator dashboard automatically.</p>
-        <p className="mt-5 text-sm text-slate-500">Practice and progress only. Formal qualification assignments stay outside SCCB Digital Learning Hub.</p>
-      </div>
-      <div className="relative">
-        <div className="brand-splash absolute -inset-5 -rotate-3 rounded-[2rem]" aria-hidden />
-        <div className="card lesson-preview relative overflow-hidden p-0">
-          <div className="border-b border-slate-100 p-6"><p className="text-sm text-slate-500">Example student view</p><h2 className="mt-1 text-xl font-bold">Network security fundamentals</h2></div>
-          <div className="grid gap-4 p-6">
-            <div className="preview-progress rounded-2xl p-5"><div className="flex items-center justify-between"><span className="font-semibold">Topic progress</span><strong className="text-2xl text-teal-800">72%</strong></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white"><div className="preview-progress-bar h-full w-[72%] rounded-full" /></div></div>
-            {["Remember - 5 min","Learn and worked example - 12 min","Core practice - 10 min"].map((item,index)=><div key={item} className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"><span className={`grid size-9 place-items-center rounded-full font-bold ${index===2?"bg-fuchsia-100 text-fuchsia-900":"bg-teal-700 text-white"}`}>{index===2?"→":"✓"}</span><span className="font-medium">{item}</span></div>)}
-          </div>
+  return (
+    <main className="simple-portal min-h-screen">
+      <header className="simple-portal-header">
+        <div className="simple-portal-width flex min-h-20 items-center">
+          <Link href="/" className="flex min-h-11 items-center gap-3 font-bold text-white">
+            <Mark>S</Mark>
+            <span>SCCB Digital Learning Hub</span>
+          </Link>
         </div>
-      </div>
-    </section>
-    <section className="brand-band py-20"><div className="shell"><p className="eyebrow">Designed around good teaching</p><h2 className="mt-4 max-w-2xl text-3xl font-bold sm:text-4xl">A focused system for purposeful practice.</h2><div className="mt-10 grid gap-8 md:grid-cols-3">{features.map(([n,t,d])=><article key={n} className="border-t border-white/25 pt-6"><span className="feature-number text-sm font-bold">{n}</span><h3 className="mt-4 text-xl font-semibold">{t}</h3><p className="feature-copy mt-3 leading-7">{d}</p></article>)}</div></div></section>
-  </main>;
+      </header>
+
+      <section className="simple-portal-width py-12 sm:py-16" aria-labelledby="portal-question">
+        <p className="text-lg text-slate-600">SCCB Digital Learning Hub</p>
+        <h1 id="portal-question" className="mt-2 max-w-2xl text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
+          What do you want to do?
+        </h1>
+        <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-700">
+          Choose one option. We will take you to the right place.
+        </p>
+
+        <nav className="choice-list mt-9" aria-label="Portal choices">
+          {choices.map((choice) => (
+            <Link className="choice-link" href={choice.href} key={choice.href}>
+              <span>
+                <span className="block text-xl font-bold">{choice.title}</span>
+                <span className="mt-1 block text-base font-normal leading-6">{choice.description}</span>
+              </span>
+              <span className="choice-arrow" aria-hidden>›</span>
+            </Link>
+          ))}
+        </nav>
+
+        <p className="mt-10 max-w-2xl border-l-4 border-slate-300 pl-4 text-sm leading-6 text-slate-600">
+          This portal is for learning, practice and progress. Formal qualification assignments are completed outside the Digital Learning Hub.
+        </p>
+      </section>
+
+      <footer className="simple-portal-width border-t border-slate-300 py-7 text-sm text-slate-600">
+        <Link className="link" href="/privacy">Privacy</Link>
+      </footer>
+    </main>
+  );
 }

@@ -49,9 +49,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ lesso
       <p className="eyebrow">{capitaliseFirst(topic?.title ?? "Learning topic")} · {formatStage(data.learning_stage)}</p>
       <h1 className="mt-3 text-4xl font-bold">{capitaliseFirst(data.title)}</h1>
       <p className="mt-3 leading-7 text-slate-600">{data.instructions}</p>
-      <div className="mt-5 flex flex-wrap gap-3 text-sm">
-        <Pill>{questions.length} questions</Pill><Pill>About {data.estimated_minutes} minutes</Pill><Pill>{data.pathway} pathway</Pill><Pill>Up to {data.max_attempts} attempts</Pill>
-      </div>
+      {actor.role==="student"?<details className="mt-5 rounded-xl border border-slate-200 p-4 text-sm"><summary className="cursor-pointer font-semibold">About this activity · {questions.length} questions</summary><div className="mt-4 flex flex-wrap gap-3"><Pill>About {data.estimated_minutes} minutes</Pill><Pill>{data.pathway} pathway</Pill><Pill>Up to {data.max_attempts} attempts</Pill></div></details>:<div className="mt-5 flex flex-wrap gap-3 text-sm"><Pill>{questions.length} questions</Pill><Pill>About {data.estimated_minutes} minutes</Pill><Pill>{data.pathway} pathway</Pill><Pill>Up to {data.max_attempts} attempts</Pill></div>}
       {data.learning_stage === "mastery_check" && data.assessment_kind!=="unit_starting_point"&&<p className="mt-5 rounded-xl bg-amber-50 p-4 text-amber-950"><strong>Independent check with no hints.</strong> This confirms whether you are ready to move ahead.</p>}
       {hintsAvailable && <p className="mt-5 rounded-xl bg-teal-50 p-4 text-teal-950">Hints are available when needed. Using a hint supports learning and is recorded so mastery reflects independent understanding.</p>}
       {actor.role==="student"&&activityState&&<p className={`mt-5 rounded-xl p-4 ${canAttempt?"bg-teal-50 text-teal-950":"bg-slate-100 text-slate-700"}`}><strong>{activityState.state}</strong>: {activityState.status_detail}</p>}

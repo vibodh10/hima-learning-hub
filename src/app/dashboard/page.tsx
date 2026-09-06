@@ -325,17 +325,11 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
 
   return <main className="shell py-10">
     {unseenBadges.length>0&&<NewBadgeNotifications awards={unseenBadges}/>}
-    <RoleBanner role="student" />
     <div className="mt-8">
-      <p className="eyebrow">Student dashboard</p>
-      <h1 className="mt-2 text-4xl font-bold">Good to see you, {name.split(" ")[0]}.</h1>
-      <p className="mt-2 text-slate-600">{capitaliseFirst(related(course.courses)?.title ?? "Your course")} is ready. Start with the next action shown below.</p>
+      <p className="eyebrow">Home</p>
+      <h1 className="mt-2 text-4xl font-bold">Hi {name.split(" ")[0]}. What do I need to do?</h1>
+      <p className="mt-3 max-w-2xl text-lg text-slate-600">Start with the one task below. Everything else can wait.</p>
     </div>
-
-    <StudentEnrolmentSummary
-      groupName={course.name}
-      courseTitle={capitaliseFirst(related(course.courses)?.title ?? "Your assigned course")}
-    />
 
     {studentNextAction?<section className={`card mt-8 ${urgentNextAction?"border-red-300 bg-red-50":"border-teal-200 bg-teal-50"}`} aria-labelledby="continue-learning-title" role={urgentNextAction?"alert":undefined}>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -345,6 +339,8 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       <Link className="button mt-6 min-w-40 text-center" href={studentNextAction.href}>{studentNextAction.label} →</Link>
       <p className="mt-3 text-xs text-slate-600">Your completed work and saved learning position are stored with your account.</p>
     </section>:<section className="card mt-8 border-blue-200 bg-blue-50" aria-labelledby="learning-preparation-title"><p className="eyebrow">Next step</p><h2 className="mt-2 text-2xl font-bold" id="learning-preparation-title">Your teacher is preparing your learning</h2><p className="mt-3 text-slate-700">Your account and course are active, but no starting point, allocated activity, active journey or published lesson is available yet.</p><Link className="link mt-4 inline-block" href="/curriculum">View my assigned units →</Link></section>}
+
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">I want to do something else</summary><p className="mt-2 text-sm text-slate-600">Choose one area. Your saved work will not be lost.</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><Link className="choice-link" href="/curriculum"><span><strong className="block">My learning</strong><span className="mt-1 block text-sm">Open my assigned unit or revise a topic</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link><Link className="choice-link" href="/progress"><span><strong className="block">My progress</strong><span className="mt-1 block text-sm">See what is going well and what to practise</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link><Link className="choice-link" href="/portfolio"><span><strong className="block">My work</strong><span className="mt-1 block text-sm">See saved worksheets and evidence</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link><Link className="choice-link" href="/help"><span><strong className="block">I need help</strong><span className="mt-1 block text-sm">Show me how the portal works</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link></div></details>
 
     {journeyPosition&&<StudentLearningPlan
       unitTitle={activeUnit?`Unit ${activeUnit.code}: ${capitaliseFirst(activeUnit.title)}`:capitaliseFirst(journeyPosition.journey_title)}
@@ -356,9 +352,9 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       details={<>{activeUnitCode&&<ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Formal learning checkpoints">{milestoneStages.map(item=>{const evidence=journeyWorksheets?.find(row=>row.unit_code===activeUnitCode&&row.evidence_stage===item.stage);return <li className={`rounded-xl border p-4 ${evidence?"border-teal-300 bg-teal-50":"border-slate-200 bg-white"}`} key={item.stage}><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Teaching Week {item.week}</p><p className="mt-2 font-bold">{item.label}</p><p className="mt-2 text-sm text-slate-600">{evidence?`Evidence preserved · ${new Date(evidence.submitted_at).toLocaleDateString("en-GB")}`:"Not yet recorded"}</p></li>})}</ol>}<div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><JourneyFact label="Unit starting point" value={unitStartingPoint?.percentage==null?"Not yet recorded":`${Math.round(Number(unitStartingPoint.percentage))}% · ${new Date(unitStartingPoint.completed_at).toLocaleDateString("en-GB")}`}/><JourneyFact label="Current topic position" value={currentCurriculumProgress?.practice_score==null?"Not yet recorded":`${currentCurriculumProgress.practice_score}% practice · ${currentCurriculumProgress.independent_attempts} independent attempt${Number(currentCurriculumProgress.independent_attempts)===1?"":"s"}`}/><JourneyFact label="Verified skill comparison" value={comparisons?.[0]?.improvement_points==null?"Not yet comparable":`${Number(comparisons[0].improvement_points)>=0?"+":""}${comparisons[0].improvement_points} percentage points`}/><JourneyFact label="Achievement Points" value={`${achievement.ap_total} AP`}/><JourneyFact label="Achievement level" value={achievement.current_level_title??"Building toward Bronze"}/><JourneyFact label="Next achievement milestone" value={achievement.next_level_title?`${achievement.points_to_next} AP to ${achievement.next_level_title}`:"Highest configured level reached"}/><JourneyFact label="Upcoming progress check" value={upcomingProgressCheck?`${journeyMilestoneLabel(upcomingProgressCheck.milestone)} · Teaching Week ${upcomingProgressCheck.week}`:"No further checkpoint in this journey"}/><JourneyFact label="Missed learning" value={catchUps.filter(item=>item.status!=="completed").length?`${catchUps.filter(item=>item.status!=="completed").length} catch-up item${catchUps.filter(item=>item.status!=="completed").length===1?"":"s"}`:"No catch-up recorded"}/></div>{achievement.certificate_status&&<p className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-950"><strong>Certificate eligible:</strong> awaiting authorised staff review.</p>}</>}
     />}
 
-    {Boolean(recentFeedback?.length)&&<section className="card mt-6" aria-labelledby="recent-feedback-title"><p className="eyebrow">Feedback</p><h2 className="mt-2 text-2xl font-bold" id="recent-feedback-title">What to improve next</h2><div className="mt-5 grid gap-3">{recentFeedback?.map(review=>{const answer=related(review.attempt_answers);const attempt=related(answer?.attempts);return <article className="rounded-xl border border-slate-200 p-4" key={review.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{capitaliseFirst(related(attempt?.activities)?.title??"Reviewed learning")}</h3><p className="mt-1 text-xs text-slate-500">Checked {review.reviewed_at?new Date(review.reviewed_at).toLocaleDateString("en-GB"):"date not recorded"}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold capitalize text-blue-900">{review.status.replaceAll("_"," ")}</span></div><p className="mt-3 text-sm leading-6 text-slate-700">{review.feedback??answer?.feedback??"No feedback text was recorded."}</p></article>})}</div></section>}
+    {Boolean(recentFeedback?.length)&&<details className="card mt-6" aria-labelledby="recent-feedback-title"><summary className="cursor-pointer list-none"><p className="eyebrow">Teacher feedback</p><h2 className="mt-2 text-xl font-bold" id="recent-feedback-title">Open my latest feedback ↓</h2></summary><div className="mt-5 grid gap-3">{recentFeedback?.map(review=>{const answer=related(review.attempt_answers);const attempt=related(answer?.attempts);return <article className="rounded-xl border border-slate-200 p-4" key={review.id}><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-semibold">{capitaliseFirst(related(attempt?.activities)?.title??"Reviewed learning")}</h3><p className="mt-1 text-xs text-slate-500">Checked {review.reviewed_at?new Date(review.reviewed_at).toLocaleDateString("en-GB"):"date not recorded"}</p></div><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold capitalize text-blue-900">{review.status.replaceAll("_"," ")}</span></div><p className="mt-3 text-sm leading-6 text-slate-700">{review.feedback??answer?.feedback??"No feedback text was recorded."}</p></article>})}</div></details>}
 
-    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">My progress and achievements</summary><p className="mt-2 text-sm text-slate-600">Optional detail. Your next learning action always remains at the top of this page.</p><div className="mt-5">
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">All my course details and achievements</summary><p className="mt-2 text-sm text-slate-600">Optional information. You do not need this to complete your next task.</p><StudentEnrolmentSummary groupName={course.name} courseTitle={capitaliseFirst(related(course.courses)?.title??"Your assigned course")}/><div className="mt-5">
 
     <section className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
       <Metric label="Current pathway" value={progress?.[0]?.current_pathway ?? mastery?.[0]?.current_pathway ?? "Starting point"} description="The current difficulty level selected from your learning evidence."/>
@@ -488,8 +484,7 @@ async function TeacherHomeDashboard() {
   ).length;
 
   return <main className="shell py-10">
-    <RoleBanner role="teacher"/>
-    <div className="mt-8"><p className="eyebrow">Teacher home</p><h1 className="mt-2 text-4xl font-bold">Your groups</h1><p className="mt-2 max-w-3xl text-slate-600">Choose a group, check who needs help and download reports from the group page.</p></div>
+    <div><p className="eyebrow">Teacher home</p><h1 className="mt-2 text-4xl font-bold">What needs my attention?</h1><p className="mt-3 max-w-3xl text-lg text-slate-600">Start with the one action below. The portal keeps routine progress and evidence in the background.</p></div>
     <section className={`card mt-8 ${teacherNextAction.kind === "attention" ? "border-amber-200 bg-amber-50" : "border-teal-200 bg-teal-50"}`} aria-labelledby="teacher-next-action-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-3xl"><p className="eyebrow">{teacherNextAction.eyebrow}</p><h2 className="mt-2 text-3xl font-bold" id="teacher-next-action-title">{teacherNextAction.title}</h2><p className="mt-3 leading-7 text-slate-700">{teacherNextAction.detail}</p></div>
@@ -498,8 +493,7 @@ async function TeacherHomeDashboard() {
       <Link className="button mt-6 min-w-40 text-center" href={teacherNextAction.href}>{teacherNextAction.label} →</Link>
       <p className="mt-3 text-xs text-slate-600">The portal handles learning routes automatically. Act only when a student needs help.</p>
     </section>
-    <section className="card mt-6" id="groups" aria-labelledby="groups-title">
-      <p className="eyebrow">My groups</p><h2 className="mt-2 text-2xl font-bold" id="groups-title">Choose a group</h2><p className="mt-2 text-sm text-slate-600">Each group contains its students, current progress and downloadable reports.</p>
+    <details className="card mt-6" id="groups" open={!classes?.length}><summary className="cursor-pointer text-lg font-bold" id="groups-title">Open a different group</summary><p className="mt-2 text-sm text-slate-600">Each group contains its students, current progress and downloadable reports.</p>
       <div className="mt-6 grid gap-3">{classes?.length ? classes.map(item => <TeacherGroupCard
         id={item.id}
         invitationReady={readinessByClass.get(item.id)?.ready === true}
@@ -510,9 +504,9 @@ async function TeacherHomeDashboard() {
         unitTitles={(item.class_units ?? []).filter(unit => unit.active && !unit.archived_at)
           .map(unit => related(unit.units)?.title).filter((title): title is string => Boolean(title))}
       />) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">You do not have a group yet. Create one below, then choose its units and teaching days.</p>}</div>
-    </section>
+    </details>
     <CreateClassForm courses={courses??[]} years={years??[]}/>
-    <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Teacher overview">
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">See all groups and teaching information</summary><section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Teacher overview">
       <Metric label="Groups" value={String(classes?.length ?? 0)}/>
       <Metric label="Students" value={String(studentIds.size)}/>
       <Metric label="Need attention" value={String(needAttention)}/>
@@ -525,7 +519,7 @@ async function TeacherHomeDashboard() {
       learnerName: item.display_name,
       status: item.attention_status,
       reason: item.attention_reason,
-    }))}/>}
+    }))}/>}</details>
   </main>;
 }
 

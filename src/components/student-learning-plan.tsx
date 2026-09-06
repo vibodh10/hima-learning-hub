@@ -32,15 +32,15 @@ export function StudentLearningPlan({
       ? "bg-teal-100 text-teal-900"
       : "bg-emerald-100 text-emerald-900";
 
-  return <section className="card mt-8" aria-labelledby="student-learning-plan-title">
-    <div className="flex flex-wrap items-start justify-between gap-4">
+  return <details className="card mt-6" aria-labelledby="student-learning-plan-title">
+    <summary className="cursor-pointer list-none"><div className="flex flex-wrap items-start justify-between gap-4">
       <div>
-        <p className="eyebrow">Your learning plan</p>
+        <p className="eyebrow">My course plan</p>
         <h2 className="mt-2 text-2xl font-bold" id="student-learning-plan-title">{unitTitle}</h2>
         <p className="mt-2 text-sm font-semibold text-teal-800">Teaching Week {teachingWeek} of {totalTeachingWeeks}</p>
       </div>
       <span className={`rounded-full px-3 py-2 text-sm font-bold ${statusStyle}`}>{statusLabel}</span>
-    </div>
+    </div><p className="mt-4 text-sm font-semibold text-teal-800">Open my course plan and dates ↓</p></summary>
     <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100" aria-label={`${progress}% of the teaching journey reached`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
       <div className="h-full rounded-full bg-teal-600" style={{ width: `${progress}%` }}/>
     </div>
@@ -57,6 +57,6 @@ export function StudentLearningPlan({
       {currentTopic&&<p className="mt-4 text-sm leading-6 text-slate-600">{currentTopic.focus}</p>}
       {details}
     </details>
-    <p className="mt-4 text-xs text-slate-500">Use the Continue button above. The portal keeps your place automatically.</p>
-  </section>;
+    <p className="mt-4 text-xs text-slate-500">Use the main Continue button above. The portal keeps your place automatically.</p>
+  </details>;
 }

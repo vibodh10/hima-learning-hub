@@ -9,7 +9,6 @@ import { StudentInvitationForm } from "@/components/student-invitation-form";
 import { ClassRegistrationLinkPanel } from "@/components/class-registration-link-panel";
 import { InvitationLifecycleControls } from "@/components/invitation-lifecycle-controls";
 import { ClassOnboardingPanel } from "@/components/class-onboarding-panel";
-import { RoleBanner } from "@/components/role-banner";
 import { presentInvitationStatus } from "@/lib/invitation-status";
 import { unitByCode } from "@/lib/learning-catalog";
 import { projectClassCurriculumOverview, projectCurriculumPaperAssessments } from "@/lib/class-curriculum-overview";
@@ -175,17 +174,22 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const average = averageCurrentClassScore(projectedAttention.map(row => ({ currentScore: row.current_score })));
   const awaitingInvitationCount=invitations?.filter(invitation=>["pending","sent"].includes(invitation.status)).length??0;
   const activeRegistrationLink=registrationLinks?.[0];
+  const studentsNeedingAttention=projectedAttention.filter(row=>["intervention_required","action_required","catch_up_required"].includes(row.attention_status));
+  const firstStudentNeedingAttention=studentsNeedingAttention[0];
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
-    <RoleBanner role={actor.role}/>
-    <Link className="link mt-6 inline-block" href="/dashboard">← Teacher dashboard</Link>
-    <div className="mt-8 flex flex-wrap items-end justify-between gap-5"><div><p className="eyebrow">My group</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title}</p><p className="mt-1 text-sm text-slate-500">{formatWeeklyLearningDays(classData.weekly_learning_days,classData.weekly_learning_day)}</p></div><div className="flex flex-wrap items-center gap-3"><Link className="button" href={`/api/reports/classes/${id}`}>Download progress report</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Download spreadsheet</Link></div></div>
+    <Link className="link inline-block" href="/dashboard">← Teacher home</Link>
+    <div className="mt-8"><p className="eyebrow">My group</p><h1 className="mt-2 text-4xl font-bold">{classData.name}</h1><p className="mt-2 text-slate-600">{related(classData.courses)?.title} · {formatWeeklyLearningDays(classData.weekly_learning_days,classData.weekly_learning_day)}</p></div>
 
-    <section className="mt-8 grid gap-5 sm:grid-cols-3"><Metric label="Students" value={String(studentIds.length)}/><Metric label="Latest progress" value={average == null ? "Not available" : `${average}%`}/><Metric label="Need attention" value={String(projectedAttention.filter(row=>["intervention_required","action_required","catch_up_required"].includes(row.attention_status)).length)}/></section>
+    {studentIds.length>0&&<section className={`card mt-8 max-w-4xl ${firstStudentNeedingAttention?"border-amber-200 bg-amber-50":"border-emerald-200 bg-emerald-50"}`}><p className="eyebrow">What should I do now?</p>{firstStudentNeedingAttention?<><h2 className="mt-2 text-3xl font-bold">Review {firstStudentNeedingAttention.display_name}</h2><p className="mt-3 max-w-3xl leading-7 text-slate-700">{firstStudentNeedingAttention.attention_reason}</p><Link className="button mt-6" href={`/teacher/learners/${firstStudentNeedingAttention.learner_id}?classId=${id}`}>Open this student →</Link></>:<><h2 className="mt-2 text-3xl font-bold">No teacher action is needed</h2><p className="mt-3 text-slate-700">No student in this group currently has an intervention, action, or catch-up alert.</p></>}</section>}
 
-    {studentIds.length>0&&<section className="card mt-8 overflow-x-auto p-0"><div className="p-5"><p className="eyebrow">Students</p><h2 className="mt-2 text-2xl font-bold">Progress at a glance</h2><p className="mt-2 text-sm text-slate-600">Students needing help appear first. Open one student for their full evidence.</p></div><table className="w-full min-w-[720px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Student</th><th className="p-5">Latest progress</th><th className="p-5">Status</th><th className="p-5">Open</th></tr></thead>
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Show group totals</summary><section className="mt-5 grid gap-5 sm:grid-cols-3"><Metric label="Students" value={String(studentIds.length)}/><Metric label="Latest progress" value={average==null?"Not available":`${average}%`}/><Metric label="Need attention" value={String(studentsNeedingAttention.length)}/></section></details>
+
+    {studentIds.length>0&&<details className="card mt-6 overflow-x-auto p-0"><summary className="cursor-pointer p-5 text-lg font-bold">See all {studentIds.length} student{studentIds.length===1?"":"s"}</summary><p className="px-5 pb-5 text-sm text-slate-600">Students needing help appear first. Open one student for their full evidence.</p><table className="w-full min-w-[720px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Student</th><th className="p-5">Latest progress</th><th className="p-5">Status</th><th className="p-5">Open</th></tr></thead>
       <tbody>{projectedAttention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5"><strong>{row.current_score==null?"Not recorded":`${row.current_score}%`}</strong>{row.progress_points!=null&&<p className="mt-1 text-xs text-slate-500">{Number(row.progress_points)>=0?"+":""}{row.progress_points} percentage points</p>}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-md text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><Link className="button-secondary button-small" href={`/teacher/learners/${row.learner_id}?classId=${id}`}>View progress</Link></td></tr>)}</tbody>
-    </table></section>}
+    </table></details>}
+
+    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Download group reports</summary><p className="mt-2 text-sm text-slate-600">Choose the format you need.</p><div className="mt-5 flex flex-wrap gap-3"><Link className="button" href={`/api/reports/classes/${id}`}>Download progress report</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Download spreadsheet</Link></div></details>
 
     {selectedUnits.length>0&&<details className="card mt-6" aria-labelledby="unit-report-title">
       <summary className="cursor-pointer text-lg font-bold" id="unit-report-title">More report formats</summary>

@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { capitaliseFirst } from "@/lib/display-text";
+import { StudentLessonJourney } from "@/components/student-lesson-journey";
 
 type TeachingScreen = {
   id: string; sort_order: number; title: string; body: string; example: string | null;
@@ -62,6 +63,12 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
     :{data:[]};
   const statesByActivity=new Map<string,ActivityState>(((activityStates??[]) as ActivityState[]).map(state=>[state.activity_id,state]));
   const objectives = Array.isArray(data.objectives) ? data.objectives.map(String) : [];
+
+  if(actor.role==="student") return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
+    <Link className="link" href="/dashboard">← Home</Link>
+    <header className="mt-8 max-w-3xl"><p className="eyebrow">{course?.title} · {unit?.code} {capitaliseFirst(unit?.title??"")}</p><h1 className="mt-3 text-4xl font-bold">{capitaliseFirst(data.title)}</h1><p className="mt-3 text-lg leading-8 text-slate-600">{capitaliseFirst(topic?.title??"")}</p></header>
+    <StudentLessonJourney lessonId={lessonId} remember={data.remember} objectives={objectives} reflection={data.reflection_prompt} screens={screens.map(screen=>({id:screen.id,title:screen.title,body:screen.body,example:screen.example,codeSample:screen.code_sample,definition:screen.definition,commonMistake:screen.common_mistake,rememberText:screen.remember_text}))} examples={examples.map(example=>({id:example.id,title:example.title,skill:related(example.skills)?.title??"",problem:example.problem,plan:example.planned_solution,steps:asStringArray(example.worked_steps),codeSample:example.code_sample,expectedOutput:example.expected_output,commonError:example.common_error}))} activities={activities.map(activity=>{const state=statesByActivity.get(activity.id);const open=!state||["Available","Completed","Mastery Demonstrated","Additional Practice Required"].includes(state.state);return{id:activity.id,title:activity.title,label:activityLabel(activity),pathway:activity.pathway,instructions:activity.instructions,minutes:activity.estimated_minutes,questionCount:Number(activity.activity_questions?.[0]?.count??0),required:activity.required,status:state?.status_detail??"Available",open};})}/>
+  </main></>;
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     <Link className="link" href="/dashboard">← Dashboard</Link>

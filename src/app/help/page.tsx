@@ -44,11 +44,11 @@ export default async function HelpPage() {
         <p className="mt-4 text-lg leading-8 text-slate-600">{introduction}</p>
       </header>
 
-      <ol className="mt-9 grid gap-5 md:grid-cols-2" aria-label={`${isStudent ? "Student" : isAdministrator ? "Administrator" : "Teacher"} portal steps`}>
+      <ol className={`mt-9 grid gap-5 ${isStudent?"max-w-3xl":"md:grid-cols-2"}`} aria-label={`${isStudent ? "Student" : isAdministrator ? "Administrator" : "Teacher"} portal steps`}>
         {steps.map(([number, title, detail]) => <li className="card" key={number}>
           <span className="inline-flex size-10 items-center justify-center rounded-full bg-teal-800 font-bold text-white">{number}</span>
           <h2 className="mt-4 text-xl font-bold">{title}</h2>
-          <p className="mt-2 leading-7 text-slate-600">{detail}</p>
+          {!isAdministrator?<details className="mt-3"><summary className="cursor-pointer font-semibold text-teal-800">Show me how</summary><p className="mt-3 leading-7 text-slate-600">{detail}</p></details>:<p className="mt-2 leading-7 text-slate-600">{detail}</p>}
         </li>)}
       </ol>
 
