@@ -8,12 +8,13 @@ function migration(file: string) {
 
 describe("curriculum data access boundary", () => {
   it("limits student unit access to published active class assignments", () => {
-    const access = migration("202607280005_course_starting_point_access.sql");
+    const access = migration("202609070002_assigned_units_only.sql");
     expect(access).toMatch(/create or replace function public\.can_access_unit\(unit_uuid uuid\)/i);
     expect(access).toMatch(/e\.student_id=auth\.uid\(\)[\s\S]*e\.archived_at is null/i);
     expect(access).toMatch(/c\.archived_at is null and c\.published/i);
     expect(access).toMatch(/cu\.unit_id=unit_uuid and cu\.active and cu\.archived_at is null/i);
-    expect(access).toMatch(/u\.id=unit_uuid and u\.code='1'/i);
+    expect(access).not.toMatch(/u\.code='1'/i);
+    expect(access).toContain("unit_not_assigned");
   });
 
   it("applies assigned-unit access to approved lesson and activity rows", () => {

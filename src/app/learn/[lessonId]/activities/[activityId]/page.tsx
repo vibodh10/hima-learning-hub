@@ -40,7 +40,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ lesso
     ? await supabase.rpc("learner_activity_states",{lesson_uuid:lessonId,learner_uuid:actor.id})
     : {data:[]};
   const activityState=(studentStates as ActivityState[] | null)?.find(state=>state.activity_id===activityId);
-  const canAttempt=!activityState||["Available","Completed","Mastery Demonstrated","Additional Practice Required"].includes(activityState.state);
+  const canAttempt=actor.role!=="student"||Boolean(activityState&&["Available","Completed","Mastery Demonstrated","Additional Practice Required"].includes(activityState.state));
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
     {actor.role==="student"&&<ActivityPositionTracker lessonId={lessonId} activityId={activityId}/>}

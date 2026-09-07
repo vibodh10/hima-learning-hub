@@ -1,21 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { saveAtomAttempt } from "@/app/actions/atom-learning";
 import { levelDifficulty, markQuestion, nextDifficulty, orderByTargetDifficulty, questionsFor, scoreQuestion } from "@/lib/atom-question-bank";
-import { topicKey, type LearningProgress } from "@/lib/learning-progress";
+import { routeForTopic, topicKey, type LearningProgress, type TopicEvidence } from "@/lib/learning-progress";
 import type { PearsonTopic, PearsonUnit } from "@/lib/pearson-curriculum";
 import { isExternalAssessmentUnit } from "@/lib/unit-assessment-kind";
 
-export function AdaptivePracticeSession({ unit, topic, storageKey }: { unit: PearsonUnit; topic: PearsonTopic; storageKey: string }) {
+export function AdaptivePracticeSession({ unit, topic, storageKey, initialEvidence }: { unit: PearsonUnit; topic: PearsonTopic; storageKey: string; initialEvidence?: TopicEvidence }) {
   const baseQuestions = useMemo(()=>questionsFor(unit,topic),[unit,topic]);
-  const [questions,setQuestions]=useState(baseQuestions);
+  const [questions,setQuestions]=useState(()=>orderByTargetDifficulty(baseQuestions,levelDifficulty(routeForTopic(initialEvidence).recommendedLevel)));
   const [startedAt]=useState(()=>Date.now()), [syncPending,startSync]=useTransition(), [syncMessage,setSyncMessage]=useState("");
   const [index,setIndex]=useState(0), [answer,setAnswer]=useState<string>("");
   const [checked,setChecked]=useState(false), [hint,setHint]=useState(false), [,setHintCount]=useState(0), [results,setResults]=useState<{questionId:string;correct:boolean;hintsUsed:number;awardedMarks:number;answer:string}[]>([]);
   const question=questions[index], correct=checked&&markQuestion(question,answer);
-  useEffect(()=>{let active=true;queueMicrotask(()=>{if(!active)return;let saved:LearningProgress={topics:{}};try{saved=JSON.parse(localStorage.getItem(storageKey)??"")}catch{}const target=levelDifficulty(saved.level??saved.recommendedLevel??"Core");setQuestions(orderByTargetDifficulty(baseQuestions,target))});return()=>{active=false}},[baseQuestions,storageKey]);
   function check(){ if(!answer.trim())return; setChecked(true); }
   function next(){ const nextResults=[...results,{questionId:question.id,correct,hintsUsed:hint?1:0,awardedMarks:scoreQuestion(question,answer),answer}]; if(index===questions.length-1){save(nextResults);setResults(nextResults);}else{const target=nextDifficulty(question.difficulty,correct);setQuestions(current=>[...current.slice(0,index+1),...orderByTargetDifficulty(current.slice(index+1),target)]);setResults(nextResults);setIndex(index+1);setAnswer("");setChecked(false);setHint(false);} }
   if(results.length===questions.length){const maxMark=questions.reduce((sum,item)=>sum+item.marks,0),mark=results.reduce((sum,item)=>sum+item.awardedMarks,0),percent=Math.round(mark/maxMark*100),secure=percent>=80&&results.filter(item=>item.correct&&item.hintsUsed===0).length>=3;return <section className={`card mx-auto max-w-3xl text-center ${secure?"border-emerald-200 bg-emerald-50":"border-red-300 bg-red-50"}`}><p className="eyebrow">{secure?"Weekly test complete":"Redo required"}</p><h1 className="mt-3 text-5xl font-bold">{percent}%</h1><p className="mt-2 font-semibold">{mark} of {maxMark} indicative marks</p><p className="mt-3 text-slate-700">{secure?"This week is complete. Your result, feedback and improvement evidence are saved.":"Return to the short lesson, then redo the practice and test. Hinted or incorrect answers become the areas to practise again."}</p>{(syncPending||syncMessage)&&<p role="status" className="mt-4 rounded-xl bg-white p-3 text-sm">{syncPending?"Adding this result to your report...":syncMessage}</p>}<div className="mt-7 flex flex-wrap justify-center gap-3">{secure?<Link className="button" href={`/curriculum/units/${unit.code}`}>Return to my week</Link>:<Link className="button" href={`/curriculum/units/${unit.code}/topics/${encodeURIComponent(topic.code)}`}>Redo the learning</Link>}{secure&&isExternalAssessmentUnit(unit)&&<Link className="button-secondary" href={`/curriculum/units/${unit.code}/papers`}>Optional external exam practice</Link>}</div></section>}

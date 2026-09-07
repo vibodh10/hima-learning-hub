@@ -525,7 +525,7 @@ function firstDate(values: (string | null)[]) { return formatDate(values.filter(
 function resultValue(value: unknown, key: string) { return related(value)?.[key]; }
 function assessmentDate(value: unknown) { const row = related(value); const instance = related(row?.assessment_instances); return stringOrNull(instance?.completed_at) ?? stringOrNull(row?.created_at); }
 function parent(topicValue: unknown) { const topic = related(topicValue); const unit = related(topic?.units); return `${String(unit?.code ?? "Unit")} ${String(unit?.title ?? "not recorded")} | ${String(topic?.title ?? "Topic not recorded")}`; }
-function parentFromActivity(activityValue: unknown) { const lesson = related(related(activityValue)?.lessons); return parent(lesson?.topics); }
+function parentFromActivity(activityValue: unknown) { const activity = related(activityValue); const lesson = related(activity?.lessons); const topic = related(lesson?.topics); return activity?.assessment_kind === "course_starting_point" || topic?.title === "Course starting point" ? "Course baseline · general background (not a unit assessment)" : parent(lesson?.topics); }
 function topicNames(items: Row[]) { const names = [...new Set(items.map(item => String(related(related(item.skills)?.topics)?.title ?? "Topic not linked")))]; return names.length ? names.join(", ") : "Not yet recorded"; }
 function topicNamesFromSkills(items: Row[]) { const names = [...new Set(items.map(item => String(related(item.topics)?.title ?? "Topic not linked")))]; return names.length ? names.join(", ") : "None"; }
 function skillNames(items: Row[]) { return items.length ? items.map(item => String(related(item.skills)?.title ?? "Skill")).join(", ") : "Insufficient evidence"; }

@@ -43,6 +43,10 @@ export function ClassSettingsForm({
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(configureClass, {});
   const [courseId, setCourseId] = useState(classData.course_id);
+  const [step, setStep] = useState(0);
+  const [selectedIds, setSelectedIds] = useState(selectedUnitIds);
+  const [focusId, setFocusId] = useState(classData.active_unit_id ?? "");
+  const [stepError, setStepError] = useState("");
   const visibleUnits = units.filter(unit => unit.course_id === courseId);
   const selectedLearningDays = normaliseWeeklyLearningDays(
     classData.weekly_learning_days,
@@ -51,12 +55,14 @@ export function ClassSettingsForm({
   return <details className="card mt-6 border-teal-200" id="unit-settings" open={!selectedUnitIds.length}>
     <summary className="cursor-pointer text-xl font-bold">Group units and teaching days</summary>
     <p className="mt-2 text-sm text-slate-600">Choose what you teach this group and on which days. These settings apply only to this group.</p>
-    <form action={action} className="mt-5 grid gap-5">
+    <form action={action} className="mt-5 grid gap-5" onSubmit={event => {if(step < 2)event.preventDefault();}}>
       <input type="hidden" name="classId" value={classData.id}/>
-      <div className="grid gap-4 md:grid-cols-2">
+      <p className="font-semibold" aria-live="polite">Step {step + 1} of 3: {["Your group and timetable", "Only the units you teach", "Check and publish"][step]}</p>
+      <div hidden={step !== 0}>
+      <div className="grid max-w-2xl gap-5">
         <Field label="Class name" name="className" placeholder="Group 1" defaultValue={classData.name}/>
         <label className="grid gap-2 text-sm font-semibold">Programme
-          <select className="input" name="courseId" value={courseId} onChange={event => setCourseId(event.target.value)} required>
+          <select className="input" name="courseId" value={courseId} onChange={event => {setCourseId(event.target.value);setSelectedIds([]);setFocusId("");}} required>
             {courses.map(course => <option value={course.id} key={course.id}>{course.title}</option>)}
           </select>
         </label>
@@ -82,26 +88,41 @@ export function ClassSettingsForm({
           <p className="mt-3 text-xs text-slate-500">Select every regular teaching day. The earliest selected day anchors the once-per-week learning journey.</p>
         </fieldset>
       </div>
-      <fieldset>
+      </div>
+      <fieldset hidden={step !== 1}>
         <legend className="text-sm font-bold">Units taught to this group</legend>
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           {visibleUnits.map(unit => <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm" key={unit.id}>
-            <input className="mt-1" type="checkbox" name="unitIds" value={unit.id} defaultChecked={selectedUnitIds.includes(unit.id)}/>
+            <input className="mt-1" type="checkbox" name="unitIds" value={unit.id} checked={selectedIds.includes(unit.id)} onChange={event => {setSelectedIds(ids => event.target.checked ? [...ids,unit.id] : ids.filter(id => id !== unit.id));if(!event.target.checked && focusId === unit.id)setFocusId("");}}/>
             <span><strong>{unit.code.match(/^\d+$/) ? `Unit ${unit.code}: ` : ""}{capitaliseFirst(unit.title)}</strong><span className="block text-slate-500">{unit.kind.replaceAll("_"," ")}{unit.initial_teaching ? " · suggested initial unit" : ""}</span></span>
           </label>)}
         </div>
       </fieldset>
+      <div hidden={step !== 2} className="max-w-2xl space-y-5">
+      <p className="text-sm">Students will see only these selected units: {visibleUnits.filter(unit => selectedIds.includes(unit.id)).map(unit => `Unit ${unit.code}`).join(", ")}. They cannot add units themselves.</p>
       <label className="grid gap-2 text-sm font-semibold">Unit students should start with
-        <select className="input" name="activeUnitId" defaultValue={classData.active_unit_id ?? ""} required>
+        <select className="input" name="activeUnitId" value={focusId} onChange={event => setFocusId(event.target.value)} required={step === 2}>
           <option value="" disabled>Select current focus</option>
-          {visibleUnits.map(unit => <option value={unit.id} key={unit.id}>{unit.code.match(/^\d+$/) ? `${unit.code} · ` : ""}{capitaliseFirst(unit.title)}</option>)}
+          {visibleUnits.filter(unit => selectedIds.includes(unit.id)).map(unit => <option value={unit.id} key={unit.id}>{unit.code.match(/^\d+$/) ? `${unit.code} · ` : ""}{capitaliseFirst(unit.title)}</option>)}
         </select>
       </label>
       <label className="flex items-center gap-3 text-sm font-semibold">
         <input type="checkbox" name="published" defaultChecked={classData.published}/>
         Make these units visible to enrolled students
       </label>
-      <button className="button justify-self-start" disabled={pending}>{pending ? "Saving…" : "Save units and continue"}</button>
+      </div>
+      <div className="flex gap-3">
+        {step > 0 && <button type="button" className="button-secondary" disabled={pending} onClick={() => {setStep(step - 1);setStepError("");}}>Back</button>}
+        {step < 2 ? <button type="button" className="button" onClick={event => {
+          const invalid = [...(event.currentTarget.form?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input,select") ?? [])].find(field => !field.closest("[hidden]") && !field.checkValidity());
+          if(invalid){invalid.reportValidity();return;}
+          if(step === 0 && !event.currentTarget.form?.querySelector('input[name="weeklyLearningDays"]:checked')){setStepError("Select at least one teaching day.");return;}
+          if(step === 1 && !selectedIds.length){setStepError("Select at least one unit you teach.");return;}
+          if(step === 1 && selectedIds.length === 1)setFocusId(selectedIds[0]);
+          setStepError("");setStep(step + 1);
+        }}>Continue</button> : <button className="button" disabled={pending}>{pending ? "Saving…" : "Save units and continue"}</button>}
+      </div>
+      {stepError && <p role="alert" className="text-red-700">{stepError}</p>}
       {state.message && <p role="status" className={`text-sm ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}
     </form>
   </details>;

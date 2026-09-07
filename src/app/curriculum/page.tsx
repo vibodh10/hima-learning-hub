@@ -33,14 +33,14 @@ function StudentUnitList({ units }: { units: AssignedUnit[] }) {
   if (!units.length) return <section className="card mt-8 max-w-3xl border-blue-200 bg-blue-50"><h2 className="text-2xl font-bold">No units assigned yet</h2><p className="mt-3 text-slate-700">Your account is ready. Your teacher needs to choose your programme and units before learning begins.</p></section>;
   const [first,...rest]=units;
   return <section className="mt-8 max-w-4xl" aria-labelledby="assigned-units-title">
-    <p className="eyebrow">Choose one unit</p><h2 className="mt-2 text-2xl font-bold" id="assigned-units-title">Start here</h2>
+    <p className="eyebrow">Set by your teachers</p><h2 className="mt-2 text-2xl font-bold" id="assigned-units-title">Your assigned units</h2>
     <div className="mt-5"><StudentUnitCard unit={first} configured={configuredByCode.get(first.code)} primary/></div>
     {rest.length>0&&<details className="card mt-5"><summary className="cursor-pointer text-lg font-bold">Show my other {rest.length} unit{rest.length===1?"":"s"}</summary><div className="mt-5 grid gap-4">{rest.map(unit=><StudentUnitCard unit={unit} configured={configuredByCode.get(unit.code)} key={unit.id}/>)}</div></details>}
   </section>;
 }
 
 function StudentUnitCard({unit,configured,primary=false}:{unit:AssignedUnit;configured:(typeof configuredUnits)[number]|undefined;primary?:boolean}){
-  const content=<><p className="eyebrow">{primary?"Your first choice":capitaliseFirst(unit.programme)}</p><h3 className="mt-2 text-2xl font-bold">{unit.code.match(/^\d+$/)?`Unit ${unit.code}: `:""}{capitaliseFirst(unit.title)}</h3>{configured?<><p className="mt-3 text-sm leading-6 text-slate-600">{configured.assessment}</p><p className="mt-5 font-semibold text-teal-800">Open this unit →</p></>:<p className="mt-3 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">Your place in this unit is confirmed. Learning materials will appear after the official content has been approved by your tutor.</p>}</>;
+  const content=<><p className="eyebrow">{primary?"Assigned by your teacher":capitaliseFirst(unit.programme)}</p><h3 className="mt-2 text-2xl font-bold">{unit.code.match(/^\d+$/)?`Unit ${unit.code}: `:""}{capitaliseFirst(unit.title)}</h3>{configured?<><p className="mt-3 text-sm leading-6 text-slate-600">{configured.assessment}</p><p className="mt-5 font-semibold text-teal-800">Open this unit →</p></>:<p className="mt-3 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">Your place in this unit is confirmed. Learning materials will appear after the official content has been approved by your tutor.</p>}</>;
   return configured?<Link className={`card block hover:border-teal-400 hover:bg-teal-50 ${primary?"border-teal-200 bg-teal-50":""}`} href={`/curriculum/units/${unit.code}`}>{content}</Link>:<article className="card">{content}</article>;
 }
 
@@ -60,16 +60,17 @@ function TeacherPreviewList() {
 async function loadAssignedUnits(studentId: string): Promise<AssignedUnit[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("enrolments")
-    .select("classes(courses(title),class_units(active,units(id,code,title,kind)))")
+    .select("classes(published,archived_at,courses(title),class_units(active,archived_at,units(id,code,title,kind)))")
     .eq("student_id", studentId)
     .is("archived_at", null);
 
   const units = new Map<string, AssignedUnit>();
   for (const enrolment of data ?? []) {
     const classRecord = related(enrolment.classes);
+    if (!classRecord?.published || classRecord.archived_at) continue;
     const programme = related(classRecord?.courses)?.title ?? "Your programme";
     for (const assignment of classRecord?.class_units ?? []) {
-      if (!assignment.active) continue;
+      if (!assignment.active || assignment.archived_at) continue;
       const unit = related(assignment.units);
       if (unit) units.set(unit.id, { ...unit, programme });
     }

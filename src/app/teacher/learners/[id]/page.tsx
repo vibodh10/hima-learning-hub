@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { assessmentParentLabel as parentFromActivity } from "@/lib/assessment-parent-label";
 import { refreshLearningAutomation } from "@/lib/learning-automation-server";
 import { AutomaticLearningRecord } from "@/components/automatic-learning-record";
 import { notFound } from "next/navigation";
@@ -555,4 +556,3 @@ function isCourseStartingPointComparison(row: Record<string, unknown>) {
   return String(skillTopic?.title ?? "").toLowerCase() === "course starting point"
     || String(activity?.title ?? "").toLowerCase().startsWith("course starting point");
 }
-function parentFromActivity(activityValue: unknown) { const activity = Array.isArray(activityValue) ? related(activityValue as Record<string, unknown>[]) : asRecord(activityValue); const lesson = Array.isArray(activity?.lessons) ? related(activity.lessons as Record<string, unknown>[]) : asRecord(activity?.lessons); const topic = Array.isArray(lesson?.topics) ? related(lesson.topics as Record<string, unknown>[]) : asRecord(lesson?.topics); const unit = Array.isArray(topic?.units) ? related(topic.units as Record<string, unknown>[]) : asRecord(topic?.units); return `${String(unit?.code ?? "Course")} ${String(unit?.title ?? "starting point and learner background")} · ${String(topic?.title ?? "Topic not linked")}`; }

@@ -80,7 +80,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     { data: progress }, { data: targets }, { data: enrolments }, { data: pilot },
     { data: mastery }, { data: badges }, { data: coins }, { data: retrieval },
     { data: streak }, { data: attempts }, { data: assessments },
-    { data: comparisons }, { data: routes }, { data: courseStartingActivities }, { data: recentFeedback },
+    { data: comparisons }, { data: routes }, { data: recentFeedback },
     { data: journeyWorksheets }, { data: curriculumProgressRows }, { data: curriculumAttempts },
     { data: savedDatabasePosition },
   ] = await Promise.all([
@@ -97,7 +97,6 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     supabase.from("assessment_instances").select("id,kind,completed_at,activities(title)").eq("learner_id", id).order("completed_at", { ascending: false }),
     supabase.from("skill_progress_comparisons").select("starting_percentage,latest_percentage,improvement_points,status,evidence,skills(title)").eq("learner_id", id).order("updated_at", { ascending: false }),
     supabase.from("learner_routes").select("route,status,retention_due_on,topics(title)").eq("learner_id", id).eq("status", "active"),
-    supabase.from("activities").select("id,title,estimated_minutes,lesson_id,lessons(id,title,status,topics(units(course_id)))").eq("assessment_kind","course_starting_point").eq("status","approved"),
     supabase.from("formative_response_reviews").select("id,status,feedback,reviewed_at,attempt_answers(feedback,questions(question_text),attempts(activities(title)))").eq("learner_id",id).not("reviewed_at","is",null).order("reviewed_at",{ascending:false}).limit(3),
     supabase.from("learner_topic_worksheets").select("id,unit_code,topic_code,evidence_stage,submitted_at").eq("learner_id",id).order("submitted_at",{ascending:true}),
     supabase.from("learner_curriculum_progress").select("unit_code,topic_code,topic_started_at,lesson_completed_at,current_section,practice_score,mastery_score,independent_attempts,evidence,updated_at").eq("learner_id",id),
@@ -120,10 +119,6 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
       </section>
     </main>;
   }
-  const courseStartActivity = courseStartingActivities?.find(activity =>
-    related(related(related(activity.lessons)?.topics)?.units)?.course_id === course?.course_id
-  );
-  const courseStartLesson = related(courseStartActivity?.lessons);
   const classId = enrolments?.[0]?.class_id;
   const {data:journeyPositions}=classId
     ? await supabase.rpc("current_class_learning_journey",{class_uuid:classId})
@@ -276,12 +271,6 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
         title:`Unit ${activeCatalogUnit.code} starting point`,
         detail:`Complete the independent starting point for ${capitaliseFirst(activeCatalogUnit.title)}. It changes the support and challenge inside the class topic; it does not move you away from your group’s teaching week.`,
         href:`/curriculum/units/${activeCatalogUnit.code}/starting-point`,
-      }
-      : !assessments?.some(item=>item.kind==="course_starting_point")&&courseStartActivity&&courseStartLesson
-        ? {
-        title:capitaliseFirst(courseStartLesson.title),
-        detail:"Create your permanent course baseline. This records prior knowledge but does not change your assigned unit or class teaching week.",
-        href:`/learn/${courseStartLesson.id}/activities/${courseStartActivity.id}`,
       }
       : undefined,
     catchUps:catchUps.map(item=>{

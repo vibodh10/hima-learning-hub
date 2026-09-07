@@ -7,6 +7,7 @@ import type { ExpertiseLevel } from "@/lib/learning-catalog";
 import { routeForTopic, topicKey, type LearningProgress, type TopicEvidence } from "@/lib/learning-progress";
 import { teachingSequenceFor } from "@/lib/btec-teaching";
 import type { PearsonTopic, PearsonUnit } from "@/lib/pearson-curriculum";
+import { topicLearningPurpose } from "@/lib/topic-learning-purpose";
 
 export function AtomTopicHub({
   unit,
@@ -80,6 +81,9 @@ export function AtomTopicHub({
     <section className="card border-teal-200 bg-teal-50">
       <p className="eyebrow">This week</p>
       <h2 className="mt-2 text-3xl font-bold">Learn, practise, test, done</h2>
+      <p className="mt-3">{initialEvidence?.evidence?.length
+        ? "Your saved answers for this topic help choose the support in this lesson. Practice questions then adapt as you answer."
+        : "There is not enough saved evidence for this topic yet, so we start with guided support. Practice questions then adapt as you answer."}</p>
       <ol className="mt-5 grid gap-2 sm:grid-cols-4" aria-label="Weekly learning steps">
         <Step current label="1. Learn"/>
         <Step label="2. Practice"/>
@@ -87,6 +91,11 @@ export function AtomTopicHub({
         <Step label="4. Done"/>
       </ol>
       {positionPending && <p className="mt-3 text-sm text-teal-900" role="status">Saving your place...</p>}
+      <details className="mt-4">
+        <summary className="cursor-pointer font-semibold">How does this help with my assessment?</summary>
+        <p className="mt-3">{topicLearningPurpose(unit, topic)}</p>
+        <p className="mt-3">Learn the idea, try it in practice, then check your understanding. Completing these steps records learning progress; it does not award an assignment grade or replace your assessed work.</p>
+      </details>
     </section>
 
     <article className="card mx-auto w-full max-w-4xl">

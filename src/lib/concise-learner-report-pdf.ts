@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { assessmentParentLabel as parentFromActivity } from "./assessment-parent-label";
 import {
   conciseCurrentJudgement, evidenceCounts, groupByTopic, hasValidComparableProgress,
   isPriorExperienceSkill, learnerReflectionLabel, reportTargetStatus, topicAssessmentStatus,
@@ -307,7 +308,6 @@ function mainGap(items: { skill: Row; counts: ReturnType<typeof evidenceCounts>;
   return low.length ? `lowest initial indication: ${low.map(item => item.skill.title).join(", ")}` : "further assessment required";
 }
 function targetParent(target: Row) { const topic = related(target.topics); return `${String(related(target.units)?.title ?? related(topic?.units)?.title ?? "Course")} / ${String(topic?.title ?? "General target")}`; }
-function parentFromActivity(activityValue: unknown) { const activity = related(activityValue); const lesson = related(activity?.lessons); const topic = related(lesson?.topics); const unit = related(topic?.units); return `${String(unit?.code ?? "Course")} ${String(unit?.title ?? "starting point and learner background")} | ${String(topic?.title ?? "Topic not linked")}`; }
 function assessmentDate(valueInput: unknown) { const row = related(valueInput); const instance = related(row?.assessment_instances); return textOrNull(instance?.completed_at) ?? textOrNull(row?.created_at); }
 function isCourseStartingPointComparison(row: Row) {
   const skillTopic = related(related(row.skills)?.topics);
