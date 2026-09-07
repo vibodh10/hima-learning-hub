@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { refreshLearningAutomation } from "@/lib/learning-automation-server";
 import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -62,6 +63,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const course = related(classInfo?.courses);
   const courseId = String(classInfo?.course_id ?? "");
   if (!classInfo || !courseId) return privateResponse("Learner or class not found or not authorised.", 404);
+  await refreshLearningAutomation(id, classId);
 
   const [classUnitResult, curriculumSkillResult] = await Promise.all([
     supabase.from("class_units").select("unit_id,units(id,code,title,archived_at)")
@@ -292,6 +294,17 @@ function buildCsvRows(data: ReportEvidence): LearnerJourneyCsvRow[] {
         status: summary.complete ? "Baseline established" : "Incomplete",
       });
     });
+  });
+  data.targets.filter(target => !emittedTargetIds.has(String(target.id))).forEach(target => {
+    const automatic = target.evidence && typeof target.evidence === "object" ? target.evidence as Row : {};
+    result.push({ unit: String(related(target.units)?.title ?? "Assigned unit"), topic: String(automatic.topic_code ?? "Weekly learning"), skill: "Weekly target",
+      evidenceType: automatic.source === "automatic_learning_admin" ? "Automatically generated target" : "Recorded target",
+      startingPointResult: String(target.reason ?? ""), startingPointDate: formatDate(stringOrNull(target.starts_on)),
+      progressPointResult: String(target.current_progress ?? "Not yet recorded"), progressPointDate: "Not yet recorded",
+      supportOrHintsUsed: "Not applicable", change: "Not claimed", feedback: String(automatic.automatic_feedback ?? "Not yet recorded"),
+      learnerAction: String(target.target_text), improvementAfterFeedback: String(automatic.appreciation ?? "Not claimed"),
+      target: String(target.target_text), deadline: formatDate(stringOrNull(target.target_date)), reviewDate: formatDate(stringOrNull(target.review_on)),
+      status: reportTargetStatus(String(target.status), String(target.target_date), new Date(data.exportedAt)) });
   });
   return result;
 }

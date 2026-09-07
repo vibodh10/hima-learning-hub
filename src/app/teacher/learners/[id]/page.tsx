@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { refreshLearningAutomation } from "@/lib/learning-automation-server";
+import { AutomaticLearningRecord } from "@/components/automatic-learning-record";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -6,7 +8,7 @@ import { AppHeader } from "@/components/app-header";
 import { CurriculumAttemptReviewForm } from "@/components/curriculum-attempt-review-form";
 import { ActivityLockOverrideForm } from "@/components/safe-learning-admin-forms";
 import {
-  BulkApproveTargetsForm, CoinCorrectionForm, CreateTargetForm, FormativeResponseReviewForm,
+  CoinCorrectionForm, FormativeResponseReviewForm,
   PathwayOverrideForm, SnapshotForm, TargetReviewForm, TeacherActionForm, TeacherNoteForm, WorkbookDecisionForm,
 } from "@/components/learner-teacher-controls";
 import { configuredUnits } from "@/lib/learning-catalog";
@@ -61,6 +63,7 @@ export default async function LearnerPage({
       : compactChoices[0] ?? null;
     if (!compactSelection) notFound();
     const compactClass = compactSelection.linkedClass;
+    await refreshLearningAutomation(id, String(compactClass.id));
     const [journeyResult, attentionResult, gapResult, unitResult, targetResult] = await Promise.all([
       supabase.rpc("current_class_learning_journey", { class_uuid: compactClass.id }),
       supabase.rpc("class_learner_attention", { class_uuid: compactClass.id }),
@@ -98,6 +101,7 @@ export default async function LearnerPage({
     const reportBase = `/api/reports/learners/${id}?classId=${compactClass.id}`;
 
     return <><AppHeader name={actor.display_name} role={actor.role}/><TeacherLearnerSummary
+      automaticRecord={<AutomaticLearningRecord learnerId={id} classId={String(compactClass.id)}/>}
       attentionReason={compactAttention?.attention_reason ?? "The portal has not recorded a concern for this student."}
       attentionStatus={compactAttention?.attention_status ?? "on_track"}
       classChoices={compactChoices.map(choice => ({ id: choice.classId, name: String(choice.linkedClass.name) }))}
@@ -116,6 +120,7 @@ export default async function LearnerPage({
       weeklyPeriod={week}
     /></>;
   }
+  await refreshLearningAutomation(id, requestedClassId);
   const evidenceResults = await Promise.all([
     supabase.from("user_profiles").select("id,display_name").eq("id", id).eq("role", "student").single(),
     supabase.from("enrolments").select("enrolled_at,classes(id,name,course_id,courses(id,title),teachers:teacher_id(display_name))").eq("student_id", id).is("archived_at", null),
@@ -348,14 +353,14 @@ export default async function LearnerPage({
       </div>) : <Empty text="No completed feedback-and-improvement cycle has been recorded yet."/>}</div>
     </section>
 
+    <AutomaticLearningRecord learnerId={id} classId={classInfo?.id}/>
     <section className="card mt-6"><p className="eyebrow">5. Targets and next steps</p><h2 className="mt-2 text-2xl font-bold">Current measurable priorities</h2>
       {targets?.length ? <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="text-slate-500"><tr><th className="pb-3">Status</th><th className="pb-3">Unit / topic</th><th className="pb-3">Target</th><th className="pb-3">Baseline</th><th className="pb-3">Success measure</th><th className="pb-3">Deadline</th><th className="pb-3">Review date</th></tr></thead><tbody>{targets.map(target => {
         const warning = !target.review_on ? "Review date needs to be added." : !target.success_measure ? "Success measure needs to be added." : null;
         return <tr className="border-t border-slate-200 align-top" key={target.id}><td className="py-4 pr-3"><StatusBadge status={reportTargetStatus(target.status, target.target_date, now)}/></td><td className="py-4 pr-3">{targetParent(target)}</td><td className="py-4 pr-3 font-semibold">{target.target_text}</td><td className="py-4 pr-3">{target.reason}</td><td className="py-4 pr-3">{target.success_measure ?? "To be completed"}</td><td className="py-4 pr-3">{formatDate(target.target_date)}</td><td className="py-4">{formatDate(target.review_on)}{warning && <p className="mt-1 text-xs font-semibold text-amber-800">{warning}</p>}</td></tr>;
       })}</tbody></table></div> : <Empty text="No targets have been recorded yet."/>}
       <details className="mt-6 rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer font-semibold">Teacher target controls</summary>
-        {classInfo && <CreateTargetForm learnerId={id} classId={classInfo.id} skills={academicSkills.map(skill => ({ id: skill.id, title: skill.title }))}/>}
-        <BulkApproveTargetsForm learnerId={id} targetIds={(targets ?? []).filter(target => target.status === "proposed").map(target => target.id)}/>
+        <p className="mt-3 text-sm text-slate-600">Weekly targets and their completion are recorded automatically. Use these optional controls only to correct a record or add a professional judgement.</p>
         <div className="mt-4 grid gap-4">{targets?.map(target => <div className="rounded-xl bg-slate-50 p-4" key={target.id}><TargetReviewForm target={target}/></div>)}</div>
       </details>
     </section>

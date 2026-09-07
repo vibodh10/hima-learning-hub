@@ -10,6 +10,9 @@ const assigned=new Set(["unit-active","unit-future"]);
 const now=new Date("2026-07-29T12:00:00Z");
 
 describe("next-target priority",()=>{
+  it("selects an automatically active weekly goal without requiring teacher approval or a skill id", () => {
+    expect(selectNextTarget([{...base,id:"automatic",skill_id:null,status:"active",evidence:{source:"automatic_learning_admin"}}],assigned,"unit-active",now)?.id).toBe("automatic");
+  });
   it("selects an active-unit skill gap before every other target",()=>{
     const result=selectNextTarget([
       {...base,id:"overdue",unit_id:"unit-future",target_date:"2026-07-01"},

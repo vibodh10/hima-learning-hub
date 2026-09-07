@@ -1,4 +1,5 @@
 "use server";
+import { refreshSavedLearningAutomation } from "@/lib/learning-automation-server";
 
 import { z } from "zod";
 import { getSessionProfile } from "@/lib/auth";
@@ -68,7 +69,8 @@ export async function saveCurriculumProgress(input: {
       current_section: currentSection,
     });
   if (error) return { ok: false, message: "Progress is saved on this device; account sync will resume when the curriculum migration is applied." };
-  return { ok: true, message: "Lesson position synced to your learner account." };
+  const automationUpdated = await refreshSavedLearningAutomation(actor.id);
+  return { ok: true, message: automationUpdated ? "Lesson position synced to your learner account." : "Your position is saved. Open your dashboard to refresh automatic records." };
 }
 
 export async function saveStartingPoint(input: {
@@ -100,9 +102,10 @@ export async function saveStartingPoint(input: {
   if (error) return { ok: false, message: error.message.includes("starting_point_already_recorded")
     ? "Your starting point is already recorded and cannot be retaken. Later checks are saved as progress points."
     : "The starting point could not be stored safely. Ask your teacher to check the portal update." };
+  const automationUpdated = await refreshSavedLearningAutomation(actor.id);
   revalidatePath("/dashboard");
   revalidatePath(`/curriculum/units/${unit.code}`);
-  return { ok: true, message: "Starting-point evidence graded and synced to your learner account.", recommendedLevel: grade.recommendedLevel };
+  return { ok: true, message: automationUpdated ? "Starting-point evidence and automatic learning target saved." : "Your starting point is saved. Open your dashboard to refresh your automatic target.", recommendedLevel: grade.recommendedLevel };
 }
 
 export type CurriculumActionState = { ok?: boolean; message?: string };

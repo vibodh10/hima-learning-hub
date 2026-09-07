@@ -160,6 +160,9 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
     ensure(105);
     line(`${reportTargetStatus(String(item.status), String(item.target_date), asAt)} | ${targetParent(item)} | Deadline ${date(textOrNull(item.target_date))}`, 10, true);
     line(`${String(item.target_text)} | Baseline: ${String(item.reason ?? "Not recorded")} | Success: ${String(item.success_measure ?? "To be completed")} | Review: ${date(textOrNull(item.review_on))}.`);
+    const automatic = item.evidence && typeof item.evidence === "object" ? item.evidence as Row : {};
+    if (automatic.automatic_feedback) line(`Automatic feedback: ${String(automatic.automatic_feedback)}`, 9);
+    if (automatic.appreciation) line(`Automatic encouragement: ${String(automatic.appreciation)}`, 9);
     if (!item.review_on) line("Warning: Review date needs to be added.", 8, true);
     else if (!item.success_measure) line("Warning: Success measure needs to be added.", 8, true);
   });

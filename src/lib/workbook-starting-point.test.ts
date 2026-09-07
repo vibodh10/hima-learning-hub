@@ -17,6 +17,9 @@ function evidence(topicCode: string, index: number, correct: boolean, overrides:
 }
 
 describe("adaptive workbook starting-point projection", () => {
+  it("retains the Challenge pathway assigned by the starting point", () => {
+    expect(summariseWorkbookStartingPoint([{ unit_code: "6", topic_code: "A1", selected_level: "Challenge", evidence: [1,2,3].map(index => evidence("A1", index, true)) }], "6", ["A1"])?.recommendedLevel).toBe("Challenge");
+  });
   it("projects the hosted 7 of 21 Support result without changing its meaning", () => {
     const topics = ["A1", "A2", "B1", "B2", "C1", "C2", "C3-C5"];
     const rows = topics.map((topicCode, topicIndex) => ({

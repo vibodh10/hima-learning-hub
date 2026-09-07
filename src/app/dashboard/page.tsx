@@ -30,6 +30,8 @@ import { capitaliseFirst } from "@/lib/display-text";
 import { TeacherPriorityList } from "@/components/teacher-priority-list";
 import { StudentLearningPlan } from "@/components/student-learning-plan";
 import { applyWeeklyLearningGaps } from "@/lib/teacher-weekly-attention";
+import { refreshLearningAutomation } from "@/lib/learning-automation-server";
+import { AutomaticLearningRecord } from "@/components/automatic-learning-record";
 
 const pilotLessonId = "61000000-0000-0000-0000-000000000001";
 const pilotTopicId = "51000000-0000-0000-0000-000000000001";
@@ -71,6 +73,7 @@ export default async function DashboardPage({searchParams}:{searchParams:Promise
 }
 
 async function StudentDashboard({ id, name }: { id: string; name: string }) {
+  await refreshLearningAutomation(id);
   const supabase = await createClient();
   const now=await currentTimestamp();
   const [
@@ -342,6 +345,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
 
     <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">I want to do something else</summary><p className="mt-2 text-sm text-slate-600">Choose one area. Your saved work will not be lost.</p><div className="mt-5 grid gap-3 sm:grid-cols-2"><Link className="choice-link" href="/curriculum"><span><strong className="block">My learning</strong><span className="mt-1 block text-sm">Open my assigned unit or revise a topic</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link><Link className="choice-link" href="/progress"><span><strong className="block">My progress</strong><span className="mt-1 block text-sm">See what is going well and what to practise</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link><Link className="choice-link" href="/portfolio"><span><strong className="block">My work</strong><span className="mt-1 block text-sm">See saved worksheets and evidence</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link><Link className="choice-link" href="/help"><span><strong className="block">I need help</strong><span className="mt-1 block text-sm">Show me how the portal works</span></span><span className="choice-arrow" aria-hidden="true">›</span></Link></div></details>
 
+    <details className="mt-6"><summary className="cursor-pointer text-lg font-bold">My automatic target and feedback</summary><AutomaticLearningRecord learnerId={id}/></details>
     {journeyPosition&&<StudentLearningPlan
       unitTitle={activeUnit?`Unit ${activeUnit.code}: ${capitaliseFirst(activeUnit.title)}`:capitaliseFirst(journeyPosition.journey_title)}
       teachingWeek={Number(journeyPosition.teaching_week)}

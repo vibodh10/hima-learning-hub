@@ -1,4 +1,5 @@
 "use server";
+import { refreshSavedLearningAutomation } from "@/lib/learning-automation-server";
 
 import {z} from "zod";
 import {getSessionProfile} from "@/lib/auth";
@@ -53,8 +54,9 @@ export async function saveAtomAttempt(input:AtomAttemptInput):Promise<{ok:boolea
   },{onConflict:"learner_id,unit_code,topic_code"});
   if(progressError)return{ok:false,message:"Your test is recorded, but the weekly completion status could not be updated. Ask your teacher to refresh the portal."};
  }
+ const automationUpdated=await refreshSavedLearningAutomation(actor.id);
  revalidatePath("/dashboard");revalidatePath(`/curriculum/units/${data.unitCode}`);
- return{ok:true,message:"Result added to your learner and teacher progress reports."};
+ return{ok:true,message:automationUpdated?"Result, automatic target and feedback saved to your learning records.":"Your result is saved. Open your dashboard to refresh the automatic target and feedback."};
 }
 
 const reviewSchema=z.object({

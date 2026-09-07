@@ -106,7 +106,7 @@ function diagnosticEvidence(value: unknown, unitCode: string, topicCode: string)
 }
 
 function isExpertiseLevel(value: unknown): value is ExpertiseLevel {
-  return value === "Support" || value === "Core" || value === "Stretch";
+  return value === "Support" || value === "Core" || value === "Stretch" || value === "Challenge";
 }
 
 function mostFrequent(values: ExpertiseLevel[]) {

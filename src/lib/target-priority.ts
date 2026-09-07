@@ -10,6 +10,7 @@ export function selectNextTarget<T extends TargetCandidate>(
   const assigned=targets.filter(target=>Boolean(target.unit_id&&assignedUnitIds.has(target.unit_id)));
   const live=(target:T)=>["approved","active","extended"].includes(target.status);
   return assigned.find(target=>target.unit_id===activeUnitId&&Boolean(target.skill_id)&&live(target))
+    ??assigned.find(target=>target.unit_id===activeUnitId&&live(target)&&asRecord(target.evidence).source==="automatic_learning_admin")
     ??assigned.find(target=>target.status==="approved"&&new Date(target.target_date)<now)
     ??assigned.find(target=>live(target)&&isRetrievalTarget(target.evidence,target.reason))
     ??assigned.find(target=>live(target)&&Boolean(target.approved_by))

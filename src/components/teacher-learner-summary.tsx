@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 type ClassChoice = { id: string; name: string };
 
@@ -19,6 +20,7 @@ export function TeacherLearnerSummary({
   classChoices,
   weeklyPeriod,
   quarterlyPeriod,
+  automaticRecord,
 }: {
   learnerName: string;
   learnerId: string;
@@ -36,6 +38,7 @@ export function TeacherLearnerSummary({
   classChoices: ClassChoice[];
   weeklyPeriod: { from: string; to: string };
   quarterlyPeriod: { from: string; to: string };
+  automaticRecord?: ReactNode;
 }) {
   const needsAttention = ["intervention_required", "action_required", "catch_up_required"].includes(attentionStatus);
   const weeklyHref = reportHref(learnerHref, weeklyPeriod);
@@ -61,6 +64,7 @@ export function TeacherLearnerSummary({
       {needsAttention&&<a className="button mt-6" href={weeklyHref}>Open this week&apos;s evidence →</a>}
     </section>
 
+    {automaticRecord}
     <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Show the student summary</summary><section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Student summary">
       <Fact label="Current unit" value={unitTitle}/>
       <Fact label="Teaching week" value={currentWeek ? `Week ${currentWeek}` : "Not started"}/>

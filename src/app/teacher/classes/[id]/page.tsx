@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { refreshLearningAutomation } from "@/lib/learning-automation-server";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -10,12 +11,13 @@ import { ClassRegistrationLinkPanel } from "@/components/class-registration-link
 import { InvitationLifecycleControls } from "@/components/invitation-lifecycle-controls";
 import { ClassOnboardingPanel } from "@/components/class-onboarding-panel";
 import { presentInvitationStatus } from "@/lib/invitation-status";
-import { unitByCode } from "@/lib/learning-catalog";
+import { expertiseLevels, unitByCode } from "@/lib/learning-catalog";
 import { projectClassCurriculumOverview, projectCurriculumPaperAssessments } from "@/lib/class-curriculum-overview";
 import { averageCurrentClassScore } from "@/lib/class-progress-summary";
 import { ClassCurriculumOverviewTable } from "@/components/class-curriculum-overview-table";
 import { summariseWorkbookStartingPoint } from "@/lib/workbook-starting-point";
 import { applyWeeklyLearningGaps } from "@/lib/teacher-weekly-attention";
+import { sortTeacherAttention } from "@/lib/teacher-attention-order";
 
 type AttentionRow={learner_id:string;display_name:string;starting_score:number|null;current_score:number|null;progress_points:number|null;catch_up_status:string;outstanding_count:number;attention_status:string;attention_reason:string;ap_total:number;achievement_level:string|null};
 
@@ -40,6 +42,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   const selectedUnits = (units ?? []).filter(unit => selectedUnitIds.includes(unit.id));
   const overviewUnit = selectedUnits.find(unit => unit.id === classData.active_unit_id) ?? selectedUnits[0];
   const activeEnrolments = (classData.enrolments ?? []).filter(enrolment => !enrolment.archived_at);
+  await Promise.all(activeEnrolments.map(enrolment => refreshLearningAutomation(enrolment.student_id, id)));
   const [{ data: journeyTemplates }, { data: journeyPositions }, {data:attentionRows,error:attentionError},{data:weeklyGapRows,error:weeklyGapError},{data:achievementRows}] = await Promise.all([
     selectedUnitIds.length
       ? supabase.from("learning_journey_templates")
@@ -66,13 +69,13 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
   }));
   const studentIds = activeEnrolments.map(enrolment => enrolment.student_id);
   const [
-    { data: mastery, error: masteryError },
+    { data: baselineRows, error: baselineError },
     { data: misconceptions, error: misconceptionsError },
     { data: curriculumAttempts, error: curriculumAttemptsError },
   ] = studentIds.length && overviewUnit ? await Promise.all([
-    supabase.from("skill_mastery")
-      .select("learner_id,mastery_score,current_pathway,skills!inner(title,topics!inner(unit_id))")
-      .in("learner_id", studentIds).eq("skills.topics.unit_id", overviewUnit.id),
+    supabase.from("unit_starting_point_baselines")
+      .select("learner_id,recommended_level,percentage")
+      .in("learner_id", studentIds).eq("unit_id", overviewUnit.id),
     supabase.from("learner_misconceptions")
       .select("learner_id,occurrence_count,resolved_at,misconceptions!inner(title,skills!inner(title,topics!inner(unit_id)))")
       .in("learner_id", studentIds).eq("misconceptions.skills.topics.unit_id", overviewUnit.id)
@@ -114,18 +117,21 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     );
     return summary?.complete ? [[learnerId, summary] as const] : [];
   }));
-  const projectedAttention = attention.map(row => {
+  const pathwayByLearner = new Map([...startingPointByLearner].map(([learnerId, summary]) => [learnerId, summary.recommendedLevel]));
+  for (const baseline of baselineRows ?? []) pathwayByLearner.set(baseline.learner_id, baseline.recommended_level as typeof expertiseLevels[number]);
+  const awaitingStartingPoint = [...new Set(studentIds)].filter(learnerId => !pathwayByLearner.get(learnerId)).length;
+  const projectedAttention = sortTeacherAttention(attention.map(row => {
     const startingPoint = startingPointByLearner.get(row.learner_id);
     if (!startingPoint || row.starting_score != null) return row;
     const route = startingPoint.recommendedLevel ? ` · ${startingPoint.recommendedLevel} route` : "";
     return {
       ...row,
       starting_score: startingPoint.percentage,
-      attention_reason: row.current_score == null
+      attention_reason: row.current_score == null && !["intervention_required", "action_required", "catch_up_required"].includes(row.attention_status)
         ? `Unit ${startingPoint.unitCode} starting point recorded at ${startingPoint.percentage}%${route}. Comparable progress evidence is not yet available.`
         : row.attention_reason,
     };
-  });
+  }));
   const learningReady=Boolean(configuredOverviewUnit&&automaticJourneyTemplate);
   const overviewModules = configuredOverviewUnit?.topics.map(topic => ({
     code: topic.code, title: topic.title,
@@ -133,7 +139,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     .map(code => ({ code, title: code }));
   const curriculumOverviewError = attentionError ?? weeklyGapError ?? curriculumAttemptsError ?? curriculumOverviewProgressError
     ?? curriculumOverviewAssessmentsError ?? curriculumOverviewTargetsError;
-  const classAnalysisError = masteryError ?? misconceptionsError;
+  const classAnalysisError = baselineError ?? misconceptionsError ?? curriculumOverviewProgressError;
   const curriculumOverview = curriculumOverviewError ? [] : projectClassCurriculumOverview({
     generatedAt: new Date().toISOString(),
     learners: activeEnrolments.map(enrolment => ({
@@ -185,8 +191,8 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
 
     <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Show group totals</summary><section className="mt-5 grid gap-5 sm:grid-cols-3"><Metric label="Students" value={String(studentIds.length)}/><Metric label="Latest progress" value={average==null?"Not available":`${average}%`}/><Metric label="Need attention" value={String(studentsNeedingAttention.length)}/></section></details>
 
-    {studentIds.length>0&&<details className="card mt-6 overflow-x-auto p-0"><summary className="cursor-pointer p-5 text-lg font-bold">See all {studentIds.length} student{studentIds.length===1?"":"s"}</summary><p className="px-5 pb-5 text-sm text-slate-600">Students needing help appear first. Open one student for their full evidence.</p><table className="w-full min-w-[720px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Student</th><th className="p-5">Latest progress</th><th className="p-5">Status</th><th className="p-5">Open</th></tr></thead>
-      <tbody>{projectedAttention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5"><strong>{row.current_score==null?"Not recorded":`${row.current_score}%`}</strong>{row.progress_points!=null&&<p className="mt-1 text-xs text-slate-500">{Number(row.progress_points)>=0?"+":""}{row.progress_points} percentage points</p>}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-md text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><Link className="button-secondary button-small" href={`/teacher/learners/${row.learner_id}?classId=${id}`}>View progress</Link></td></tr>)}</tbody>
+    {studentIds.length>0&&<details className="card mt-6 overflow-x-auto p-0"><summary className="cursor-pointer p-5 text-lg font-bold">See all {studentIds.length} student{studentIds.length===1?"":"s"}</summary><p className="px-5 pb-5 text-sm text-slate-600">Help priority first, then lowest available score. Starting-point scores are used until later progress is recorded. Students without any score appear first within their priority group.</p><table className="w-full min-w-[720px] text-left"><thead className="bg-slate-50 text-sm text-slate-600"><tr><th className="p-5">Student</th><th className="p-5">Latest available score</th><th className="p-5">Status</th><th className="p-5">Open</th></tr></thead>
+      <tbody>{projectedAttention.map(row => <tr key={row.learner_id} className="border-t border-slate-200"><td className="p-5 font-semibold">{row.display_name}</td><td className="p-5"><strong>{row.current_score==null?(row.starting_score==null?"Not recorded":`${row.starting_score}%`):`${row.current_score}%`}</strong><p className="mt-1 text-xs text-slate-500">{row.current_score==null?"Starting point":"Later progress"}</p>{row.progress_points!=null&&<p className="mt-1 text-xs text-slate-500">{Number(row.progress_points)>=0?"+":""}{row.progress_points} percentage points</p>}</td><td className="p-5"><AttentionStatus status={row.attention_status}/><p className="mt-2 max-w-md text-xs text-slate-600">{row.attention_reason}</p></td><td className="p-5"><Link className="button-secondary button-small" href={`/teacher/learners/${row.learner_id}?classId=${id}`}>View progress</Link></td></tr>)}</tbody>
     </table></details>}
 
     <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Download group reports</summary><p className="mt-2 text-sm text-slate-600">Choose the format you need.</p><div className="mt-5 flex flex-wrap gap-3"><Link className="button" href={`/api/reports/classes/${id}`}>Download progress report</Link><Link className="button-secondary" href={`/api/reports/classes/${id}?format=csv`}>Download spreadsheet</Link></div></details>
@@ -255,7 +261,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
     {studentIds.length>0&&<details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">More class analysis</summary>{classAnalysisError
       ? <section className="mt-5 rounded-xl border border-red-200 bg-red-50 p-5" role="alert"><h2 className="font-bold">Class analysis is temporarily unavailable</h2><p className="mt-2 text-sm text-red-900">No mastery or misconception totals have been inferred. Try again later.</p></section>
       : <section className="mt-5 grid gap-6 lg:grid-cols-2">
-      <div className="card"><h2 className="text-2xl font-bold">Mastery distribution</h2><p className="mt-2 text-sm text-slate-600">Number of learner-skill records at each current pathway.</p><div className="mt-5 grid grid-cols-2 gap-3">{["Support","Core","Stretch","Mastery"].map(pathway => <Metric key={pathway} label={pathway} value={String(mastery?.filter(skill => skill.current_pathway === pathway).length ?? 0)}/>)}</div></div>
+      <div className="card"><h2 className="text-2xl font-bold">Starting-point pathways</h2><p className="mt-2 text-sm text-slate-600">Students assigned to each pathway in this unit. Each student is counted once after their starting-point assessment; passing a mastery check is not required.</p><div className="mt-5 grid grid-cols-2 gap-3">{expertiseLevels.map(pathway => <Metric key={pathway} label={pathway} value={String([...pathwayByLearner.values()].filter(level => level === pathway).length)}/>)}</div><p className="mt-4 text-sm text-slate-600">Awaiting starting point: {awaitingStartingPoint}</p></div>
       <div className="card"><h2 className="text-2xl font-bold">Common misconceptions</h2><p className="mt-2 text-sm text-slate-600">Repeated patterns support re-teaching decisions and intervention review.</p><div className="mt-5 grid gap-3">{misconceptions?.length ? misconceptions.slice(0, 6).map((row, index) => <div className="rounded-xl bg-amber-50 p-4" key={index}><p className="font-semibold">{related(row.misconceptions)?.title}</p><p className="mt-1 text-sm text-amber-900">{related(related(row.misconceptions)?.skills)?.title} · {row.occurrence_count} occurrences · {row.resolved_at ? "resolved" : "open"}</p></div>) : <p className="text-slate-600">No tagged misconception evidence yet.</p>}</div></div>
     </section>}</details>}
   </main></>;
