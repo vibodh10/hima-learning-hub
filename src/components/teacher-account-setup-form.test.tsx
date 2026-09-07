@@ -15,7 +15,7 @@ describe("secure teacher account setup", () => {
     expect(screen.getByLabelText("Verified college email")).toHaveAttribute("type", "email");
     expect(screen.getByLabelText("Verified college email")).toHaveAttribute("placeholder", "name@sccb.ac.uk");
     expect(screen.getByRole("button", { name: "Email setup link" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy link for Teams" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create registration link" })).toBeInTheDocument();
     expect(screen.getByText(/tutor chooses their own password/i)).toBeInTheDocument();
   });
 

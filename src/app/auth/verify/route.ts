@@ -9,6 +9,7 @@ const confirmation = z.object({
   type: z.enum(["recovery", "invite"]),
   next: z.string().startsWith("/").refine((value) => !value.startsWith("//")),
   invitation: z.uuid().optional(),
+  flow: z.enum(["teacher"]).optional(),
 });
 
 export async function POST(request: Request) {
@@ -24,7 +25,9 @@ export async function POST(request: Request) {
   });
   if (error) {
     console.error("Email token verification failed", { code: error.code, status: error.status });
-    return NextResponse.redirect(publicAuthRedirect(request.url, "/login?error=expired-email-link"), 303);
+    return NextResponse.redirect(publicAuthRedirect(request.url, parsed.data.flow === "teacher"
+      ? "/register/teacher?error=expired"
+      : "/login?error=expired-email-link"), 303);
   }
 
   if (parsed.data.type === "invite" || parsed.data.invitation) {

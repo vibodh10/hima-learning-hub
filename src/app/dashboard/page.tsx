@@ -327,7 +327,7 @@ async function StudentDashboard({ id, name }: { id: string; name: string }) {
     {unseenBadges.length>0&&<NewBadgeNotifications awards={unseenBadges}/>}
     <div className="mt-8">
       <p className="eyebrow">Home</p>
-      <h1 className="mt-2 text-4xl font-bold">Hi {name.split(" ")[0]}. What do I need to do?</h1>
+      <h1 className="mt-2 text-4xl font-bold">Hi {name.split(" ")[0]}. Here&apos;s your next step.</h1>
       <p className="mt-3 max-w-2xl text-lg text-slate-600">Start with the one task below. Everything else can wait.</p>
     </div>
 

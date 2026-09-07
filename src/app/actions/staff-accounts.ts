@@ -101,10 +101,10 @@ export async function setupTeacherAccount(
       email: parsed.data.email,
       options: { redirectTo },
     });
-    if (linkError || !linkData.properties.action_link) {
+    if (linkError || !linkData.properties.hashed_token) {
       return { message: "The tutor account is ready, but a secure setup link could not be generated. Try again." };
     }
-    setupUrl = linkData.properties.action_link;
+    setupUrl = `${origin}/register/teacher?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}`;
   } else {
     const sessionClient = await createClient();
     const { error: emailError } = await sessionClient.auth.resetPasswordForEmail(parsed.data.email, {
