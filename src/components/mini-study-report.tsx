@@ -16,6 +16,21 @@ export function MiniStudyReport({learners,records}:{learners:{id:string;name:str
       </dl>
       <div className="mt-5 rounded-lg border border-slate-300 p-4"><h2 className="font-bold">Automatic next target</h2><p className="mt-2">{row.summary.target}</p></div>
       {row.summary.needsHelp&&<p className="mt-4">Suggested support: check the learner&apos;s understanding of this idea with a short example. This flag is based on the recorded answers, not a judgement of ability.</p>}
+      <details className="mt-5 border-t border-slate-200 pt-4">
+        <summary className="cursor-pointer font-semibold">See recorded answers and feedback</summary>
+        {records.filter(record=>record.learner_id===row.id&&record.grade&&record.status!=="abandoned")
+          .sort((a,b)=>(b.checked_at??"").localeCompare(a.checked_at??""))
+          .map(record=><article key={record.id} className="mt-4 rounded-lg bg-slate-50 p-4">
+            <h3 className="font-bold">{record.content.title??(record.kind==="baseline"?"Short starting point":"Short self-study")}</h3>
+            <p className="mt-1 text-sm">{record.checked_at?new Date(record.checked_at).toLocaleDateString("en-GB",{timeZone:"Europe/London"}):"Date not recorded"} · {record.status==="completed"?"Completed":"Feedback review pending"}</p>
+            <ol className="mt-3 space-y-4">{record.grade!.feedback.map(answer=><li key={answer.questionId}>
+              <p className="font-semibold">{answer.recap?"Recap: ":""}{answer.prompt??answer.skill.replaceAll("_"," ")}</p>
+              <p>First answer: {answer.selectedAnswer??"Not saved in this older record"}</p>
+              <p>{answer.correct?"Correct":"Needs practice"} · Expected: {answer.correctAnswer}</p>
+              <p className="mt-1">{answer.explanation}</p>
+            </li>)}</ol>
+          </article>)}
+      </details>
     </details>)}</div>}
   </section>;
 }

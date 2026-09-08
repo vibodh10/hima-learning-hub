@@ -11,9 +11,9 @@ const teacherSteps = [
 
 const studentSteps = [
   ["1", "Join your group", "Open the registration link shared by your teacher, check that the correct group is shown and create your student account. A secure email invitation may also be used."],
-  ["2", "Start from Home", "Your Home page shows the unit, teaching week, next action, feedback and any catch-up that applies to you."],
+  ["2", "Open your step", "Your teacher chooses the unit. Open the portal to see just your next short step."],
   ["3", "Complete your starting point", "This records what you know before teaching. It is a baseline, not a grade."],
-  ["4", "Learn, practise, test and improve", "Finish the current teaching week in order. Future weeks stay hidden, and mistakes lead to feedback and targeted practice before the week is complete."],
+  ["4", "Finish for today", "Read one idea and example, answer the short check, then review the feedback. You can stop when you see ‘done for today’. Your next step starts with a recap."],
 ];
 
 const administratorSteps = [
@@ -30,7 +30,7 @@ export default async function HelpPage() {
   const steps = isStudent ? studentSteps : isAdministrator ? administratorSteps : teacherSteps;
   const heading = isStudent ? "Your learning journey, step by step" : isAdministrator ? "Set up tutors and oversee the portal" : "Your teaching workflow, step by step";
   const introduction = isStudent
-    ? "The portal keeps your assigned learning, progress, feedback and evidence together. You can only see your own record."
+    ? "One small self-study step at a time. Your teacher sees your progress and chooses any extra support you need."
     : isAdministrator
       ? "Prepare groups and secure tutor access once. Tutors then add students, check progress and download reports from a short everyday workflow."
       : "Create or open your group, choose what you teach and share its temporary registration link. The portal handles weekly learning, feedback evidence and progress reporting automatically.";

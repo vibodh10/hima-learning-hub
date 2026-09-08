@@ -9,6 +9,20 @@ select public.teacher_configure_class((select class_id from mini_fixture),'Mini 
 reset role;
 insert into public.enrolments(class_id,student_id) select class_id,'90000000-0000-0000-0000-000000000002' from mini_fixture;
 set local role service_role;
+do $$ declare baseline_id uuid; begin
+ begin
+  perform public.open_mini_study('90000000-0000-0000-0000-000000000002',(select class_id from mini_fixture),'40000000-0000-0000-0000-000000000006','too-early','daily','{}','[{}]');
+  raise exception 'daily step skipped starting point';
+ exception when raise_exception then if sqlerrm<>'starting_point_required' then raise; end if; end;
+ baseline_id:=public.open_mini_study('90000000-0000-0000-0000-000000000002',(select class_id from mini_fixture),'40000000-0000-0000-0000-000000000006','qa-baseline','baseline','{}','[{}]');
+ perform public.check_mini_study('90000000-0000-0000-0000-000000000002',baseline_id,'{"correct":1,"total":1,"feedback":[]}','Keep practising.');
+ perform public.finish_mini_study('90000000-0000-0000-0000-000000000002',baseline_id);
+ update public.mini_study_sessions set completed_at=now()-interval '1 day' where id=baseline_id;
+ begin
+  perform public.open_mini_study('90000000-0000-0000-0000-000000000002',(select class_id from mini_fixture),'40000000-0000-0000-0000-000000000006','new-baseline-version','baseline','{}','[{}]');
+  raise exception 'starting point repeated';
+ exception when raise_exception then if sqlerrm<>'starting_point_already_recorded' then raise; end if; end;
+end $$;
 update mini_fixture set session_id=public.open_mini_study('90000000-0000-0000-0000-000000000002',class_id,'40000000-0000-0000-0000-000000000006','qa-daily','daily','{"title":"QA only"}','[{"id":"qa","answer":"one"}]');
 do $$ declare saved uuid; response jsonb; begin
   select session_id into saved from mini_fixture;

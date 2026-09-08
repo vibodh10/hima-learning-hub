@@ -12,9 +12,11 @@ describe("role-specific application navigation", () => {
     render(<AppHeader name="Student One" role="student" />);
     expect(screen.getByText("Student mode")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Student mode navigation" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "My learning" })).toHaveAttribute("href", "/curriculum");
-    expect(screen.getByRole("link", { name: "My progress" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "My work" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "My step" })).toHaveAttribute("href", "/study");
+    expect(screen.queryByRole("link", { name: "My learning" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "My progress" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "My work" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Rewards" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Help" })).toHaveAttribute("href", "/help");
     expect(screen.queryByRole("link", { name: "My groups" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();

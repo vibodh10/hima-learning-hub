@@ -50,9 +50,20 @@ Evidence so far:
 Required next work, without shrinking the original goal:
 
 1. Complete short, accurate content for the assigned units; Unit 6's initial six steps are not its complete theory provision. Add specific accessibility/usability examples, with primary sources.
-2. Connect the minimal flow as the actual student entry point and retire student-facing progress/portfolio/unit-choice routes appropriately, while preserving teacher access and existing records. At present the legacy dashboard remains the entry point.
+2. Verify the newly connected student entry point in an authenticated browser journey. Dashboard, progress, portfolio, curriculum and legacy learning pages now redirect students to `/study`; staff resources and historical records remain available. Check remaining entry routes and direct legacy actions before rollout.
 3. Expand teacher integration: self-study report is a dedicated route, not yet the default group summary; reconcile old automatic targets/attention with new evidence so teachers receive no contradictory messages.
 4. Verify existing full-unit baselines inform support honestly; prevent a transferred learner taking another mini baseline for the same unit. Review multi-group selection/resume and class changes.
 5. Add raw discrete response identifiers to auditable evidence if needed; never collect personal background/free-text sensitive information.
 6. Complete full authenticated end-to-end testing on isolated records (including teacher group creation and selection), teacher mobile/desktop, 200% text, refresh/offline/duplicate tab/day boundary, empty/missing data, privacy and exports. Separate preview tests from real persistence tests.
 7. Final full tests, build, migration/deployment, then post-deployment verification. Do not publish this incomplete redesign or mark the goal complete based only on the foundation checks above.
+
+## Integration checkpoint (2026-09-08, still local)
+
+- Removed the redundant student dashboard and its unused helpers; student navigation offers the assigned step and help. Updated help/privacy wording without deleting learner records.
+- Added teacher access to the short-study report from the group page. Expanded its optional evidence view with the original question, selected predefined answer, marking explanation and completion state. Older missing answer snapshots are explicitly labelled, not invented.
+- Preserved completed same-unit learning and starting points across group transfers. Rotation resumes valid unfinished work, then chooses the least recently used ready group; an exhausted/unavailable unit cannot block another ready unit.
+- Removed the two-assignment-snapshot opening race. Database operations still recheck the exact current assignment, require a starting point before daily learning, and prevent repeat baselines/lessons across groups.
+- Isolated database contract passed with new starting-point-required and duplicate-baseline checks. No production migration applied.
+- 34 focused mini-study tests passed, then 11 route/planning tests passed (the latter include the new exhausted-unit case). Focused lint, typecheck and the final checkpoint production build passed. Initial typecheck found stale generated route types after adding the layout; regenerating them resolved the mismatch. The full suite had 403 passes, 3 skips and one failed old navigation assertion expecting the deliberately removed student menus. Updated that test to require My step and prohibit the old links; record its rerun below. This failed run is not a full-suite pass.
+- Full integrated teacher attention/legacy automation reconciliation, broader content and authenticated end-to-end browser QA remain incomplete. Do not describe this checkpoint as a ready deployment.
+- Corrected-navigation rerun: 16 tests passed across app header, student route guards, assignment planning and teacher evidence UI. Final build and focused lint passed. A fresh full-suite run remains part of the final release gate after the remaining implementation.

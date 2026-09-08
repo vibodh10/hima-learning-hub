@@ -22,7 +22,8 @@ create table public.mini_study_sessions (
   check(status not in ('review','completed') or grade is not null)
 );
 create unique index mini_study_one_open on public.mini_study_sessions(learner_id) where status in ('opened','review');
-create unique index mini_study_one_lesson on public.mini_study_sessions(learner_id,class_id,unit_id,kind,lesson_id) where status<>'abandoned';
+create unique index mini_study_one_lesson on public.mini_study_sessions(learner_id,unit_id,kind,lesson_id) where status<>'abandoned';
+create unique index mini_study_one_baseline on public.mini_study_sessions(learner_id,unit_id) where kind='baseline' and status<>'abandoned';
 create index mini_study_teacher_records on public.mini_study_sessions(class_id,unit_id,learner_id,completed_at desc);
 alter table public.mini_study_sessions enable row level security;
 revoke all on public.mini_study_sessions from public,anon,authenticated;
@@ -47,7 +48,7 @@ grant execute on function public.mini_study_assigned(uuid,uuid,uuid) to service_
 
 create function public.open_mini_study(learner_uuid uuid,class_uuid uuid,unit_uuid uuid,lesson_value text,kind_value text,content_value jsonb,keys_value jsonb)
 returns uuid language plpgsql security definer set search_path='' as $$
-declare current_session public.mini_study_sessions; new_id uuid; today date:=(now() at time zone 'Europe/London')::date;
+declare current_session public.mini_study_sessions; new_id uuid; baseline_exists boolean; today date:=(now() at time zone 'Europe/London')::date;
 begin
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('mini:'||learner_uuid::text,0));
  if not public.mini_study_assigned(learner_uuid,class_uuid,unit_uuid) then raise exception 'unit_not_assigned' using errcode='42501'; end if;
@@ -57,6 +58,11 @@ begin
  where learner_id=learner_uuid and status in ('opened','review') and not public.mini_study_assigned(learner_uuid,class_id,unit_id);
  select * into current_session from public.mini_study_sessions where learner_id=learner_uuid and status in ('opened','review');
  if current_session.id is not null then return current_session.id; end if;
+ select exists(select 1 from public.unit_starting_point_baselines where learner_id=learner_uuid and unit_id=unit_uuid)
+   or exists(select 1 from public.mini_study_sessions where learner_id=learner_uuid and unit_id=unit_uuid and kind='baseline' and status='completed')
+ into baseline_exists;
+ if kind_value='daily' and not baseline_exists then raise exception 'starting_point_required'; end if;
+ if kind_value='baseline' and baseline_exists then raise exception 'starting_point_already_recorded'; end if;
  insert into public.mini_study_sessions(learner_id,class_id,unit_id,unit_code,lesson_id,kind,content,question_keys)
  select learner_uuid,class_uuid,unit_uuid,u.code,lesson_value,kind_value,content_value,keys_value from public.units u where u.id=unit_uuid returning id into new_id;
  return new_id;

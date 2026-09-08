@@ -11,7 +11,7 @@ export type StudyLesson = {
   questions: StudyQuestionKey[]; sources: string[];
 };
 export type StudyResponse = { questionId: string; answer: string | Record<string, string> };
-export type StudyFeedback = { questionId: string; correct: boolean; recap: boolean; skill: string; explanation: string; correctAnswer: string };
+export type StudyFeedback = { questionId: string; correct: boolean; recap: boolean; skill: string; explanation: string; correctAnswer: string; selectedAnswer?: string; prompt?: string };
 export type StudyGrade = { correct: number; total: number; feedback: StudyFeedback[] };
 export type StudyCompletion = { lessonId: string; completedAt: string; kind: "baseline" | "daily"; feedback: StudyFeedback[] };
 export type StudyCard = {
@@ -84,7 +84,9 @@ export function gradeStudy(keys: StudyQuestionKey[], input: unknown): StudyGrade
       : Object.entries(q.answer).every(([stem,option])=>actual && typeof actual!=="string" && actual[stem]===option);
     const correctAnswer = typeof q.answer === "string" ? q.options.find(o=>o.id===q.answer)!.text
       : q.stems!.map(s=>`${s.text}: ${q.options.find(o=>o.id===(q.answer as Record<string,string>)[s.id])!.text}`).join("; ");
-    return {questionId:q.id,skill:q.skill,correct,recap:Boolean(q.recap),explanation:q.explanation,correctAnswer};
+    const selectedAnswer=typeof actual==="string"?q.options.find(o=>o.id===actual)!.text
+      : q.stems!.map(s=>`${s.text}: ${q.options.find(o=>o.id===(actual as Record<string,string>)[s.id])!.text}`).join("; ");
+    return {questionId:q.id,prompt:q.prompt,skill:q.skill,correct,recap:Boolean(q.recap),explanation:q.explanation,correctAnswer,selectedAnswer};
   });
   return {correct:feedback.filter(f=>f.correct && !f.recap).length,total:feedback.filter(f=>!f.recap).length,feedback};
 }
