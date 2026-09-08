@@ -1,5 +1,40 @@
 @import "tailwindcss";
 
+/* A calm, single-task student surface. Brand colours remain theme-aware; no dashboard chrome. */
+.mini-study-surface { min-height:100vh; background:#f4f6f8; color:#132b42; font-family:Arial,Helvetica,sans-serif; }
+.mini-study-header { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1.1rem max(1rem,calc((100% - 720px)/2)); background:var(--primary); color:#fff; }
+.mini-study-header a { color:#fff; font-size:1.125rem; font-weight:700; }
+.mini-study-header button { min-height:44px; padding:.45rem .75rem; border:1px solid currentColor; border-radius:.25rem; cursor:pointer; }
+.mini-study-main { width:min(720px,calc(100% - 2rem)); margin:2rem auto; }
+.mini-study-panel { background:#fff; border:1px solid #c7d1db; border-top:5px solid var(--primary); border-radius:.3rem; padding:clamp(1.25rem,4vw,2.5rem); overflow-wrap:anywhere; }
+.mini-study-panel h1 { font-size:clamp(1.6rem,4vw,2.1rem); line-height:1.25; font-weight:700; margin:.6rem 0 1.4rem; }
+.mini-study-panel h1:focus { outline:none; }
+.mini-study-panel p { font-size:1.125rem; line-height:1.6; margin:.7rem 0; }
+.mini-study-panel .mini-study-kicker,.mini-study-position { color:#415c71; font-size:1rem; }
+.mini-study-example { padding:1rem 1.25rem; margin:1.5rem 0; border-left:4px solid #2574a9; background:#edf5fb; }
+.mini-study-example h2 { font-weight:700; font-size:1.125rem; }
+.mini-study-help { margin:1rem 0; font-size:1rem; }
+.mini-study-help summary { cursor:pointer; color:#154f85; min-height:44px; padding:.5rem 0; }
+.mini-study-primary { display:block; width:fit-content; max-width:100%; min-height:48px; margin-top:1.5rem; padding:.8rem 1.5rem; background:var(--primary); color:#fff; border:2px solid transparent; border-radius:.3rem; box-shadow:0 3px 0 var(--primary-strong); font-size:1.125rem; font-weight:700; cursor:pointer; }
+.mini-study-primary:disabled { background:#566675; box-shadow:none; cursor:default; }
+.mini-study-primary:focus-visible,.mini-study-option:focus-within,.mini-study-matches select:focus-visible { outline:3px solid #ffcf33; outline-offset:3px; box-shadow:0 0 0 5px #17324d; }
+.mini-study-options { display:grid; gap:.8rem; border:0; margin:1rem 0; padding:0; }
+.mini-study-option { display:flex; align-items:flex-start; gap:.9rem; min-height:52px; border:2px solid #71859a; border-radius:.3rem; padding:1rem; font-size:1.125rem; line-height:1.5; cursor:pointer; }
+.mini-study-option:has(input:checked) { border-color:var(--primary); background:#f1f5fa; }
+.mini-study-option input { width:1.4rem; height:1.4rem; flex-shrink:0; margin-top:.15rem; accent-color:var(--primary); }
+.mini-study-matches { border:0; padding:0; display:grid; gap:1rem; }
+.mini-study-matches legend { font-size:1rem; margin-bottom:1rem; }
+.mini-study-matches label { display:grid; gap:.5rem; font-size:1.125rem; font-weight:700; }
+.mini-study-matches select { width:100%; max-width:100%; min-height:52px; border:2px solid #71859a; padding:.75rem; border-radius:.3rem; font:inherit; font-weight:400; background:#fff; }
+.mini-study-feedback-answer { font-weight:700; }
+.mini-study-panel .mini-study-error { border-left:4px solid #ae231c; padding:.6rem 1rem; color:#8f1d17; }
+.mini-study-done .mini-study-xp { font-size:2rem; font-weight:700; color:#176637; }
+.mini-study-badge { display:inline-block; border:2px solid #8b690c; border-radius:.4rem; padding:.75rem 1rem; background:#fff4c6; color:#4c3900; font-weight:700; }
+.mini-study-footer { display:flex; flex-wrap:wrap; gap:1.5rem; width:min(720px,calc(100% - 2rem)); margin:2rem auto; font-size:1rem; }
+.mini-study-footer a { text-decoration:underline; color:#154f85; min-height:44px; padding:.5rem 0; }
+.mini-study-skip { position:absolute; left:-10000px; }
+.mini-study-skip:focus { left:1rem; top:1rem; z-index:100; padding:1rem; background:#ffcf33; color:#132b42; }
+
 :root {
   --background:#f7f5fb;
   --foreground:#17213a;
