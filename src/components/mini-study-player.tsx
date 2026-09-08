@@ -14,7 +14,10 @@ export function MiniStudyHome({initial}:{initial:StudyHome}) {
     <p className="mini-study-kicker">Your self-study</p>
     <h1>{home.status==="ready"?(home.kind==="baseline"?"Let's find your starting point":"One small step today"):home.status==="complete"?"You're up to date":"Your next step"}</h1>
     {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"Four basic questions. It is fine not to know the answers yet.":"A quick recap, one idea and a short check. Then you're done."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
-    {home.status!=="complete"&&<button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{setHome(await beginMiniStudy());})}>{pending?"Opening your step…":home.status==="ready"?"Start":"Try again"}</button>}
+    {home.status!=="complete"&&<button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
+      try{setHome(await beginMiniStudy());}
+      catch{setHome({status:"unavailable",message:"Your connection was interrupted. Try again to reopen your saved step."});}
+    })}>{pending?"Opening your step…":home.status==="ready"?"Start":"Try again"}</button>}
   </section>;
 }
 
@@ -37,6 +40,9 @@ export function MiniStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=f
   const heading=useRef<HTMLHeadingElement>(null);
   useEffect(()=>{heading.current?.focus();},[phase,questionIndex,feedbackIndex,reward]);
   const question=card.questions[questionIndex];
+  // Feedback follows the questions the learner actually saw, not source-file order.
+  const feedback=grade?card.questions.flatMap(q=>grade.feedback.filter(f=>f.questionId===q.id)):[];
+  const currentFeedback=feedback[feedbackIndex];
   const answer=responses[question?.id];
   const validAnswer=question?.kind==="choice"?typeof answer==="string":
     Boolean(answer && typeof answer!=="string" && question.stems?.every(s=>answer[s.id]) && new Set(Object.values(answer)).size===question.stems?.length);
@@ -93,13 +99,14 @@ export function MiniStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=f
       </fieldset>}
       <button className="mini-study-primary" disabled={pending||!validAnswer} onClick={nextQuestion}>{pending?"Saving your answers…":questionIndex===card.questions.length-1?"Check my answers":"Continue"}</button>
     </>}
-    {phase==="feedback"&&grade&&<>
-      <p className="mini-study-position">{grade.feedback[feedbackIndex].recap?"Your recap":"Your answer"}</p>
-      <h1 ref={heading} tabIndex={-1}>{grade.feedback[feedbackIndex].correct?"That's right":"Let's look at this together"}</h1>
-      <p className="mini-study-feedback-answer">{grade.feedback[feedbackIndex].correctAnswer}</p>
-      <p>{grade.feedback[feedbackIndex].explanation}</p>
-      <button className="mini-study-primary" disabled={pending} onClick={()=>feedbackIndex<grade.feedback.length-1?setFeedbackIndex(feedbackIndex+1):finishStep()}>
-        {pending?(savingCompletion?"Saving your completion…":"Loading feedback…"):feedbackIndex<grade.feedback.length-1?"Continue":"Finish for today"}
+    {phase==="feedback"&&currentFeedback&&<>
+      <p className="mini-study-position">{currentFeedback.recap?"Your recap":"Your answer"}</p>
+      <h1 ref={heading} tabIndex={-1}>{currentFeedback.correct?"That's right":"Let's look at this together"}</h1>
+      <p>{currentFeedback.prompt??card.questions[feedbackIndex].prompt}</p>
+      <p className="mini-study-feedback-answer">{currentFeedback.correctAnswer}</p>
+      <p>{currentFeedback.explanation}</p>
+      <button className="mini-study-primary" disabled={pending} onClick={()=>feedbackIndex<feedback.length-1?setFeedbackIndex(feedbackIndex+1):finishStep()}>
+        {pending?(savingCompletion?"Saving your completion…":"Loading feedback…"):feedbackIndex<feedback.length-1?"Continue":"Finish for today"}
       </button>
     </>}
     {error&&<p className="mini-study-error" role="alert">{error}</p>}

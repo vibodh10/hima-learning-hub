@@ -113,14 +113,15 @@ export function ClassSettingsForm({
       </div>
       <div className="flex gap-3">
         {step > 0 && <button type="button" className="button-secondary" disabled={pending} onClick={() => {setStep(step - 1);setStepError("");}}>Back</button>}
-        {step < 2 ? <button type="button" className="button" onClick={event => {
+        {step < 2 ? <button key="continue" type="button" className="button" onClick={event => {
+          event.preventDefault();
           const invalid = [...(event.currentTarget.form?.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input,select") ?? [])].find(field => !field.closest("[hidden]") && !field.checkValidity());
           if(invalid){invalid.reportValidity();return;}
           if(step === 0 && !event.currentTarget.form?.querySelector('input[name="weeklyLearningDays"]:checked')){setStepError("Select at least one teaching day.");return;}
           if(step === 1 && !selectedIds.length){setStepError("Select at least one unit you teach.");return;}
           if(step === 1 && selectedIds.length === 1)setFocusId(selectedIds[0]);
           setStepError("");setStep(step + 1);
-        }}>Continue</button> : <button className="button" disabled={pending}>{pending ? "Saving…" : "Save units and continue"}</button>}
+        }}>Continue</button> : <button key="save" type="submit" className="button" disabled={pending}>{pending ? "Saving…" : "Save units and continue"}</button>}
       </div>
       {stepError && <p role="alert" className="text-red-700">{stepError}</p>}
       {state.message && <p role="status" className={`text-sm ${state.ok ? "text-teal-800" : "text-red-700"}`}>{state.message}</p>}

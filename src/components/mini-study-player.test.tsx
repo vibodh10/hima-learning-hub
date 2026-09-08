@@ -1,6 +1,7 @@
 import {cleanup,fireEvent,render,screen} from "@testing-library/react";
 import {afterEach,describe,expect,it,vi} from "vitest";
-import {MiniStudyPlayer,StudyDone} from "./mini-study-player";
+import {MiniStudyHome,MiniStudyPlayer,StudyDone} from "./mini-study-player";
+import {beginMiniStudy} from "@/app/actions/mini-study";
 import {gradeStudy,publicStudyQuestions,type StudyCard} from "@/lib/mini-study";
 import {unit6StudyLessons} from "@/lib/mini-study-content";
 
@@ -10,6 +11,13 @@ const lesson=unit6StudyLessons[0];
 function card():StudyCard {return {sessionId:"test-session",kind:"daily",title:lesson.title,unitTitle:"Website Development",lines:lesson.lines,example:lesson.example,support:lesson.support,questions:publicStudyQuestions(lesson.questions,"test-session")};}
 
 describe("one-step student experience",()=>{
+ it("offers a safe retry if the connection fails while opening a step",async()=>{
+  vi.mocked(beginMiniStudy).mockRejectedValueOnce(new Error("offline"));
+  render(<MiniStudyHome initial={{status:"ready",kind:"daily",unitTitle:"Website Development"}}/>);
+  fireEvent.click(screen.getByRole("button",{name:"Start"}));
+  expect(await screen.findByRole("status")).toHaveTextContent("connection was interrupted");
+  expect(await screen.findByRole("button",{name:"Try again"})).toBeEnabled();
+ });
  it("shows a short explanation first, not questions or progress panels",()=>{
   render(<MiniStudyPlayer card={card()}/>);
   expect(screen.getByRole("heading",{name:lesson.title})).toBeInTheDocument();
@@ -64,5 +72,15 @@ describe("one-step student experience",()=>{
   render(<StudyDone reward={{xp:0,badge:null,nextOn:"2026-09-09"}}/>);
   expect(screen.queryByText(/XP/)).not.toBeInTheDocument();
   expect(screen.getByText("You can close the portal now.")).toBeInTheDocument();
+ });
+ it("reviews answers in the presented question order with the original prompt",()=>{
+  const current=card();
+  current.questions=[...publicStudyQuestions(lesson.questions,"order")].sort((a,b)=>a.kind==="match"?-1:b.kind==="match"?1:0);
+  const grade=gradeStudy(lesson.questions,lesson.questions.map(q=>({questionId:q.id,answer:q.answer})))!;
+  render(<MiniStudyPlayer card={current} initialGrade={grade}/>);
+  expect(screen.getByText(current.questions[0].prompt)).toBeInTheDocument();
+  expect(screen.queryByText(current.questions[1].prompt)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button",{name:"Continue"}));
+  expect(screen.getByText(current.questions[1].prompt)).toBeInTheDocument();
  });
 });

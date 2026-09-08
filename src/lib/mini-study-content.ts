@@ -1,4 +1,8 @@
 import type { StudyLesson, StudyQuestionKey } from "./mini-study";
+import {dataModellingStudy} from "./mini-study-data-modelling";
+import {securityStudy} from "./mini-study-security";
+import {cloudStudy} from "./mini-study-cloud";
+import {projectStudy} from "./mini-study-projects";
 
 export const studySources = {
   pearson:"https://qualifications.pearson.com/content/dam/pdf/BTEC-Nationals/Information-Technology/2016/specification-and-sample-assessments/specification-pearson-btec-level-3-national-extended-diploma-in-information-technology.pdf",
@@ -52,6 +56,14 @@ export const unit6StudyLessons: StudyLesson[] = [
 // Further short ideas cover visual design and performance without adding a
 // second task to the learner's day. Stable IDs retain all completed evidence.
 unit6StudyLessons.push(
+ lesson({id:"visual-hierarchy",title:"Make the important thing stand out",skill:"usability",
+  lines:["Visual hierarchy uses size, position and contrast to suggest importance.","Proportion describes the sizes of elements in relation to each other.","The golden ratio, about 1:1.618, is one design reference—not proof of usability."],
+  example:"A college page gives a decorative photograph most of the space and makes its Apply button tiny. Attractive proportions do not help applicants if the main action is difficult to find.",support:"Look first at what catches your eye. Is it what the intended user needs?",
+  question:"What best tests whether this creative layout works for applicants?",answers:["Observe whether applicants can find and use the Apply button","Check only that the layout uses the golden ratio","Assume the biggest photograph makes every task easier"],feedback:"A design reference can guide composition, but observed task performance is needed to judge usability for the audience.",pairs:[["Visual hierarchy","Using visual differences to suggest importance"],["Proportion","Sizes of elements in relation to each other"]],analysis:"A small low-emphasis Apply button can be overlooked, delaying the task even when the photograph is attractive.",evaluation:"Keep creative features that support the purpose, but prioritise a discoverable main action and retest with applicants."}),
+ lesson({id:"search-discovery",title:"Help people find the right page",skill:"discovery",
+  lines:["Search engines can discover pages by crawling links and store information in an index.","Search engine optimisation helps make relevant content discoverable and understandable.","Accurate titles, useful wording and maintained content help; no keyword guarantees first place."],
+  example:"A college names a page 'Level 3 IT course: entry requirements' and keeps its course details current. Calling it 'Page 7' gives people and search services much less useful context.",support:"Use the words the audience needs, honestly describing what is on the page.",
+  question:"Which change best helps someone identify the relevant course page?",answers:["Give it an accurate descriptive title and maintain its information","Repeat unrelated popular words throughout the page","Promise a first-place search result from one keyword"],feedback:"Relevant titles and maintained content support discovery and understanding. Search placement is not guaranteed, and misleading keywords do not serve the visitor's task.",pairs:[["Crawling","Discovering pages by following links"],["Indexing","Storing information about discovered content"]],analysis:"A descriptive course title can help a prospective applicant recognise that the page matches their search.",evaluation:"Compare relevant search queries and the usefulness of the landing page; a high position alone does not prove the information meets the user's need."}),
  lesson({id:"layout",title:"Give the page breathing room",skill:"usability",
   lines:["White space is empty space around page elements; it need not be white.","Grouping related items helps readers scan a page.","Alignment gives the page a predictable structure."],
   example:"A college page puts the course title, dates and Apply button together. A gap separates this group from unrelated news, making the application section easier to spot.",support:"Look for items that belong together. Can you recognise that group quickly?",
@@ -102,5 +114,12 @@ export const unit6StudyBaseline: StudyQuestionKey[] = [
 ];
 
 export function studyContentFor(unitCode:string) {
-  return unitCode==="6" ? {version:"u6-mini-v1",lessons:unit6StudyLessons,baseline:unit6StudyBaseline} : undefined;
+  switch(unitCode){
+    case "5":return dataModellingStudy;
+    case "6":return {version:"u6-mini-v1",lessons:unit6StudyLessons,baseline:unit6StudyBaseline};
+    case "9":return projectStudy;
+    case "11":return securityStudy;
+    case "16":return cloudStudy;
+    default:return undefined;
+  }
 }

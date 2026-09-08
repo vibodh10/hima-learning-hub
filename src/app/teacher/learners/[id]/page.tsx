@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { assessmentParentLabel as parentFromActivity } from "@/lib/assessment-parent-label";
-import { refreshLearningAutomation } from "@/lib/learning-automation-server";
 import { AutomaticLearningRecord } from "@/components/automatic-learning-record";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth";
@@ -64,7 +63,6 @@ export default async function LearnerPage({
       : compactChoices[0] ?? null;
     if (!compactSelection) notFound();
     const compactClass = compactSelection.linkedClass;
-    await refreshLearningAutomation(id, String(compactClass.id));
     const [journeyResult, attentionResult, gapResult, unitResult, targetResult] = await Promise.all([
       supabase.rpc("current_class_learning_journey", { class_uuid: compactClass.id }),
       supabase.rpc("class_learner_attention", { class_uuid: compactClass.id }),
@@ -101,8 +99,8 @@ export default async function LearnerPage({
     const quarter = currentCalendarQuarter(new Date());
     const reportBase = `/api/reports/learners/${id}?classId=${compactClass.id}`;
 
-    return <><AppHeader name={actor.display_name} role={actor.role}/><TeacherLearnerSummary
-      automaticRecord={<AutomaticLearningRecord learnerId={id} classId={String(compactClass.id)}/>}
+    return <><AppHeader name={actor.display_name} role={actor.role}/><aside className="shell mt-6 rounded-xl border border-purple-200 bg-white p-5"><h2 className="font-bold">Earlier learning records</h2><p className="mt-2">These preserved records describe the earlier learning activities, not the current daily steps.</p><Link className="link mt-3 inline-block" href={`/teacher/classes/${compactClass.id}`}>See current short-study results and automatic targets →</Link></aside><TeacherLearnerSummary
+      automaticRecord={<AutomaticLearningRecord learnerId={id} classId={String(compactClass.id)} historical/>}
       attentionReason={compactAttention?.attention_reason ?? "The portal has not recorded a concern for this student."}
       attentionStatus={compactAttention?.attention_status ?? "on_track"}
       classChoices={compactChoices.map(choice => ({ id: choice.classId, name: String(choice.linkedClass.name) }))}
@@ -121,7 +119,6 @@ export default async function LearnerPage({
       weeklyPeriod={week}
     /></>;
   }
-  await refreshLearningAutomation(id, requestedClassId);
   const evidenceResults = await Promise.all([
     supabase.from("user_profiles").select("id,display_name").eq("id", id).eq("role", "student").single(),
     supabase.from("enrolments").select("enrolled_at,classes(id,name,course_id,courses(id,title),teachers:teacher_id(display_name))").eq("student_id", id).is("archived_at", null),
@@ -264,6 +261,7 @@ export default async function LearnerPage({
   const curriculumStrengths = curriculumPractice.filter(item => Number(item.percentage) >= 75);
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
+    <aside className="card mb-6"><h2 className="font-bold">Earlier learning records</h2><p className="mt-2">These preserved records describe the earlier learning activities. Current short-study results and automatic targets are on the group page.</p></aside>
     <Link className="link" href={classInfo ? `/teacher/classes/${classInfo.id}` : "/dashboard"}>← {classInfo?.name ?? "Teacher dashboard"}</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
       <div><p className="eyebrow">Learner evidence record</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-2 text-slate-600">{courseInfo?.title ?? "Course not recorded"}</p></div>
@@ -354,7 +352,7 @@ export default async function LearnerPage({
       </div>) : <Empty text="No completed feedback-and-improvement cycle has been recorded yet."/>}</div>
     </section>
 
-    <AutomaticLearningRecord learnerId={id} classId={classInfo?.id}/>
+    <AutomaticLearningRecord learnerId={id} classId={classInfo?.id} historical/>
     <section className="card mt-6"><p className="eyebrow">5. Targets and next steps</p><h2 className="mt-2 text-2xl font-bold">Current measurable priorities</h2>
       {targets?.length ? <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="text-slate-500"><tr><th className="pb-3">Status</th><th className="pb-3">Unit / topic</th><th className="pb-3">Target</th><th className="pb-3">Baseline</th><th className="pb-3">Success measure</th><th className="pb-3">Deadline</th><th className="pb-3">Review date</th></tr></thead><tbody>{targets.map(target => {
         const warning = !target.review_on ? "Review date needs to be added." : !target.success_measure ? "Success measure needs to be added." : null;

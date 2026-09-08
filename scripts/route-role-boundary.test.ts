@@ -11,7 +11,6 @@ describe("private page role boundaries", () => {
     ["admin/page.tsx", /requireRole\("administrator"\)/],
     ["teacher/content/page.tsx", /requireRole\("administrator"\)/],
     ["teacher/sample-report/page.tsx", /requireRole\("teacher",\s*"administrator"\)/],
-    ["teacher/classes/[id]/page.tsx", /requireRole\("teacher",\s*"administrator"\)/],
     ["teacher/learners/[id]/page.tsx", /requireRole\("teacher",\s*"administrator"\)/],
     ["teacher/learners/[id]/evidence/page.tsx", /requireRole\("administrator"\)/],
     ["learn/[lessonId]/page.tsx", /requireRole\("student",\s*"teacher",\s*"administrator"\)/],
@@ -21,6 +20,14 @@ describe("private page role boundaries", () => {
     ["rewards/page.tsx", /requireRole\("student"\)/],
   ])("keeps %s behind its explicit role guard", (relativePath, guard) => {
     expect(source(relativePath)).toMatch(guard);
+  });
+
+  it("delegates the teacher group route only to the role- and class-guarded page",()=>{
+    expect(source("teacher/classes/[id]/page.tsx").trim()).toBe('export {default} from "@/components/mini-study-group-page";');
+    const groupPage=readFileSync(resolve(process.cwd(),"src","components","mini-study-group-page.tsx"),"utf8");
+    expect(groupPage).toMatch(/await requireRole\("teacher",\s*"administrator"\)/);
+    expect(groupPage).toContain('client.rpc("can_manage_class",{class_uuid:id})');
+    expect(groupPage).toContain('if(accessError||!allowed)notFound()');
   });
 
   it("requires an authenticated profile before rendering a dashboard", () => {

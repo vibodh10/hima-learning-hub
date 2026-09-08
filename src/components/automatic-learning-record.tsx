@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export async function AutomaticLearningRecord({ learnerId, classId }: { learnerId: string; classId?: string }) {
+export async function AutomaticLearningRecord({ learnerId, classId, historical=false }: { learnerId: string; classId?: string; historical?:boolean }) {
   const client = await createClient();
   let query = client.from("learner_automation_summaries")
     .select("class_id,feedback,appreciation,updated_at,targets(target_text,status,target_date),classes(name)")
@@ -8,11 +8,11 @@ export async function AutomaticLearningRecord({ learnerId, classId }: { learnerI
   if (classId) query = query.eq("class_id", classId);
   const { data, error } = await query;
   if (error) return <p role="status" className="card mt-6">Automatic records could not be loaded. Refresh to try again.</p>;
-  if (!data?.length) return <p className="card mt-6 text-slate-600">Automatic targets will appear when the group&apos;s learning journey starts.</p>;
+  if (!data?.length) return <p className="card mt-6 text-slate-600">{historical?"No earlier automatic target record was saved.":"Automatic targets will appear when the group’s learning journey starts."}</p>;
   return <section className="card mt-6" aria-label="Automatic learning records">
-    <p className="eyebrow">Updated automatically from recorded work</p>
-    <h2 className="mt-2 text-2xl font-bold">Target, feedback and encouragement</h2>
-    <p className="mt-2 text-sm text-slate-600">No forms or teacher approval needed. Targets update as work is saved and records are opened.</p>
+    <p className="eyebrow">{historical?"Preserved earlier-system summary":"Updated automatically from recorded work"}</p>
+    <h2 className="mt-2 text-2xl font-bold">{historical?"Earlier target and feedback":"Target, feedback and encouragement"}</h2>
+    <p className="mt-2 text-sm text-slate-600">{historical?"Opening this history does not generate new targets. Use the group’s short-study records for the current next target.":"No forms or teacher approval needed. Targets update as work is saved and records are opened."}</p>
     {data.map(row => {
       const target = Array.isArray(row.targets) ? row.targets[0] : row.targets;
       const group = Array.isArray(row.classes) ? row.classes[0] : row.classes;
