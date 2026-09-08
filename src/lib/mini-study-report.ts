@@ -1,4 +1,5 @@
 import type { StudyGrade } from "./mini-study";
+export type StudyLegacyBaseline={learner_id:string;correct_count:number;question_count:number;completed_at:string};
 
 export type MiniStudyRecord={id:string;learner_id:string;kind:"baseline"|"daily";status:string;content:{title?:string};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
 export function miniStudyLearnerSummary(records:MiniStudyRecord[]) {

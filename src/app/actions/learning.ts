@@ -146,6 +146,7 @@ export async function configureClass(_: ActionState, formData: FormData): Promis
   }
   revalidatePath("/dashboard");
   revalidatePath(`/teacher/classes/${parsed.data.classId}`);
+  revalidatePath(`/teacher/classes/${parsed.data.classId}/settings`);
   return { ok: true, message: "Class curriculum and schedule saved." };
 }
 

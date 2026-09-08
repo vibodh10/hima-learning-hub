@@ -41,7 +41,7 @@ select exists(select 1 from public.enrolments e
  join public.user_profiles p on p.id=e.student_id and p.organisation_id=c.organisation_id
  where e.student_id=learner_uuid and e.class_id=class_uuid and cu.unit_id=unit_uuid
  and e.archived_at is null and c.archived_at is null and c.published
- and cu.active and cu.archived_at is null and u.archived_at is null and p.archived_at is null and p.role='student')
+ and cu.active and cu.archived_at is null and u.archived_at is null and u.status='approved' and p.archived_at is null and p.role='student')
 $$;
 revoke all on function public.mini_study_assigned(uuid,uuid,uuid) from public,anon,authenticated;
 grant execute on function public.mini_study_assigned(uuid,uuid,uuid) to service_role;

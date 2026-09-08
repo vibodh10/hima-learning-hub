@@ -69,6 +69,6 @@ describe("short self-study rules",()=>{
     expect(studyThinking(lesson,{correct:1,total:4,feedback:[]})).toBeUndefined();
     expect(studyThinking(lesson,{correct:2,total:4,feedback:[]})).toBe(lesson.analysis);
     expect(studyThinking(lesson,{correct:4,total:4,feedback:[]})).toBe(lesson.evaluation);
-    expect(unit6StudyLessons.at(-1)?.questions[0].explanation).toContain("does not award a qualification grade");
+    expect(unit6StudyLessons.find(l=>l.skill==="evaluation")?.questions[0].explanation).toContain("does not award a qualification grade");
   });
 });

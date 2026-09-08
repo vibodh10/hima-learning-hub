@@ -9,14 +9,13 @@ import { unitByCode } from "@/lib/learning-catalog";
 import { nextJourneyMilestone } from "@/lib/unit-journeys";
 import { scopedTeacherAttention, selectTeacherDashboardLearners } from "@/lib/teacher-dashboard-filters";
 import { summariseTeacherOverview } from "@/lib/dashboard-summary";
+import { TeacherHomeDashboard } from "@/components/mini-study-teacher-home";
 import { selectTeacherNextAction } from "@/lib/teacher-next-action";
 import { matchCompletedAllocationIds } from "@/lib/class-report-model";
 import { formatWeeklyLearningDays } from "@/lib/weekly-schedule";
 import { classInvitationReadiness } from "@/lib/class-invitation-readiness";
 import { TeacherGroupCard } from "@/components/teacher-group-card";
 import { capitaliseFirst } from "@/lib/display-text";
-import { TeacherPriorityList } from "@/components/teacher-priority-list";
-import { applyWeeklyLearningGaps } from "@/lib/teacher-weekly-attention";
 
 type TeacherFilters={
   academicYear?:string;period?:string;course?:string;class?:string;unit?:string;
@@ -40,109 +39,6 @@ export default async function DashboardPage({searchParams}:{searchParams:Promise
   </>;
 }
 
-async function TeacherHomeDashboard() {
-  const supabase = await createClient();
-  const [{ data: classes }, { data: journeyTemplates }, {data:courses}, {data:years}] = await Promise.all([
-    supabase.from("classes").select("id,name,active_unit_id,weekly_learning_day,weekly_learning_days,published,enrolments(count),class_enrolments:enrolments(student_id),student_invitations(status),class_units(unit_id,active,archived_at,units(code,title,status,archived_at))").is("archived_at", null).order("name"),
-    supabase.from("learning_journey_templates").select("unit_id").eq("status", "approved").is("archived_at", null),
-    supabase.from("courses").select("id,title").eq("active",true).is("archived_at",null).order("title"),
-    supabase.from("academic_years").select("id,name").is("archived_at",null).order("starts_on",{ascending:false}),
-  ]);
-  const classSignals = await Promise.all((classes ?? []).map(async item => {
-    const [{ data }, { data: weeklyGaps }] = await Promise.all([
-      supabase.rpc("class_learner_attention", { class_uuid: item.id }),
-      supabase.rpc("class_learner_weekly_gaps", { class_uuid: item.id }),
-    ]);
-    return applyWeeklyLearningGaps((data ?? []) as TeacherAttentionDb[], weeklyGaps ?? []).map(row => ({
-      ...row,
-      classId: item.id,
-      className: item.name,
-    }));
-  }));
-  const attention = classSignals.flat();
-  const approvedJourneyUnitIds = new Set((journeyTemplates ?? []).map(template => template.unit_id));
-  const readinessByClass = new Map((classes ?? []).map(item => {
-    const activeClassUnits = (item.class_units ?? []).filter(unit => unit.active && !unit.archived_at);
-    const currentAssignment = activeClassUnits.find(unit => unit.unit_id === item.active_unit_id);
-    const currentUnit = related(currentAssignment?.units);
-    const configuredUnitCode = currentUnit
-      && currentUnit.status === "approved"
-      && !currentUnit.archived_at
-      && unitByCode(currentUnit.code)
-      ? currentUnit.code
-      : null;
-    return [item.id, classInvitationReadiness({
-      published: item.published,
-      activeUnitId: item.active_unit_id,
-      activeClassUnitIds: activeClassUnits.map(unit => unit.unit_id),
-      configuredUnitCode,
-      hasApprovedJourney: Boolean(item.active_unit_id && approvedJourneyUnitIds.has(item.active_unit_id)),
-    })] as const;
-  }));
-  const teacherNextAction = selectTeacherNextAction({
-    classes: (classes ?? []).map(item => ({
-      id: item.id,
-      name: item.name,
-      published: item.published,
-      activeUnitCount: (item.class_units ?? []).filter(unit => unit.active).length,
-      studentCount: item.enrolments?.[0]?.count ?? 0,
-      pendingInvitationCount: (item.student_invitations ?? []).filter(invitation => ["pending", "sent"].includes(invitation.status)).length,
-    })),
-    attention: attention.map(item => ({
-      classId: item.classId,
-      learnerId: item.learner_id,
-      displayName: item.display_name,
-      status: item.attention_status,
-      reason: item.attention_reason,
-    })),
-    canManageGroupSetup: true,
-  });
-  const studentIds = new Set((classes ?? []).flatMap(item => (item.class_enrolments ?? []).map(row => row.student_id)));
-  const actionableStatuses = new Set(["intervention_required", "action_required", "catch_up_required"]);
-  const needAttention = attention.filter(item => actionableStatuses.has(item.attention_status)).length;
-  const readyForStudents = (classes ?? []).filter(item =>
-    readinessByClass.get(item.id)?.ready === true && (item.enrolments?.[0]?.count ?? 0) === 0
-  ).length;
-
-  return <main className="shell py-10">
-    <div><p className="eyebrow">Teacher home</p><h1 className="mt-2 text-4xl font-bold">What needs my attention?</h1><p className="mt-3 max-w-3xl text-lg text-slate-600">Start with the one action below. The portal keeps routine progress and evidence in the background.</p></div>
-    <section className={`card mt-8 ${teacherNextAction.kind === "attention" ? "border-amber-200 bg-amber-50" : "border-teal-200 bg-teal-50"}`} aria-labelledby="teacher-next-action-title">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-3xl"><p className="eyebrow">{teacherNextAction.eyebrow}</p><h2 className="mt-2 text-3xl font-bold" id="teacher-next-action-title">{teacherNextAction.title}</h2><p className="mt-3 leading-7 text-slate-700">{teacherNextAction.detail}</p></div>
-        {teacherNextAction.meta && <span className="rounded-full bg-white px-3 py-2 text-sm font-bold text-slate-900">{teacherNextAction.meta}</span>}
-      </div>
-      <Link className="button mt-6 min-w-40 text-center" href={teacherNextAction.href}>{teacherNextAction.label} →</Link>
-      <p className="mt-3 text-xs text-slate-600">The portal handles learning routes automatically. Act only when a student needs help.</p>
-    </section>
-    <details className="card mt-6" id="groups" open={!classes?.length}><summary className="cursor-pointer text-lg font-bold" id="groups-title">Open a different group</summary><p className="mt-2 text-sm text-slate-600">Each group contains its students, current progress and downloadable reports.</p>
-      <div className="mt-6 grid gap-3">{classes?.length ? classes.map(item => <TeacherGroupCard
-        id={item.id}
-        invitationReady={readinessByClass.get(item.id)?.ready === true}
-        key={item.id}
-        name={item.name}
-        schedule={formatWeeklyLearningDays(item.weekly_learning_days, item.weekly_learning_day)}
-        studentCount={item.enrolments?.[0]?.count ?? 0}
-        unitTitles={(item.class_units ?? []).filter(unit => unit.active && !unit.archived_at)
-          .map(unit => related(unit.units)?.title).filter((title): title is string => Boolean(title))}
-      />) : <p className="rounded-2xl bg-slate-50 p-6 text-slate-600">You do not have a group yet. Create one below, then choose its units and teaching days.</p>}</div>
-    </details>
-    <CreateClassForm courses={courses??[]} years={years??[]}/>
-    <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">See all groups and teaching information</summary><section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Teacher overview">
-      <Metric label="Groups" value={String(classes?.length ?? 0)}/>
-      <Metric label="Students" value={String(studentIds.size)}/>
-      <Metric label="Need attention" value={String(needAttention)}/>
-      <Metric label="Ready for students" value={String(readyForStudents)}/>
-    </section>
-    {studentIds.size > 0 && <TeacherPriorityList items={attention.map(item => ({
-      classId: item.classId,
-      className: item.className,
-      learnerId: item.learner_id,
-      learnerName: item.display_name,
-      status: item.attention_status,
-      reason: item.attention_reason,
-    }))}/>}</details>
-  </main>;
-}
 
 async function AdministratorDashboard({role,filters }: {role:"administrator";filters:TeacherFilters }) {
   const supabase = await createClient();
