@@ -1,4 +1,5 @@
 import { pearsonUnits, type PearsonTopic, type PearsonUnit } from "./pearson-curriculum";
+import { extendedPearsonUnits } from "./extended-pearson-units";
 
 export const expertiseLevels = ["Support", "Core", "Stretch", "Challenge"] as const;
 export type ExpertiseLevel = typeof expertiseLevels[number];
@@ -134,10 +135,15 @@ const unit19: PearsonUnit = {
   ],
 };
 
-export const configuredUnits: PearsonUnit[] = [unit1, ...pearsonUnits, unit8, unit9, unit10, unit14, unit19]
+export const configuredUnits: PearsonUnit[] = [unit1, ...pearsonUnits, unit8, unit9, unit10, unit14, unit19, ...extendedPearsonUnits]
   .sort((a, b) => Number(a.code) - Number(b.code));
 
 const unitMeta: Record<string, UnitMeta> = {
+  ...Object.fromEntries(extendedPearsonUnits.map(unit => [unit.code, {
+    aims: unit.code === "11" ? ["A Threats and protection", "B Networks", "C Protection planning", "D Security documentation", "E Forensic procedures"] : ["A Investigate and evaluate", "B Design and implement", "C Test, improve and evaluate"],
+    criteria: unit.code === "11" ? ["AO1-AO5: original external-assessment preparation"] : [`Unit ${unit.code}: evidence judged against the teacher's approved assignment brief`],
+    project: project(`${unit.title}: applied project`,unit.topics[0].phases.find(phase=>phase.label==="Worked examples")!.detail,"Use an original teacher-approved scenario. Produce your own work and retain evidence of your decisions; this is not a live Pearson assessment.",["Requirements and context","Justified plan","Implementation or incident analysis","Test evidence","Evaluation and recommendations"],unit.code === "11" ? ["Content areas A-E"] : ["Learning aims A-C"],["Formative preparation; not an awarded qualification grade"],"Evaluate a credible alternative and explain the remaining limitations.",["Understand the problem","Plan your response","Apply and record evidence","Check results","Evaluate"]),
+  }])),
   "1": {
     aims: ["A Digital devices in IT systems", "B Transmitting data", "C Operating online", "D Protecting data and information", "E Impact of IT systems", "F Moral, ethical and legal issues"],
     criteria: ["AO1 knowledge and understanding", "AO2 application of IT terms, standards, concepts and processes", "AO3 selecting technologies and procedures to solve contextual problems", "AO4 analysis, evaluation and justified solutions", "AO5 connections between technologies, procedures, outcomes and solutions"],

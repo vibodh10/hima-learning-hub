@@ -28,7 +28,49 @@ function weeks(rows: Array<[string, string, string]>): ConfiguredJourneyWeek[] {
   }));
 }
 
-export const configuredUnitJourneys: Record<"2" | "4" | "6" | "10" | "14" | "19", ConfiguredJourneyWeek[]> = {
+export const configuredUnitJourneys: Record<"2" | "4" | "5" | "6" | "10" | "11" | "14" | "16" | "19", ConfiguredJourneyWeek[]> = {
+  "5": weeks([
+    ["A1-A2","Your data modelling starting point","Find out what you already know about using spreadsheets to make decisions."],
+    ["A1-A2","Use information to make a decision","Separate facts from assumptions and try a simple spreadsheet calculation."],
+    ["A3-A5","Compare possible outcomes","Change one input, compare the result and explain a limitation."],
+    ["B1","Decide what the model must do","Identify the user's inputs, outputs and success checks."],
+    ["B2-B3","Plan a clear spreadsheet","Sketch the sheets and ask someone to try following your plan."],
+    ["C1","Progress check: spreadsheet calculations","Try formulas and references, then use your feedback to correct gaps."],
+    ["C1","Build reliable calculations","Practise lookups, logical functions and safe data entry."],
+    ["C2","Check the results","Calculate an expected answer independently and test your model."],
+    ["C3-C4","Improve the model","Make one evidence-based improvement and explain its effect."],
+    ["C2","Progress check: test and explain","Use a new example to check your testing skills."],
+    ["C3-C4","Explain your recommendation","Use results to support a recommendation and acknowledge limitations."],
+    ["C3-C4","Review your progress","Compare your learning evidence and identify what to practise next."],
+  ]),
+  "11": weeks([
+    ["A1-A2","Your cyber security starting point","Find out what you already know about threats, protection and incident evidence."],
+    ["A1-A2","Spot a threat and a weakness","Link a specific weakness to a possible incident and its impact."],
+    ["A3-A5","Choose suitable protection","Explain how layered protection reduces risk without assuming it removes all risk."],
+    ["B1-B2","Understand the network","Read a network diagram and explain the job of each component."],
+    ["B3","Trace network services","Follow addressing, name resolution, sign-in and access permissions."],
+    ["C1-C2","Progress check: prioritise risks","Use supplied evidence to explain which risks need attention first."],
+    ["C3","Plan and check protection","Connect each control to a risk and a realistic success test."],
+    ["D1-D2","Prepare an incident response","Identify roles, reporting, containment, recovery and supplier responsibilities."],
+    ["E1-E2","Read incident evidence carefully","Preserve originals and build a timeline from supplied fictional records."],
+    ["E1-E2","Progress check: explain an incident","Distinguish what the evidence shows from what you are assuming."],
+    ["C3","Recommend a useful improvement","Justify a control using the incident findings and remaining risks."],
+    ["E1-E2","Review your progress","Compare your learning evidence and identify what to practise next."],
+  ]),
+  "16": weeks([
+    ["A1-A2","Your cloud collaboration starting point","Find out what you already know about cloud services and shared work."],
+    ["A1-A2","Compare cloud options","Explain what the provider manages and what the organisation still manages."],
+    ["A3-A5","Understand what users need","Check access, costs, connectivity, responsibilities and data handling."],
+    ["B1-B2","Plan a shared workspace","Decide who can read, edit and share each kind of information."],
+    ["B1-B2","Review the plan","Ask a test user to follow the plan and record one useful change."],
+    ["B3","Progress check: configure access","Use an authorised sandbox or supplied configuration to practise safe permissions."],
+    ["B3","Support shared working","Practise account management, collaboration rules and clear instructions."],
+    ["C1-C2","Test common problems","Check edits, access removal, lost connections and recovery of test files."],
+    ["C1-C2","Maintain the service","Use evidence to prioritise updates and reliability improvements."],
+    ["C3-C5","Progress check: evaluate the service","Explain how well the service meets the users' needs."],
+    ["C3-C5","Help someone use it","Write short instructions and check that another person can follow them."],
+    ["C3-C5","Review your progress","Compare your learning evidence and identify what to practise next."],
+  ]),
   "2": weeks([
     ["A1", "Database systems and starting point", "Establish prior understanding, then explain relational database purpose, structures and terminology."],
     ["A2", "SQL and relational data", "Retrieve and manipulate relational data using appropriate RDBMS tools and SQL."],

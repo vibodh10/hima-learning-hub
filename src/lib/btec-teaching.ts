@@ -5,21 +5,20 @@ export type TeachingPoint={concept:string;explanation:string;example:string};
 export type TeachingCard={id:string;title:string;purpose:string;points:TeachingPoint[];workedSteps?:string[];misconception:string;checkQuestion:string;checkAnswer:string};
 
 export function teachingSequenceFor(unit:PearsonUnit,topic:PearsonTopic,level:ExpertiseLevel):TeachingCard[]{
- const lesson=lessonFor(unit,topic,level),groups=chunk(topic.content,2);
+ const lesson=lessonFor(unit,topic,level),groups=chunk(topic.content,["5","11","16"].includes(unit.code)?1:2);
  const conceptCards=groups.map((concepts,index):TeachingCard=>({
-  id:`concept-${index+1}`,title:`Key ideas ${index*2+1} to ${Math.min(index*2+concepts.length,topic.content.length)}`,
+  id:`concept-${index+1}`,title:concepts.join(" and "),
   purpose:`Understand ${concepts.join(" and ")} before applying them.`,
   points:concepts.map(concept=>({concept,explanation:explainConcept(concept,unit.code,topic.title,level),example:conceptExample(concept,unit.code)})),
-  misconception:`Do not earn marks by listing “${concepts[0]}” alone. Define it accurately, apply it to the named organisation and explain the resulting effect.`,
+   misconception:`Do more than name “${concepts[0]}”. Explain what it means and give an example of how it helps.`,
   checkQuestion:`How would you distinguish or connect ${concepts.join(" and ")} in a new vocational scenario?`,
   checkAnswer:concepts.map(concept=>`${concept}: ${shortDefinition(concept,unit.code)}`).join(" "),
  }));
- const goal=topic.phases.find(phase=>phase.label==="Assignment goal")?.detail??`Apply ${topic.title} accurately in assessment evidence.`;
  return [
-  {id:"orientation",title:"The big idea",purpose:`Understand why ${topic.title.toLowerCase()} matters in Unit ${unit.code}.`,points:[{concept:topic.title,explanation:`Assessment context: ${unit.assessment} You need to move from accurate knowledge to decisions that fit a named user, organisation or technical constraint.`,example:lesson.example.scenario}],misconception:"Treating the topic as a list of definitions instead of a connected decision-making process.",checkQuestion:`What must a strong response about ${topic.title.toLowerCase()} do beyond recalling facts?`,checkAnswer:"It must apply accurate knowledge to the context, develop the effect of a decision and support the conclusion with evidence or a success check."},
+  {id:"orientation",title:"The big idea",purpose:`Understand why ${topic.title.toLowerCase()} matters in Unit ${unit.code}.`,points:[{concept:topic.title,explanation:"Learn the idea, look at an example, then try a short check. Your answers help your teacher see what you understand and where you need support.",example:lesson.example.scenario}],misconception:"Remembering a word is not the same as knowing how to use it.",checkQuestion:`Can you give an example of ${topic.title.toLowerCase()}?`,checkAnswer:"Describe a situation, explain what you would do and say why it would help."},
   ...conceptCards,
   {id:"worked",title:"Worked vocational example",purpose:"See how a requirement becomes a justified technical decision.",points:[{concept:"Scenario",explanation:`${lesson.example.scenario} Read the scenario as evidence: identify the named user, purpose, constraint and success condition before choosing any technical feature.`,example:lesson.example.result}],workedSteps:lesson.example.steps,misconception:lesson.mistakes[0],checkQuestion:"What makes the final step a justification rather than an unsupported opinion?",checkAnswer:"It links the chosen decision back to the original requirement and uses a test, result, constraint or comparison as evidence."},
-  {id:"assessment",title:unit.code==="1"||unit.code==="2"||unit.code==="14"?"Assessment technique":"Assignment evidence",purpose:goal,points:[{concept:"Command words",explanation:assessmentTechnique(unit.code),example:`For ${topic.title}, an Explain answer develops why or how; an Analyse answer builds linked consequences; an Evaluate answer weighs evidence before reaching a judgement.`}],misconception:"Writing everything known about the topic without following the command word or using the supplied context.",checkQuestion:"What should appear in the conclusion of a higher-mark response?",checkAnswer:"A supported judgement that answers the exact question, follows from the evidence and, where relevant, prioritises the best option or improvement."},
+  {id:"assessment",title:"Explain what you have learned",purpose:"Use a reason and an example to show your understanding.",points:[{concept:"Explain your decision",explanation:"Name the problem, explain your choice and say how it helps the user. Use something you observed or calculated to support your answer. If the choice has a limitation, explain that too.",example:`For ${topic.title}, try: I would choose this because... In this example it helps by... One limitation is...`}],misconception:"Giving a conclusion without a reason or example.",checkQuestion:"What evidence supports your decision?",checkAnswer:"Point to a specific example, result or observation. Explain how it supports your answer and what it does not prove."},
  ];
 }
 
@@ -72,10 +71,4 @@ function conceptExample(concept:string,unitCode:string){
  return `A team records a requirement involving ${concept}, implements a suitable choice, then compares the measured result with the agreed success criterion.`;
 }
 
-function assessmentTechnique(unitCode:string){
- if(unitCode==="1")return "For the written examination, identify the command word, underline the context and allocate time by marks. Extend each point with a because/therefore link and finish evaluative questions with a contextual judgement.";
- if(unitCode==="2")return "For the set task, keep a traceable chain from requirements to relational design, implementation, testing and evaluation. Screenshots or outputs need annotations that explain what the evidence proves.";
- if(unitCode==="14")return "For the external set task, analyse the organisation's evidence before designing. Keep every service requirement traceable to the proposed information, data, hardware, software and management decisions; compare alternatives and justify the final solution. Practice materials must never be presented as Pearson's live task.";
- return "For internal assessment, keep authentic dated evidence of research, design decisions, development, testing, feedback, refinement and evaluation. A polished final product without the decision trail cannot demonstrate the full criteria.";
-}
 function chunk<T>(values:T[],size:number){return Array.from({length:Math.ceil(values.length/size)},(_,index)=>values.slice(index*size,index*size+size));}

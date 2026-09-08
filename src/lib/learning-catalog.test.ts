@@ -4,7 +4,7 @@ import { projectReady, topicKey, type LearningProgress } from "./learning-progre
 
 describe("configured Pearson learner journey", () => {
   it("provides every configured unit, clickable topic route and project", () => {
-    expect(configuredUnits.map(unit => unit.code)).toEqual(["1", "2", "4", "6", "8", "9", "10", "14", "19"]);
+    expect(configuredUnits.map(unit => unit.code)).toEqual(["1", "2", "4", "5", "6", "8", "9", "10", "11", "14", "16", "19"]);
     for (const unit of configuredUnits) {
       expect(unit.topics.length).toBeGreaterThan(0);
       expect(metaForUnit(unit.code).project.deliverables.length).toBeGreaterThan(3);

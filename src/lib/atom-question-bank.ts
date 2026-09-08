@@ -61,7 +61,7 @@ export function questionsFor(unit: PearsonUnit, topic: PearsonTopic): LearningQu
 }
 
 export function paperBlueprintsFor(unit: PearsonUnit):PaperBlueprint[]{
-  const external=unit.code==="1"||unit.code==="2"||unit.code==="14";
+  const external=unit.code==="1"||unit.code==="2"||unit.code==="11"||unit.code==="14";
   return [
     {mode:"knowledge",title:"Knowledge and terminology check",description:"Short questions from every topic to secure essential vocabulary and processes.",suggestedMinutes:Math.max(20,unit.topics.length*3),questionsPerTopic:2},
     {mode:"applied",title:unit.code==="2"?"Short practical set-task practice":external?"Applied assessment practice":"Applied vocational practice",description:practicalDescription(unit,"applied"),suggestedMinutes:["2","4","6"].includes(unit.code)?90:Math.max(35,unit.topics.length*6),questionsPerTopic:2},

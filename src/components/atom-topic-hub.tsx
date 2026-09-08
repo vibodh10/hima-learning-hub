@@ -7,7 +7,6 @@ import type { ExpertiseLevel } from "@/lib/learning-catalog";
 import { routeForTopic, topicKey, type LearningProgress, type TopicEvidence } from "@/lib/learning-progress";
 import { teachingSequenceFor } from "@/lib/btec-teaching";
 import type { PearsonTopic, PearsonUnit } from "@/lib/pearson-curriculum";
-import { topicLearningPurpose } from "@/lib/topic-learning-purpose";
 
 export function AtomTopicHub({
   unit,
@@ -92,9 +91,8 @@ export function AtomTopicHub({
       </ol>
       {positionPending && <p className="mt-3 text-sm text-teal-900" role="status">Saving your place...</p>}
       <details className="mt-4">
-        <summary className="cursor-pointer font-semibold">How does this help with my assessment?</summary>
-        <p className="mt-3">{topicLearningPurpose(unit, topic)}</p>
-        <p className="mt-3">Learn the idea, try it in practice, then check your understanding. Completing these steps records learning progress; it does not award an assignment grade or replace your assessed work.</p>
+        <summary className="cursor-pointer font-semibold">What happens next?</summary>
+        <p className="mt-3">Learn one idea, try an example, then check your understanding. Your results help choose the support you need and show your teacher how you are progressing.</p>
       </details>
     </section>
 
