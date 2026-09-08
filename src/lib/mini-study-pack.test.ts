@@ -3,7 +3,7 @@ import {studyContentFor} from "./mini-study-content";
 import {gradeStudy,publicStudyQuestions} from "./mini-study";
 
 describe("assigned-unit short study packs",()=>{
-  it.each(["5","6","9","11","16"])("keeps Unit %s short, basic and independently markable",code=>{
+  it.each(["2","4","5","6","9","11","16","19"])("keeps Unit %s short, basic and independently markable",code=>{
     const pack=studyContentFor(code)!;
     expect(pack.baseline).toHaveLength(4);
     const all=[...pack.baseline,...pack.lessons.flatMap(l=>l.questions)];

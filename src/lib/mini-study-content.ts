@@ -3,6 +3,7 @@ import {dataModellingStudy} from "./mini-study-data-modelling";
 import {securityStudy} from "./mini-study-security";
 import {cloudStudy} from "./mini-study-cloud";
 import {projectStudy} from "./mini-study-projects";
+import {databaseStudy,programmingStudy,iotStudy} from "./mini-study-active-units";
 
 export const studySources = {
   pearson:"https://qualifications.pearson.com/content/dam/pdf/BTEC-Nationals/Information-Technology/2016/specification-and-sample-assessments/specification-pearson-btec-level-3-national-extended-diploma-in-information-technology.pdf",
@@ -115,11 +116,14 @@ export const unit6StudyBaseline: StudyQuestionKey[] = [
 
 export function studyContentFor(unitCode:string) {
   switch(unitCode){
+    case "2":return databaseStudy;
+    case "4":return programmingStudy;
     case "5":return dataModellingStudy;
     case "6":return {version:"u6-mini-v1",lessons:unit6StudyLessons,baseline:unit6StudyBaseline};
     case "9":return projectStudy;
     case "11":return securityStudy;
     case "16":return cloudStudy;
+    case "19":return iotStudy;
     default:return undefined;
   }
 }

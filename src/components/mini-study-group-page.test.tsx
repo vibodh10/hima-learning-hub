@@ -7,6 +7,7 @@ vi.mock("@/lib/auth",()=>({requireRole:mocks.role}));
 vi.mock("@/lib/supabase/server",()=>({createClient:async()=>({rpc:mocks.rpc,from:mocks.from})}));
 vi.mock("next/navigation",()=>({notFound:()=>{throw new Error("not-found");}}));
 vi.mock("./app-header",()=>({AppHeader:()=>null}));
+vi.mock("server-only",()=>({}));
 afterEach(cleanup);
 beforeEach(()=>{
  vi.clearAllMocks();mocks.queries={};
@@ -19,8 +20,8 @@ beforeEach(()=>{
  };
  mocks.from.mockImplementation((table:string)=>{
   const query:Record<string,ReturnType<typeof vi.fn>>={};
-  for(const method of ["select","eq","is","in","neq","maybeSingle"])query[method]=vi.fn(()=>query);
-  query.then=vi.fn((resolve:(value:unknown)=>unknown)=>Promise.resolve(mocks.tables[table]).then(resolve));
+  for(const method of ["select","eq","is","in","neq","maybeSingle","order","range"])query[method]=vi.fn(()=>query);
+  query.then=vi.fn((resolve:(value:unknown)=>unknown)=>Promise.resolve({...mocks.tables[table],count:Array.isArray(mocks.tables[table].data)?mocks.tables[table].data.length:0}).then(resolve));
   mocks.queries[table]=query;return query;
  });
 });
@@ -34,10 +35,11 @@ describe("current teacher group view",()=>{
   render(await MiniStudyGroupPage({params:Promise.resolve({id:"class-a"})}));
   expect(mocks.queries.mini_study_sessions.eq).toHaveBeenCalledWith("class_id","class-a");
   expect(mocks.queries.mini_study_sessions.eq).toHaveBeenCalledWith("unit_id","unit-6");
-  expect(mocks.queries.mini_study_sessions.in).toHaveBeenCalledWith("learner_id",["learner-a"]);
+  expect(mocks.queries.unit_starting_point_baselines.in).toHaveBeenCalledWith("learner_id",["learner-a"]);
   expect(mocks.queries.enrolments.is).toHaveBeenCalledWith("archived_at",null);
   expect(screen.getByText(/Existing full-unit starting point: 16 of 21/)).toBeInTheDocument();
   expect(screen.queryByText(/weekly|catch-up alert/i)).not.toBeInTheDocument();
+  expect(screen.getByRole("link",{name:"Download short-study spreadsheet"})).toHaveAttribute("href","/api/reports/classes/class-a/mini-study");
  });
  it("shows a retrieval error instead of fabricated zero progress",async()=>{
   mocks.tables.mini_study_sessions={data:null,error:{message:"offline"}};
