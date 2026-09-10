@@ -5,10 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { gradeStudy, type StudyResult, type StudyReward } from "@/lib/mini-study";
 import { openStudySession, studySessionFor, type StudyHome } from "@/lib/mini-study-server";
 
-export async function beginMiniStudy():Promise<StudyHome> {
+export async function beginMiniStudy(continueToday=false):Promise<StudyHome> {
   const actor=await getSessionProfile();
   if(!actor || actor.role!=="student") return {status:"unavailable",message:"Please sign in as a student."};
-  try { return await openStudySession(actor.id); }
+  try { return await openStudySession(actor.id,continueToday===true); }
   catch { return {status:"unavailable",message:"Your step could not be opened. Please refresh and try again."}; }
 }
 

@@ -1,5 +1,7 @@
 import Link from "next/link";
-export default function PrivacyPage() {
+import { requireRole } from "@/lib/auth";
+export default async function PrivacyPage() {
+  await requireRole("teacher", "admin");
   return <main className="shell max-w-3xl py-16"><Link className="link" href="/">← Home</Link><p className="eyebrow mt-10">Privacy information</p><h1 className="mt-3 text-4xl font-bold">How SCCB Digital Learning Hub handles learner data</h1>
     <div className="mt-8 grid gap-6 leading-7 text-slate-700">
       <p>SCCB Digital Learning Hub records the minimum information needed to provide learning practice, show progress and help authorised teachers plan support. It does not use learner data for advertising, sell it, or use student work to train external models.</p>

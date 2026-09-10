@@ -13,6 +13,6 @@ export default async function StudyPage() {
     <a className="mini-study-skip" href="#study-main">Skip to your step</a>
     <header className="mini-study-header"><Link href="/study">SCCB Learning</Link><form action={logout}><button type="submit">Sign out</button></form></header>
     <main id="study-main" className="mini-study-main"><MiniStudyHome initial={home}/></main>
-    <footer className="mini-study-footer"><Link href="/help">Need help?</Link><Link href="/privacy">Privacy</Link></footer>
+    <footer className="mini-study-footer"><Link href="/help">Need help?</Link></footer>
   </div>;
 }

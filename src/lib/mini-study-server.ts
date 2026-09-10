@@ -69,7 +69,7 @@ export async function getStudyHome(learnerId:string):Promise<StudyHome> {
   return studyHomeForContext(learnerId,context);
 }
 
-async function studyHomeForContext(learnerId:string,context:StudyAssignment|null):Promise<StudyHome> {
+async function studyHomeForContext(learnerId:string,context:StudyAssignment|null,continueToday=false):Promise<StudyHome> {
   if(!context) return {status:"unavailable",message:"Your teacher needs to assign a group and unit before your next step is available."};
   const admin=createAdminClient();
   const {data:rows,error}=await admin.from("mini_study_sessions").select("*")
@@ -78,9 +78,9 @@ async function studyHomeForContext(learnerId:string,context:StudyAssignment|null
   const sessions=(rows??[]) as StudySessionRow[];
   const today=studyDay(new Date());
   const completedToday=sessions.find(s=>s.completed_at && studyDay(new Date(s.completed_at))===today);
-  if(completedToday?.reward) return {status:"done",reward:completedToday.reward};
   const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && ["opened","review"].includes(s.status));
   if(active) return {status:"active",card:cardForSession(active),grade:active.grade};
+  if(completedToday?.reward && !continueToday) return {status:"done",reward:completedToday.reward};
   const content=studyContentFor(context.unitCode);
   if(!content) return {status:"unavailable",message:"Your teacher's unit is assigned. Its short self-study steps are still being prepared."};
   const history=studyHistoryForUnit(sessions,context.unitId);
@@ -104,11 +104,11 @@ function opaqueKeys(questions:StudyQuestionKey[]):StudyQuestionKey[] {
   });
 }
 
-export async function openStudySession(learnerId:string):Promise<StudyHome> {
+export async function openStudySession(learnerId:string,continueToday=false):Promise<StudyHome> {
   // Plan the kind and questions against one assignment snapshot. The database
   // rechecks that exact assignment if the teacher changes it during this request.
   const context=await studyContext(learnerId);
-  const home=await studyHomeForContext(learnerId,context);
+  const home=await studyHomeForContext(learnerId,context,continueToday);
   if(home.status!=="ready") return home;
   if(!context) throw new Error("Your group assignment changed. Please refresh.");
   const content=studyContentFor(context.unitCode);

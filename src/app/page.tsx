@@ -58,7 +58,6 @@ export default function Home() {
       </section>
 
       <footer className="simple-portal-width border-t border-slate-300 py-7 text-sm text-slate-600">
-        <Link className="link" href="/privacy">Privacy</Link>
       </footer>
     </main>
   );

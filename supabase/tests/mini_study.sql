@@ -24,7 +24,7 @@ do $$ declare baseline_id uuid; begin
  exception when raise_exception then if sqlerrm<>'starting_point_already_recorded' then raise; end if; end;
 end $$;
 update mini_fixture set session_id=public.open_mini_study('90000000-0000-0000-0000-000000000002',class_id,'40000000-0000-0000-0000-000000000006','qa-daily','daily','{"title":"QA only"}','[{"id":"qa","answer":"one"}]');
-do $$ declare saved uuid; response jsonb; begin
+do $$ declare saved uuid; extra_id uuid; response jsonb; begin
   select session_id into saved from mini_fixture;
   if public.open_mini_study('90000000-0000-0000-0000-000000000002',(select class_id from mini_fixture),'40000000-0000-0000-0000-000000000006','different','daily','{}','[{}]')<>saved then raise exception 'duplicate active session'; end if;
   begin
@@ -41,10 +41,13 @@ do $$ declare saved uuid; response jsonb; begin
   response:=public.finish_mini_study('90000000-0000-0000-0000-000000000002',saved);
   if response->>'xp'<>'20' or response->>'badge'<>'First small step' then raise exception 'missing reward'; end if;
   if public.finish_mini_study('90000000-0000-0000-0000-000000000002',saved)<>response then raise exception 'retry not idempotent'; end if;
-  begin
-    perform public.open_mini_study('90000000-0000-0000-0000-000000000002',(select class_id from mini_fixture),'40000000-0000-0000-0000-000000000006','next-daily','daily','{}','[{}]');
-    raise exception 'second step opened on same day';
-  exception when raise_exception then if sqlerrm<>'finished_today' then raise; end if; end;
+  extra_id:=public.open_mini_study('90000000-0000-0000-0000-000000000002',(select class_id from mini_fixture),'40000000-0000-0000-0000-000000000006','optional-extra','daily','{}','[{}]');
+  if extra_id is null or extra_id=saved then raise exception 'optional same-day lesson missing'; end if;
+  perform public.check_mini_study('90000000-0000-0000-0000-000000000002',extra_id,'{"correct":1,"total":1,"feedback":[]}','Recall the idea.');
+  response:=public.finish_mini_study('90000000-0000-0000-0000-000000000002',extra_id);
+  if response->>'xp'<>'20' or response->>'badge' is not null then raise exception 'extra lesson reward incorrect'; end if;
+  if public.finish_mini_study('90000000-0000-0000-0000-000000000002',extra_id)<>response then raise exception 'extra reward retry not idempotent'; end if;
+  if (select count(*) from public.learner_achievement_point_events where idempotency_key='mini:'||extra_id::text)<>1 then raise exception 'duplicate extra XP'; end if;
 end $$;
 reset role;
 do $$ begin

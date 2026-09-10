@@ -11,6 +11,24 @@ const lesson=unit6StudyLessons[0];
 function card():StudyCard {return {sessionId:"test-session",kind:"daily",title:lesson.title,unitTitle:"Website Development",lines:lesson.lines,example:lesson.example,support:lesson.support,questions:publicStudyQuestions(lesson.questions,"test-session")};}
 
 describe("one-step student experience",()=>{
+ it("keeps stopping optional and opens another assigned lesson only on request",async()=>{
+  vi.mocked(beginMiniStudy).mockClear();
+  vi.mocked(beginMiniStudy).mockResolvedValueOnce({status:"active",card:card(),grade:null});
+  render(<StudyDone reward={{xp:20,badge:null,nextOn:"2026-09-09"}}/>);
+  expect(screen.getByRole("heading",{name:"You're done for today"})).toBeInTheDocument();
+  expect(beginMiniStudy).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button",{name:"Do another lesson"}));
+  expect(await screen.findByRole("heading",{name:lesson.title})).toBeInTheDocument();
+  expect(beginMiniStudy).toHaveBeenCalledWith(true);
+ });
+ it("keeps the completion receipt and retry button if opening an extra lesson fails",async()=>{
+  vi.mocked(beginMiniStudy).mockRejectedValueOnce(new Error("offline"));
+  render(<StudyDone reward={{xp:20,badge:null,nextOn:"2026-09-09"}}/>);
+  fireEvent.click(screen.getByRole("button",{name:"Do another lesson"}));
+  expect(await screen.findByRole("alert")).toHaveTextContent("completed step is saved");
+  expect(screen.getByText("+20 XP")).toBeInTheDocument();
+  expect(screen.getByRole("button",{name:"Do another lesson"})).toBeEnabled();
+ });
  it("offers a safe retry if the connection fails while opening a step",async()=>{
   vi.mocked(beginMiniStudy).mockRejectedValueOnce(new Error("offline"));
   render(<MiniStudyHome initial={{status:"ready",kind:"daily",unitTitle:"Website Development"}}/>);

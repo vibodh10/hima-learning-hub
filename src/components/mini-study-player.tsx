@@ -115,13 +115,27 @@ export function MiniStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=f
 
 export function StudyDone({reward}:{reward:StudyReward}) {
   const title=useRef<HTMLHeadingElement>(null);
+  const [next,setNext]=useState<StudyHome|null>(null);
+  const [error,setError]=useState("");
+  const [pending,start]=useTransition();
   useEffect(()=>title.current?.focus(),[]);
+  if(next) return <MiniStudyHome initial={next}/>;
   return <section className="mini-study-panel mini-study-done">
     <p className="mini-study-kicker">Small steps count</p>
     <h1 ref={title} tabIndex={-1}>You&apos;re done for today</h1>
     {reward.xp>0&&<p className="mini-study-xp">+{reward.xp} XP</p>}
     {reward.badge&&<p className="mini-study-badge"><span aria-hidden="true">★ </span>{reward.badge}</p>}
-    <p>Well done for taking this step. Your next one is available on {new Intl.DateTimeFormat("en-GB",{day:"numeric",month:"long"}).format(new Date(`${reward.nextOn}T12:00:00Z`))}.</p>
+    <p>Well done for taking this step. If you want to keep learning, you can do another lesson. It is also fine to stop here and come back another day.</p>
     <p>You can close the portal now.</p>
+    <button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
+      setError("");
+      try {
+        const result=await beginMiniStudy(true);
+        if(result.status==="unavailable") setError(result.message);
+        else if(result.status==="done") setError("Your next lesson could not be opened yet. Please try again.");
+        else setNext(result);
+      } catch {setError("Your connection was interrupted. Your completed step is saved. Try again when you're ready.");}
+    })}>{pending?"Opening your next lesson…":"Do another lesson"}</button>
+    {error&&<p className="mini-study-error" role="alert">{error}</p>}
   </section>;
 }
