@@ -1,5 +1,15 @@
 # Mini-learning redesign: completion audit
 
+## Latest scope correction and verification — 2026-09-14
+
+The user's later instructions supersede the strict daily cap below: retain the reassuring finished screen, but offer an optional **Do another lesson** button. Students still cannot choose units. Removed the student Privacy link and restricted the notice page to staff, as explicitly clarified by the user. Existing records and access protections remain unchanged.
+
+- Focused player/action checks: 16 passed, including opt-in continuation and a recoverable connection failure. The full 433-test suite was not rerun.
+- Production build passed after correcting the privacy-page role to `administrator`; merged the newer production homepage redirect instead of overwriting it, and its build also passed.
+- The old disposable local database was damaged. A fresh isolated local database applied every migration; the focused SQL journey passed after moving a test-only reward-count assertion out of the restricted service role. Same-day extra completion, first-answer retention, per-session XP idempotency, assignment checks and teacher isolation were verified. No real learner was used.
+- Applied only `202609080002_mini_study_optional_more.sql` to production. It removes the date cap, not the authentication, assignment, grading or duplicate-reward guards. Release confirmation is recorded separately after publishing.
+
+
 Source: user goal-objective.md, attachment 12e77b2b-f475-499e-95c2-111bbebe3777. This checklist preserves the full goal; a passing build alone is not completion.
 
 ## Intended experience

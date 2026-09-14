@@ -47,10 +47,10 @@ do $$ declare saved uuid; extra_id uuid; response jsonb; begin
   response:=public.finish_mini_study('90000000-0000-0000-0000-000000000002',extra_id);
   if response->>'xp'<>'20' or response->>'badge' is not null then raise exception 'extra lesson reward incorrect'; end if;
   if public.finish_mini_study('90000000-0000-0000-0000-000000000002',extra_id)<>response then raise exception 'extra reward retry not idempotent'; end if;
-  if (select count(*) from public.learner_achievement_point_events where idempotency_key='mini:'||extra_id::text)<>1 then raise exception 'duplicate extra XP'; end if;
 end $$;
 reset role;
 do $$ begin
+ if (select count(*) from public.learner_achievement_point_events where idempotency_key='mini:'||(select id::text from public.mini_study_sessions where class_id=(select class_id from mini_fixture) and lesson_id='optional-extra'))<>1 then raise exception 'duplicate extra XP'; end if;
  if (select count(*) from public.learner_achievement_point_events where idempotency_key='mini:'||(select session_id::text from mini_fixture))<>1 then raise exception 'duplicate XP'; end if;
  if (select count(*) from public.badge_awards where evidence->>'mini_study_session'=(select session_id::text from mini_fixture))<>1 then raise exception 'duplicate badge'; end if;
  if not (select needs_help from public.mini_study_sessions where id=(select session_id from mini_fixture)) then raise exception 'help signal missing'; end if;
