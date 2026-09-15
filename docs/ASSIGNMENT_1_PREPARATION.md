@@ -59,3 +59,12 @@ Verified locally on 15 September:
 - TypeScript and full ESLint passed. Production build passed, including the new routes. The subsequent presentation-only change collapsed the long Pearson URL behind a disclosure; the focused suite was rerun and passed after that change.
 - Browser inspection of the actual preview verified step selection, the Harvard example and corrective feedback for uncited paraphrasing. The guide was visually inspected at the normal narrow panel width and at a 320px phone viewport. The viewport override was reset.
 - No signed-in student journey or production deployment was executed. Existing permission checks are reused; mocked guard tests are not a new end-to-end database security audit. The new guide does not write to learner records.
+
+## 15 September follow-up: clear rewards and learner evidence
+
+- Current learner records now show short-study evidence on the individual staff page, with the actual achievement-point award entries and a clear distinction from earlier topic assessments.
+- Verified the reported learner's 40 AP came from two completed short-study steps, 20 AP each; no assessment result was changed.
+- Every cumulative 100 XP earns 1 additional coin. Database trigger awards new milestones atomically with XP, uses the purchase balance lock, and credits existing XP. Spending does not reset milestones; XP remains permanent.
+- Theme Preview shows an ocean scene, badge frame or celebration sample. The equipped ocean uses still fish, bubbles and lighting depth, with opaque reading panels. Gold icons decorate earned badges.
+- Focused verification: one database journey (99/100/250 XP boundaries, repeat award, spending, retained XP and execution permissions), three reward component tests, production build and final typecheck. No broad test suite run.
+- Applied only migration 202609150001_xp_coins.sql to the linked production database after a dry run.

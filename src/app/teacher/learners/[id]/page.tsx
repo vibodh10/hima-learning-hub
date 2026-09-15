@@ -1,3 +1,4 @@
+import { LearnerCurrentStudy } from "@/components/learner-current-study";
 import Link from "next/link";
 import { assessmentParentLabel as parentFromActivity } from "@/lib/assessment-parent-label";
 import { AutomaticLearningRecord } from "@/components/automatic-learning-record";
@@ -99,7 +100,7 @@ export default async function LearnerPage({
     const quarter = currentCalendarQuarter(new Date());
     const reportBase = `/api/reports/learners/${id}?classId=${compactClass.id}`;
 
-    return <><AppHeader name={actor.display_name} role={actor.role}/><aside className="shell mt-6 rounded-xl border border-purple-200 bg-white p-5"><h2 className="font-bold">Earlier learning records</h2><p className="mt-2">These preserved records describe the earlier learning activities, not the current daily steps.</p><Link className="link mt-3 inline-block" href={`/teacher/classes/${compactClass.id}`}>See current short-study results and automatic targets →</Link></aside><TeacherLearnerSummary
+    return <><AppHeader name={actor.display_name} role={actor.role}/><aside className="shell mt-6 rounded-xl border border-purple-200 bg-white p-5"><h2 className="font-bold">Earlier learning records</h2><p className="mt-2">These preserved records describe the earlier learning activities, not the current daily steps.</p><Link className="link mt-3 inline-block" href={`/teacher/classes/${compactClass.id}`}>See current short-study results and automatic targets →</Link></aside><div className="shell"><LearnerCurrentStudy learnerId={id} classId={String(compactClass.id)}/></div><TeacherLearnerSummary
       automaticRecord={<AutomaticLearningRecord learnerId={id} classId={String(compactClass.id)} historical/>}
       attentionReason={compactAttention?.attention_reason ?? "The portal has not recorded a concern for this student."}
       attentionStatus={compactAttention?.attention_status ?? "on_track"}
@@ -261,7 +262,7 @@ export default async function LearnerPage({
   const curriculumStrengths = curriculumPractice.filter(item => Number(item.percentage) >= 75);
 
   return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell py-10">
-    <aside className="card mb-6"><h2 className="font-bold">Earlier learning records</h2><p className="mt-2">These preserved records describe the earlier learning activities. Current short-study results and automatic targets are on the group page.</p></aside>
+    <aside className="card mb-6"><h2 className="font-bold">Earlier learning records</h2><p className="mt-2">These preserved records describe the earlier learning activities. Current short-study results and the source of achievement points appear below, followed by the earlier assessments.</p></aside>
     <Link className="link" href={classInfo ? `/teacher/classes/${classInfo.id}` : "/dashboard"}>← {classInfo?.name ?? "Teacher dashboard"}</Link>
     <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
       <div><p className="eyebrow">Learner evidence record</p><h1 className="mt-2 text-4xl font-bold">{learner.display_name}</h1><p className="mt-2 text-slate-600">{courseInfo?.title ?? "Course not recorded"}</p></div>
@@ -281,12 +282,13 @@ export default async function LearnerPage({
       </form>
     </details>}
 
-    <section className="card mt-8"><p className="eyebrow">1. Learner overview</p><h2 className="mt-2 text-2xl font-bold">At a glance</h2>
+    {classInfo&&<LearnerCurrentStudy learnerId={id} classId={String(classInfo.id)}/>}
+    <section className="card mt-8"><p className="eyebrow">1. Earlier assessment overview</p><h2 className="mt-2 text-2xl font-bold">Earlier assessments at a glance</h2>
       <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Summary label="Learner" value={learner.display_name}/><Summary label="Course" value={courseInfo?.title ?? "Not recorded"}/>
         <Summary label="Teacher" value={teacherName}/><Summary label="Enrolment date" value={formatDate(selectedEnrolment?.enrolment.enrolled_at)}/>
         <Summary label="Report date" value={now.toLocaleDateString("en-GB")}/>
-        <Summary label="Starting-point status" value={overviewStartingStatus(topicGroups, workbookStartingPoints)}/>
+        <Summary label="Earlier topic assessment status" value={overviewStartingStatus(topicGroups, workbookStartingPoints)}/>
         <Summary label="Current progress status" value={topicGroups.some(group => group.items.some(item => item.valid)) ? "Comparable progress evidence is available." : "No comparable progress-point assessment has been completed yet."}/>
         <Summary label="Active / achieved targets" value={`${activeTargets.length} / ${achievedTargets.length}`}/>
         <Summary label="Next review date" value={formatDate(nextReview)}/>

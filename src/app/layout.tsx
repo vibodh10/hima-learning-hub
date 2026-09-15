@@ -1,3 +1,4 @@
+import { OceanScene } from "@/components/cosmetic-preview";
 import type { Metadata } from "next";
 import "./globals.css";
 import { ServiceWorkerRegistration } from "@/components/service-worker";
@@ -36,7 +37,7 @@ export default async function RootLayout({
   }
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
-      <body className="min-h-full flex flex-col" data-theme={theme||undefined} data-badge-frame={badgeFrame||undefined} data-celebration-effect={celebrationEffect||undefined}>{children}<ServiceWorkerRegistration /></body>
+      <body className="min-h-full flex flex-col" data-theme={theme||undefined} data-badge-frame={badgeFrame||undefined} data-celebration-effect={celebrationEffect||undefined}><OceanScene backdrop/>{children}<ServiceWorkerRegistration /></body>
     </html>
   );
 }

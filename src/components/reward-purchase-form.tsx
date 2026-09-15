@@ -1,5 +1,6 @@
 "use client";
 
+import { CosmeticPreview } from "./cosmetic-preview";
 import { useActionState, useEffect, useState } from "react";
 import { equipReward, purchaseReward, type ActionState } from "@/app/actions/learning";
 
@@ -28,7 +29,7 @@ export function RewardPurchaseForm({
   const currentPurchaseId=purchaseId??purchaseResult?.purchaseId;
   const currentEquipped=equipResult?.equipped??purchaseResult?.equipped??Boolean(equipped);
   return <div className="mt-4">
-    {showPreview&&<div className="mb-3 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm"><strong>Preview</strong><pre className="mt-2 whitespace-pre-wrap font-sans">{formatPreview(preview)}</pre></div>}
+    {showPreview&&<div className="mb-3 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm"><strong>Preview</strong><CosmeticPreview value={preview}/><p className="mt-2 text-xs">Preview only. Buy or equip to apply it.</p></div>}
     <div className="flex flex-wrap gap-2">
       <button className="button-secondary" type="button" onClick={()=>setShowPreview(value=>!value)}>{showPreview?"Close preview":"Preview"}</button>
       {!currentOwned&&<form action={action}><input type="hidden" name="rewardId" value={rewardId}/><button className="button" disabled={pending||!affordable}>{pending?"Purchasing…":affordable?`Buy and apply for ${price} coins`:`Need ${price} coins`}</button></form>}
@@ -41,11 +42,7 @@ export function RewardPurchaseForm({
   </div>;
 }
 
-function formatPreview(value:unknown){
-  return value&&typeof value==="object"
-    ?Object.entries(value as Record<string,unknown>).map(([key,item])=>`${key.replaceAll("_"," ")}: ${String(item)}`).join("\n")
-    :"Visual customisation preview";
-}
+
 export function applyEquippedCosmetic(kind:string,equipped:boolean,config:Record<string,unknown>){
   const body=document.body;
   if(kind==="profile_theme"||kind==="dashboard_background"){

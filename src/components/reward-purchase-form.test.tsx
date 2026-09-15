@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { applyEquippedCosmetic, RewardPurchaseForm } from "./reward-purchase-form";
 
@@ -15,6 +15,14 @@ afterEach(() => {
 });
 
 describe("reward purchase form", () => {
+  it("opens and closes a visual preview without equipping or purchasing", () => {
+    render(<RewardPurchaseForm rewardId="ocean" price={40} owned={false} affordable preview={{theme:"ocean"}}/>);
+    fireEvent.click(screen.getByRole("button", {name:"Preview"}));
+    expect(screen.getByRole("img", {name:/Ocean theme preview/})).toBeVisible();
+    expect(document.body).not.toHaveAttribute("data-theme");
+    fireEvent.click(screen.getByRole("button", {name:"Close preview"}));
+    expect(screen.queryByRole("img", {name:/Ocean theme preview/})).not.toBeInTheDocument();
+  });
   it("makes immediate application clear before purchase", () => {
     render(<RewardPurchaseForm
       rewardId="67000000-0000-0000-0000-000000000001"

@@ -124,7 +124,7 @@ export function StudyDone({reward}:{reward:StudyReward}) {
     <p className="mini-study-kicker">Small steps count</p>
     <h1 ref={title} tabIndex={-1}>You&apos;re done for today</h1>
     {reward.xp>0&&<p className="mini-study-xp">+{reward.xp} XP</p>}
-    {reward.badge&&<p className="mini-study-badge"><span aria-hidden="true">★ </span>{reward.badge}</p>}
+    {reward.badge&&<p className="mini-study-badge"><span className="gold-badge-icon" aria-hidden="true">★</span>{reward.badge}</p>}
     <p>Well done for taking this step. If you want to keep learning, you can do another lesson. It is also fine to stop here and come back another day.</p>
     <p>You can close the portal now.</p>
     <button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{

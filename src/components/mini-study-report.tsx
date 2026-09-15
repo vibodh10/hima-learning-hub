@@ -1,13 +1,13 @@
 import Link from "next/link";
 import {miniStudyLearnerSummary,type MiniStudyRecord,type StudyLegacyBaseline} from "@/lib/mini-study-report";
 
-export function MiniStudyReport({learners,records,baselines=[],classId}:{learners:{id:string;name:string}[];records:MiniStudyRecord[];baselines?:StudyLegacyBaseline[];classId?:string}) {
+export function MiniStudyReport({learners,records,baselines=[],classId,expanded=false}:{learners:{id:string;name:string}[];records:MiniStudyRecord[];baselines?:StudyLegacyBaseline[];classId?:string;expanded?:boolean}) {
   const rows=learners.map(learner=>({...learner,legacy:baselines.find(b=>b.learner_id===learner.id),summary:miniStudyLearnerSummary(records.filter(r=>r.learner_id===learner.id))}))
     .sort((a,b)=>Number(b.summary.needsHelp)-Number(a.summary.needsHelp)||a.name.localeCompare(b.name));
   return <section aria-labelledby="mini-report-title">
     <h1 id="mini-report-title" className="text-3xl font-bold">Short self-study records</h1>
     <p className="mt-3 max-w-3xl">Starting points, first answers and next targets. These are small learning checks, not assignment grades. Different topics and starting-point versions are not directly comparable.</p>
-    {!rows.length?<p className="card mt-6">No students have joined this group yet.</p>:<div className="mt-6 grid gap-4">{rows.map(row=><details className="card" key={row.id}>
+    {!rows.length?<p className="card mt-6">No students have joined this group yet.</p>:<div className="mt-6 grid gap-4">{rows.map(row=><details className="card" key={row.id} open={expanded}>
       <summary className="cursor-pointer text-lg font-bold">{row.name} · {row.summary.needsHelp?"Support suggested":row.summary.latest?row.summary.latest.finished?"Learning recorded":"Feedback review pending":row.summary.baseline||row.legacy?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}</summary>
       {row.summary.supportReason&&<p className="mt-4 rounded-lg bg-amber-50 p-4"><strong>Why support is suggested: </strong>{row.summary.supportReason}</p>}
       <dl className="mt-5 grid gap-5 sm:grid-cols-2">
