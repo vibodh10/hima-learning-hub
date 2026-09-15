@@ -6,7 +6,7 @@ import {projectStudy} from "./mini-study-projects";
 import {databaseStudy,programmingStudy,iotStudy} from "./mini-study-active-units";
 
 export const studySources = {
-  pearson:"https://qualifications.pearson.com/content/dam/pdf/BTEC-Nationals/Information-Technology/2016/specification-and-sample-assessments/specification-pearson-btec-level-3-national-extended-diploma-in-information-technology.pdf",
+  pearson:"https://qualifications.pearson.com/content/dam/pdf/BTEC-Nationals/Information-Technology/2016/specification-and-sample-assessments/specification-pearson-btec-level-3-national-diploma-in-information-technology.pdf",
   wai:"https://www.w3.org/WAI/fundamentals/accessibility-principles/",
 };
 

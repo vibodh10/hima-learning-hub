@@ -35,6 +35,22 @@
 .mini-study-skip { position:absolute; left:-10000px; }
 .mini-study-skip:focus { left:1rem; top:1rem; z-index:100; padding:1rem; background:#ffcf33; color:#132b42; }
 
+.assignment-deadline { padding:1rem 1.25rem; border-left:4px solid var(--primary); background:var(--surface); border-radius:.5rem; line-height:1.6; }
+.assignment-note { margin:1rem 0; font-size:1rem; line-height:1.6; color:var(--muted); }
+.assignment-plan { margin:1rem 0 1.5rem; }
+.assignment-plan label { display:block; font-weight:700; margin:.5rem 0; }
+.assignment-plan select { width:100%; min-width:0; min-height:48px; padding:.75rem; border:2px solid var(--muted); border-radius:.5rem; background:var(--surface); color:var(--foreground); font:inherit; }
+.assignment-plan p { margin:.75rem 0; line-height:1.6; }
+.assignment-subheading { margin:1.5rem 0 .75rem; font-size:1.125rem; font-weight:700; }
+.assignment-tasks { padding-left:1.4rem; list-style:decimal; }
+.assignment-tasks li { margin:.9rem 0; padding-left:.25rem; font-size:1.125rem; line-height:1.6; }
+.assignment-tools ul { list-style:disc; padding-left:1.4rem; }
+.assignment-tools a { display:inline-block; padding:.65rem 0; color:var(--primary); text-decoration:underline; }
+.assignment-navigation { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; margin-top:1.5rem; }
+.assignment-navigation .mini-study-primary { margin-top:0; }
+.assignment-text-button { min-height:48px; padding:.5rem 0; color:var(--primary); text-decoration:underline; cursor:pointer; font:inherit; }
+.assignment-text-button:focus-visible,.assignment-plan select:focus-visible { outline:3px solid #ffcf33; outline-offset:3px; box-shadow:0 0 0 5px #17324d; }
+
 :root {
   --background:#f7f5fb;
   --foreground:#17213a;

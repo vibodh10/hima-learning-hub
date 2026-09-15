@@ -12,6 +12,7 @@ const roleLabels: Record<Role, string> = {
 const navigation: Record<Role, { href: string; label: string }[]> = {
   student: [
     { href: "/study", label: "My step" },
+    { href: "/rewards", label: "My rewards" },
     { href: "/help", label: "Help" },
   ],
   teacher: [

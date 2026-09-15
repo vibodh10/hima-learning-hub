@@ -27,7 +27,7 @@ describe("one-step student experience",()=>{
   fireEvent.click(screen.getByRole("button",{name:"Do another lesson"}));
   expect(await screen.findByRole("alert")).toHaveTextContent("completed step is saved");
   expect(screen.getByText("+20 XP")).toBeInTheDocument();
-  expect(screen.getByRole("button",{name:"Do another lesson"})).toBeEnabled();
+  expect(await screen.findByRole("button",{name:"Do another lesson"})).toBeEnabled();
  });
  it("offers a safe retry if the connection fails while opening a step",async()=>{
   vi.mocked(beginMiniStudy).mockRejectedValueOnce(new Error("offline"));
