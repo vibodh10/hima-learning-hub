@@ -3,6 +3,12 @@ import {miniStudyLearnerSummary,type MiniStudyRecord} from "./mini-study-report"
 
 function record(extra:Partial<MiniStudyRecord>={}):MiniStudyRecord{return {id:"1",learner_id:"learner",kind:"daily",status:"completed",content:{title:"Purpose"},grade:{correct:1,total:2,feedback:[{questionId:"recap",correct:false,recap:true,skill:"purpose",explanation:"",correctAnswer:""}]},target_text:"Review the purpose example.",needs_help:false,checked_at:"2026-09-08T12:00:00Z",completed_at:"2026-09-08T12:01:00Z",...extra};}
 describe("teacher short-study evidence",()=>{
+ it("explains support without treating a completed lesson as missing work",()=>{
+  const summary=miniStudyLearnerSummary([record({needs_help:true,grade:{correct:0,total:2,feedback:[]}})]);
+  expect(summary.completedSteps).toBe(1);
+  expect(summary.supportReason).toContain("0 of 2");
+  expect(summary.supportReason).toContain("The step is completed");
+ });
  it("keeps absent evidence unknown, not zero",()=>{
   const summary=miniStudyLearnerSummary([]);
   expect(summary.baseline).toBeNull();expect(summary.latest).toBeNull();expect(summary.recap).toBeNull();

@@ -14,6 +14,9 @@ export function miniStudyLearnerSummary(records:MiniStudyRecord[]) {
     recap:recap.length?{correct:recap.filter(r=>r.correct).length,total:recap.length}:null,
     completedSteps:records.filter(r=>r.kind==="daily" && r.status==="completed").length,
     needsHelp:lastEvidence?.needs_help??false,
+    supportReason:lastEvidence?.needs_help&&lastEvidence.grade
+      ? `${lastEvidence.kind==="baseline"?"Starting point":lastEvidence.content.title??"Latest short lesson"}: ${lastEvidence.grade.correct} of ${lastEvidence.grade.total} new first answers correct. ${lastEvidence.status==="completed"?"The step is completed. Support is suggested for understanding, not missing work.":"Feedback review is not yet finished."}`
+      :null,
     target:lastEvidence?.target_text??"Complete the next assigned short step so support can be selected from evidence.",
   };
 }

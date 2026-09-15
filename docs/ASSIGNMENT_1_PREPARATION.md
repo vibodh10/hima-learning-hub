@@ -1,5 +1,13 @@
 # Assignment 1 preparation — 15 September 2026
 
+## Live release — 15 September 2026
+
+After the user's explicit request to make the guide available to students, published revision `438d90164d065ed7504524c251879660a1616286` to the existing Railway production service. Deployment `1f3b6a00-787c-463d-a5c8-6727d2a5267e` reached SUCCESS, and the live `/api/release` independently reported that exact revision. Live origin: https://sccb.up.railway.app.
+
+The release also restores student navigation to `/rewards`, which now shows real achievement points/XP and separate spendable coins, earned badges, and the existing optional reward shop with purchase/equip controls. It reuses existing learner-scoped queries and the guarded achievement-summary function; no reward conversion or database migration was added. Teacher group navigation remains simple and unchanged.
+
+Following the user's instruction to minimise testing, this publication used one production build (including TypeScript) and a brief read-only live release/page check. No new student account, purchase, private learner inspection or broad test run was performed. The older local-only notes below describe the earlier preparation checkpoint, not current deployment status.
+
 ## Confirmed and unconfirmed
 
 The user requested preparation and date follow-ups for an assignment due **28 September 2026**, including comparing two websites, W3C standards/testing tools and Harvard referencing. They clarified **Pearson BTEC Level 3 National Diploma**, not Extended Diploma, and requested that assessment requirements be checked against Pearson only. The working subject is Information Technology, Unit 6 Website Development, Learning aim A, consistent with the two-website comparison described.
