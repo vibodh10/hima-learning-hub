@@ -8,7 +8,7 @@ export type StudyQuestionKey = StudyQuestion & { answer: string | Record<string,
 export type StudyLesson = {
   id: string; unitCode: string; topicCode: string; title: string; skill: string;
   lines: string[]; example: string; support: string; analysis: string; evaluation: string;
-  questions: StudyQuestionKey[]; sources: string[];
+  questions: StudyQuestionKey[]; recapQuestion?: StudyQuestionKey; sources: string[];
 };
 export type StudyResponse = { questionId: string; answer: string | Record<string, string> };
 export type StudyFeedback = { questionId: string; correct: boolean; recap: boolean; skill: string; explanation: string; correctAnswer: string; selectedAnswer?: string; prompt?: string };
@@ -104,7 +104,7 @@ export function nextStudyLesson(lessons: StudyLesson[], history: StudyCompletion
 export function studyQuestionSet(lesson: StudyLesson, previous?: StudyLesson): StudyQuestionKey[] {
   if (!previous) return lesson.questions;
   // Recap a specific, genuinely completed idea. Its score is separate from the new topic.
-  const source = previous.questions.find(q=>q.kind==="choice");
+  const source = previous.recapQuestion ?? previous.questions.find(q=>q.kind==="choice");
   return source ? [{...source,id:`recap:${previous.id}:${source.id}`,recap:true,prompt:`Quick recap: ${source.prompt}`},...lesson.questions] : lesson.questions;
 }
 

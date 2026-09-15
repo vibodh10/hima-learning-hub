@@ -23,6 +23,7 @@ export function AssignmentOneGuide({schedule,preview=false,unit="6"}:{schedule:R
         {schedule.phase==="past"?"The planned date has passed. Check your submission or any agreed extension with your teacher.":schedule.phase==="due"?"Due today. Confirm the time and submission location with your teacher.":`${schedule.days} calendar days to the due date. Your teacher will confirm the submission time.`}
       </p>
       <p className="assignment-note">{unit==="4"?"Unit 4 Programming":"Unit 6 Website Development"} · Learning aim A. Use this preparation guide alongside your teacher&apos;s assignment brief.</p>
+      <p className="assignment-note"><a className="link" href={`${assignmentOne.specification}#page=${unit==="4"?55:77}`} target="_blank" rel="noreferrer">Open Pearson&apos;s Unit {unit} specification (PDF)</a></p>
       <details className="mini-study-help assignment-plan"><summary>See the plan or choose a step</summary>
         <label htmlFor="assignment-step">Open a preparation step</label>
         <select id="assignment-step" value={index} onChange={event=>go(Number(event.target.value))}>

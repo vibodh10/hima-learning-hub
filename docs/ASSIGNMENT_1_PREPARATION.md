@@ -76,3 +76,10 @@ Verified locally on 15 September:
 - Corrected the reported learner's interpretation after the detailed page loaded: the two 20 AP events represent a short starting-point check and one daily lesson, not two daily lessons. Live page shows starting point 2/4, latest lesson 2/2 and 1 completed short lesson.
 - User confirmed live reward previews work and liked the ocean. Added a small Python snake and code faces to the frame preview; the equipped badge also gets the snake. Brief entrance animation respects reduced motion.
 - Five focused assignment-guide checks passed; final production build validates the new route.
+
+## Unit 4 question wording follow-up
+
+- Found the same choice prompt was reused in baseline, lesson and recap. Unit 4 now has distinct authored questions for these contexts, using canteen orders, seat booking, delivery, printing and other everyday tasks with plausible distractors.
+- Added optional alternate starting-point and recap checks to the shared pack builder; other packs retain their current behaviour. Existing lesson IDs remain stable, and saved session questions/results are preserved.
+- Made the official Pearson specification link visible near the top of both assignment guides. Unit 6 opens at PDF page 77 (unit introduction); the existing detail link remains.
+- One focused test checks distinct prompts, correct/wrong marking and stable IDs. Typecheck passed. No full test suite requested or run.
