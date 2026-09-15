@@ -1,0 +1,32 @@
+UNIT 4 PROGRAMMING — ASSIGNMENT 1 PREPARATION
+Due: 28 September 2026. Confirm the time and submission route with your teacher.
+Use your issued assignment brief. This sheet does not submit or grade your work.
+
+Chosen program and language:
+Purpose and intended users:
+Source URL, author, version/year and access date:
+Relevant code file and line numbers:
+
+Problem being solved:
+How it is divided into parts:
+Repeated patterns and relevant/irrelevant details:
+Input, processing and output:
+
+Programming technique being investigated:
+How it works in this program:
+How a comparable technique works in another language:
+Trace or observed test (label which):
+Result and limitations:
+
+Design choice and evidence:
+Effect on the user or developer:
+Benefit and drawback:
+Reasoned judgement and possible improvement:
+
+Criterion supported (check the teacher's brief):
+Citation in your report:
+Matching full reference:
+Question to discuss with your teacher:
+
+Repeat these notes for further examples as needed.
+Final check: A.P1 / A.P2 / A.P3 / A.M1 / A.D1, evidence, references, final file.

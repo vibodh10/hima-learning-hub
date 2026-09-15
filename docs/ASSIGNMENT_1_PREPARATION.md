@@ -68,3 +68,11 @@ Verified locally on 15 September:
 - Theme Preview shows an ocean scene, badge frame or celebration sample. The equipped ocean uses still fish, bubbles and lighting depth, with opaque reading panels. Gold icons decorate earned badges.
 - Focused verification: one database journey (99/100/250 XP boundaries, repeat award, spending, retained XP and execution permissions), three reward component tests, production build and final typecheck. No broad test suite run.
 - Applied only migration 202609150001_xp_coins.sql to the linked production database after a dry run.
+
+## Unit 4 theory guide and Python decoration
+
+- Added /study/programming-assignment-one for assigned Unit 4 students, with the same 28 September date, short steps, original practice prompts, Harvard support and a blank evidence sheet. Staff can open the guide too.
+- Checked Pearson National Diploma IT Issue 6, Unit 4 printed pp. 47–56: Learning aim A, A.P1/A.P2/A.P3/A.M1/A.D1. The guide requires real code examples and reasoned explanations, without supplying assessed answers or replacing the issued brief.
+- Corrected the reported learner's interpretation after the detailed page loaded: the two 20 AP events represent a short starting-point check and one daily lesson, not two daily lessons. Live page shows starting point 2/4, latest lesson 2/2 and 1 completed short lesson.
+- User confirmed live reward previews work and liked the ocean. Added a small Python snake and code faces to the frame preview; the equipped badge also gets the snake. Brief entrance animation respects reduced motion.
+- Five focused assignment-guide checks passed; final production build validates the new route.

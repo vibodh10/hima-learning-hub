@@ -114,10 +114,10 @@ export const assignmentSteps: AssignmentStep[] = [
   },
 ];
 
-export function assignmentSchedule(now: Date) {
+export function assignmentSchedule(now: Date, steps: AssignmentStep[] = assignmentSteps) {
   const today=studyDay(now);
-  const phase=today>assignmentOne.dueOn?"past":today===assignmentOne.dueOn?"due":today<assignmentSteps[0].from?"before":"preparing";
-  const current=phase==="past"?assignmentSteps.length-1:Math.max(0,assignmentSteps.findIndex(step=>today<=step.until));
+  const phase=today>assignmentOne.dueOn?"past":today===assignmentOne.dueOn?"due":today<steps[0].from?"before":"preparing";
+  const current=phase==="past"?steps.length-1:Math.max(0,steps.findIndex(step=>today<=step.until));
   const days=Math.round((Date.parse(`${assignmentOne.dueOn}T12:00:00Z`)-Date.parse(`${today}T12:00:00Z`))/86400000);
   return {today,phase,current,days} as const;
 }
