@@ -116,7 +116,7 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
   if(error) throw new Error("Your short learning steps are not available yet. Please try again later.");
   const sessions=(rows??[]) as StudySessionRow[];
   const today=studyDay(new Date());
-  const completedToday=sessions.find(s=>s.completed_at && studyDay(new Date(s.completed_at))===today);
+  const completedToday=sessions.find(s=>s.class_id===context.classId&&s.completed_at&&studyDay(new Date(s.completed_at))===today);
   const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && !s.paused_for_starting_point && ["opened","review"].includes(s.status));
   const startingPointComplete=hasStartingPoint(sessions,context);
   const displayTitle=startingPointDisplayTitle(context.unitTitle,context.classUnitCodes);
@@ -153,6 +153,11 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const content=studyContentFor(context.unitCode);
   if(!content) throw new Error("This unit's short steps are not ready yet.");
   const admin=createAdminClient();
+  // A stale open step from another group must not be returned by the database
+  // when the learner has since joined a different registration group.
+  const {error:staleError}=await admin.from("mini_study_sessions").update({status:"abandoned"})
+    .eq("learner_id",learnerId).in("status",["opened","review"]).neq("class_id",context.classId);
+  if(staleError) throw new Error("Your previous group step could not be closed safely. Please refresh and try again.");
   const {data:rows,error}=await admin.from("mini_study_sessions").select("*").eq("learner_id",learnerId)
     .eq("status","completed");
   if(error) throw new Error("Your previous step could not be checked. Please try again.");
