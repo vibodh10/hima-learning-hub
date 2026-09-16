@@ -127,7 +127,7 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   if(legacyError)throw new Error("Your starting point could not be checked. Please try again.");
   const baseline=studySupportBaseline((rows??[]) as StudySessionRow[],context.unitId,legacy);
   const card:Omit<StudyCard,"sessionId"|"questions">=home.kind==="baseline"
-    ? {kind:"baseline",title:"Your starting point",unitTitle:context.unitTitle,lines:["Four short questions, one at a time.","It is fine to choose â€˜I'm not sure yetâ€™. This helps choose your first step."],example:"",support:""}
+    ? {kind:"baseline",title:"Your starting point",unitTitle:context.unitTitle,secondsPerQuestion:5,lines:["10 short prerequisite questions. Five seconds each, with automatic advance.","Timeouts need another check; they do not prove a missing skill."],example:"",support:""}
     : {kind:"daily",title:selected!.title,unitTitle:context.unitTitle,lines:selected!.lines,example:selected!.example,support:selected!.support,thinking:studyThinking(selected!,baseline)};
   const keys=opaqueKeys(home.kind==="baseline"?startingPointQuestions:studyQuestionSet(selected!,previous));
   const {data:id,error:openError}=await admin.rpc("open_mini_study",{learner_uuid:learnerId,class_uuid:context.classId,unit_uuid:context.unitId,
