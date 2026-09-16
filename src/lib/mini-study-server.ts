@@ -22,31 +22,40 @@ export type StudyHome =
 
 function related<T>(value:T|T[]|null):T|undefined { return Array.isArray(value)?value[0]:value??undefined; }
 
+function startingPointQuestionsFor(unitCode:string):StudyQuestionKey[] {
+  if(unitCode==="2") return startingPointQuestions;
+  return studyContentFor(unitCode)?.baseline ?? startingPointQuestions;
+}
+
 export async function studyContext(learnerId:string) {
   const client=await createClient();
   const {data,error}=await client.from("enrolments")
-    .select("class_id,classes!inner(id,name,active_unit_id,published,archived_at)")
+    .select("class_id,classes!inner(id,name,published,archived_at)")
     .eq("student_id",learnerId).is("archived_at",null).is("classes.archived_at",null)
     .eq("classes.published",true).order("class_id");
   if(error) throw new Error("Your assigned learning could not be loaded. Please try again.");
   const assignments:StudyAssignment[]=[];
   for(const row of data??[]) {
     const group=related(row.classes);
-    if(!group?.active_unit_id) continue;
+    if(!group) continue;
     const {data:assigned,error:assignedError}=await client.from("class_units")
-      .select("units!inner(id,code,title)").eq("class_id",row.class_id).eq("unit_id",group.active_unit_id)
-      .eq("active",true).is("archived_at",null).maybeSingle();
-    if(assignedError) throw new Error("Your assigned unit could not be checked. Please try again.");
-    const unit=assigned?related(assigned.units):undefined;
-    if(unit) assignments.push({classId:row.class_id,unitId:unit.id,unitCode:unit.code,unitTitle:unit.title});
+      .select("units!inner(id,code,title)").eq("class_id",row.class_id)
+      .eq("active",true).is("archived_at",null).order("unit_id");
+    if(assignedError) throw new Error("Your assigned units could not be checked. Please try again.");
+    for(const assignedRow of assigned??[]) {
+      const unit=related(assignedRow.units);
+      if(unit) assignments.push({classId:row.class_id,unitId:unit.id,unitCode:unit.code,unitTitle:unit.title});
+    }
   }
   if(!assignments.length)return null;
   const {data:history,error:historyError}=await createAdminClient().from("mini_study_sessions")
     .select("class_id,unit_id,status,kind,lesson_id,grade,completed_at,opened_at").eq("learner_id",learnerId).neq("status","abandoned").order("opened_at");
   if(historyError)throw new Error("Your saved learning could not be checked. Please try again.");
   return selectStudyAssignment(assignments,history??[],assignment=>{
+    const assignmentHistory=studyHistoryForUnit(history??[],assignment.unitId);
+    if(!assignmentHistory.some(item=>item.kind==="baseline")) return true;
     const content=studyContentFor(assignment.unitCode);
-    return Boolean(content&&nextStudyLesson(content.lessons,studyHistoryForUnit(history??[],assignment.unitId)));
+    return Boolean(content&&nextStudyLesson(content.lessons,assignmentHistory));
   })??null;
 }
 
@@ -80,17 +89,17 @@ async function studyHomeForContext(learnerId:string,context:StudyAssignment|null
   const today=studyDay(new Date());
   const completedToday=sessions.find(s=>s.completed_at && studyDay(new Date(s.completed_at))===today);
   const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && ["opened","review"].includes(s.status));
-  const needsStartingPoint=!sessions.some(s=>s.lesson_id===startingPointId&&s.status==="completed");
-  if(needsStartingPoint&&active?.lesson_id!==startingPointId)return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
+  const hasStartingPoint=sessions.some(s=>s.unit_id===context.unitId&&s.lesson_id===startingPointId&&s.status==="completed");
+  if(!hasStartingPoint&&active?.lesson_id!==startingPointId)return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
   if(active) return {status:"active",card:cardForSession(active),grade:active.grade};
-  if(completedToday?.reward && !continueToday && sessions.some(s=>s.lesson_id===startingPointId&&s.status==="completed")) return {status:"done",reward:completedToday.reward};
+  if(completedToday?.reward && !continueToday && hasStartingPoint) return {status:"done",reward:completedToday.reward};
   const content=studyContentFor(context.unitCode);
   if(!content) return {status:"unavailable",message:"Your teacher's unit is assigned. Its short self-study steps are still being prepared."};
-  const history=studyHistoryForUnit(sessions.filter(s=>s.unit_id===context.unitId||s.lesson_id===startingPointId||s.lesson_id.startsWith("prereq-")).map(s=>({...s,unit_id:context.unitId})),context.unitId);
+  const history=studyHistoryForUnit(sessions,context.unitId);
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("id")
     .eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
   if(legacyError) throw new Error("Your existing starting point could not be checked. Please try again.");
-  if(!sessions.some(s=>s.lesson_id===startingPointId&&s.status==="completed")) return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
+  if(!hasStartingPoint) return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
   return nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history)
     ? {status:"ready",unitTitle:context.unitTitle,kind:"daily"}
     : {status:"complete",message:"You have finished the available self-study steps for this unit. Your teacher can see your learning record."};
@@ -120,7 +129,7 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const {data:rows,error}=await admin.from("mini_study_sessions").select("*").eq("learner_id",learnerId)
     .eq("status","completed");
   if(error) throw new Error("Your previous step could not be checked. Please try again.");
-  const history=studyHistoryForUnit(((rows??[]) as StudySessionRow[]).filter(s=>s.unit_id===context.unitId||s.lesson_id===startingPointId||s.lesson_id.startsWith("prereq-")).map(s=>({...s,unit_id:context.unitId})),context.unitId);
+  const history=studyHistoryForUnit((rows??[]) as StudySessionRow[],context.unitId);
   const selected=nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history);
   if(!selected && home.kind==="daily") return {status:"complete",message:"You have finished the available steps."};
   const previousId=history.filter(h=>h.kind==="daily").at(-1)?.lessonId;
@@ -128,10 +137,11 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("correct_count,question_count").eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
   if(legacyError)throw new Error("Your starting point could not be checked. Please try again.");
   const baseline=studySupportBaseline((rows??[]) as StudySessionRow[],context.unitId,legacy);
+  const baselineQuestions=startingPointQuestionsFor(context.unitCode);
   const card:Omit<StudyCard,"sessionId"|"questions">=home.kind==="baseline"
-    ? {kind:"baseline",title:"Your starting point",unitTitle:context.unitTitle,secondsPerQuestion:5,lines:["10 short prerequisite questions. Five seconds each, with automatic advance.","Timeouts need another check; they do not prove a missing skill."],example:"",support:""}
+    ? {kind:"baseline",title:`${context.unitTitle} starting point`,unitTitle:context.unitTitle,secondsPerQuestion:5,lines:[`${baselineQuestions.length} short starting-point questions. Five seconds each, with automatic advance.`,`Timeouts need another check; they do not prove a missing skill.`],example:"",support:""}
     : {kind:"daily",title:selected!.title,unitTitle:context.unitTitle,lines:selected!.lines,example:selected!.example,support:selected!.support,thinking:studyThinking(selected!,baseline)};
-  const keys=opaqueKeys(home.kind==="baseline"?startingPointQuestions:studyQuestionSet(selected!,previous));
+  const keys=opaqueKeys(home.kind==="baseline"?baselineQuestions:studyQuestionSet(selected!,previous));
   const {data:id,error:openError}=await admin.rpc("open_mini_study",{learner_uuid:learnerId,class_uuid:context.classId,unit_uuid:context.unitId,
     lesson_value:home.kind==="baseline"?startingPointId:selected!.id,kind_value:home.kind,content_value:card,keys_value:keys});
   if(openError) {
