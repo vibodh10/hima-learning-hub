@@ -17,11 +17,14 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
   const client=await createClient();
   const allowed=await client.rpc("can_manage_class",{class_uuid:id});
   if(allowed.error||!allowed.data)return message("Group not found or not authorised.",404);
-  const group=await client.from("classes").select("name,active_unit_id").eq("id",id).is("archived_at",null).maybeSingle();
+  const group=await client.from("classes").select("name").eq("id",id).is("archived_at",null).maybeSingle();
   if(group.error||!group.data)return message("Group not found.",404);
-  if(!group.data.active_unit_id)return message("Choose this group's current unit before downloading its report.",409);
+  const units=await client.from("class_units").select("unit_id").eq("class_id",id).eq("active",true).is("archived_at",null).order("unit_id");
+  if(units.error)return message("The group units could not be loaded.",503);
+  const unitIds=(units.data??[]).map(unit=>unit.unit_id);
+  if(!unitIds.length)return message("Choose this group's units before downloading its report.",409);
   try{
-    const evidence=await loadMiniStudyEvidence(client,id,group.data.active_unit_id);
+    const evidence=await loadMiniStudyEvidence(client,id,unitIds);
     return new Response(miniStudyCsv(group.data.name,evidence.learners,evidence.records,evidence.baselines),{headers:{...headers,
       "Content-Type":"text/csv; charset=utf-8","Content-Disposition":'attachment; filename="short-study-records.csv"'}});
   }catch{return message("The complete report could not be loaded. Please refresh and try again; no partial report has been downloaded.",503);}
