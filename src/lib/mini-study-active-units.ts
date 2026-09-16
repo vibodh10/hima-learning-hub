@@ -1,4 +1,5 @@
 import {makeStudyPack} from "./mini-study-pack";
+import {unit2ExtensionIdeas} from "./mini-study-unit2-extension";
 
 export const databaseStudy=makeStudyPack("2",[
  {id:"records",topic:"A1",title:"Keep one kind of thing together",skill:"structure",
@@ -13,6 +14,7 @@ export const databaseStudy=makeStudyPack("2",[
  {id:"validation",topic:"B2",title:"Valid is not always accurate",skill:"validation",
  lines:["Validation checks whether data follows an allowed rule.","Verification checks entered data against its source.","A value can pass validation and still be incorrect."],
  example:"A quantity field accepts whole numbers from 1 to 10. Entering 4 passes that rule, but the paper request may actually say 3.",help:"Allowed by the rule and matching the source are different checks.",question:"What would detect the valid but mistyped quantity?",answers:["Compare the entry with the original request","Assume a passed range check proves accuracy","Make the field a brighter colour"],feedback:"Checking against the source can reveal a plausible typing error. Validation alone cannot prove that an accepted value is true.",pairs:[["Validation","Checking whether data follows a rule"],["Verification","Checking entered data against its source"]],analyse:"Combining these checks can catch both impossible values and some plausible typing errors.",evaluate:"Test normal, boundary and invalid values, but do not claim all data is accurate merely because the rules work."},
+ ...unit2ExtensionIdeas,
 ]);
 
 export {programmingStudy} from "./mini-study-programming";
