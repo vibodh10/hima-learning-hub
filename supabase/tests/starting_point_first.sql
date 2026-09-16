@@ -13,6 +13,11 @@ do $$ begin
  if not exists(select 1 from public.mini_study_sessions where id=(select old_id from sp_fixture) and paused_for_starting_point and content->>'title'='Preserved') then raise exception 'Old work not preserved'; end if;
  if not exists(select 1 from public.mini_study_sessions where id=(select new_id from sp_fixture) and jsonb_array_length(question_keys)=10 and not paused_for_starting_point) then raise exception 'New assessment not opened'; end if;
 end $$;
+select public.check_mini_study('90000000-0000-0000-0000-000000000002',(select new_id from sp_fixture),'{"correct":8,"total":10,"feedback":[]}','Review missed skills');
+do $$ declare saved jsonb; begin
+ saved:=public.check_mini_study('90000000-0000-0000-0000-000000000002',(select new_id from sp_fixture),'{"correct":10,"total":10,"feedback":[]}','Overwrite');
+ if saved->>'correct'<>'8' then raise exception 'Retry replaced first answers'; end if;
+end $$;
 update public.mini_study_sessions set status='completed',completed_at=now(),grade='{"correct":8,"total":10,"feedback":[]}' where id=(select new_id from sp_fixture);
 do $$ declare resumed uuid; begin
  resumed:=public.open_mini_study('90000000-0000-0000-0000-000000000002',(select class_id from sp_fixture),'40000000-0000-0000-0000-000000000006','next','daily','{}','[{}]');
