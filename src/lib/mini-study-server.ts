@@ -52,10 +52,13 @@ function studySupportBaselineForContext(rows:StudySessionRow[],context:StudyCont
 
 export async function studyContext(learnerId:string):Promise<StudyContext|null> {
   const client=await createClient();
+  // A registration link defines the learner's study group. If a test account has
+  // been joined to several groups, the most recently joined active group wins so
+  // lessons from another timetable group are never mixed into the same study run.
   const {data,error}=await client.from("enrolments")
-    .select("class_id,classes!inner(id,name,published,archived_at)")
+    .select("class_id,enrolled_at,classes!inner(id,name,published,archived_at)")
     .eq("student_id",learnerId).is("archived_at",null).is("classes.archived_at",null)
-    .eq("classes.published",true).order("class_id");
+    .eq("classes.published",true).order("enrolled_at",{ascending:false}).limit(1);
   if(error) throw new Error("Your assigned learning could not be loaded. Please try again.");
   const assignments:StudyAssignment[]=[];
   for(const row of data??[]) {
