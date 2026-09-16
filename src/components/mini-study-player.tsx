@@ -1,4 +1,5 @@
 "use client";
+import {TimedStartingPoint} from "./timed-starting-point";
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { beginMiniStudy, checkMiniStudy, finishMiniStudy } from "@/app/actions/mini-study";
@@ -13,21 +14,25 @@ export function MiniStudyHome({initial}:{initial:StudyHome}) {
   return <section className="mini-study-panel">
     <p className="mini-study-kicker">Your self-study</p>
     <h1>{home.status==="ready"?(home.kind==="baseline"?"Let's find your starting point":"One small step today"):home.status==="complete"?"You're up to date":"Your next step"}</h1>
-    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"Four basic questions. It is fine not to know the answers yet.":"A quick recap, one idea and a short check. Then you're done."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
+    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"10 short questions, five seconds each. The check moves on automatically.":"A quick recap, one idea and a short check. Then you're done."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
     {home.status!=="complete"&&<button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
       try{setHome(await beginMiniStudy());}
       catch{setHome({status:"unavailable",message:"Your connection was interrupted. Try again to reopen your saved step."});}
-    })}>{pending?"Opening your step…":home.status==="ready"?"Start":"Try again"}</button>}
+    })}>{pending?"Opening your stepâ€¦":home.status==="ready"?"Start":"Try again"}</button>}
   </section>;
 }
 
-type PlayerProps={
+export type PlayerProps={
   card:StudyCard;initialGrade?:StudyGrade|null;
   check?:(sessionId:string,responses:StudyResponse[])=>Promise<StudyResult>;
   finish?:(sessionId:string)=>Promise<{ok:true;reward:StudyReward}|{ok:false;message:string}>;
 };
 
-export function MiniStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=finishMiniStudy}:PlayerProps) {
+export function MiniStudyPlayer(props:PlayerProps) {
+ if(props.card.secondsPerQuestion&&!props.initialGrade)return <TimedStartingPoint {...props}/>;
+ return <UntimedStudyPlayer {...props}/>;
+}
+export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=finishMiniStudy}:PlayerProps) {
   const [phase,setPhase]=useState<"learn"|"questions"|"feedback">(initialGrade?"feedback":card.questions[0]?.recap?"questions":"learn");
   const [questionIndex,setQuestionIndex]=useState(0);
   const [responses,setResponses]=useState<Record<string,StudyResponse["answer"]>>({});
@@ -57,7 +62,7 @@ export function MiniStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=f
         const result=await check(card.sessionId,card.questions.map(q=>({questionId:q.id,answer:responses[q.id]})));
         if(!result.ok){setError(result.message);return;}
         setGrade(result.grade);setFeedbackIndex(0);setPhase("feedback");setError("");
-      }catch{setError("We couldn't save your answers. They are still here—please try again.");}
+      }catch{setError("We couldn't save your answers. They are still hereâ€”please try again.");}
     });
   }
   function finishStep() {
@@ -97,7 +102,7 @@ export function MiniStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=f
         </select></label>)}
         {answer && typeof answer==="object" && Object.values(answer).filter(Boolean).length!==new Set(Object.values(answer).filter(Boolean)).size&&<p role="status">Each meaning belongs to one idea. Choose a different meaning for the repeated answer.</p>}
       </fieldset>}
-      <button className="mini-study-primary" disabled={pending||!validAnswer} onClick={nextQuestion}>{pending?"Saving your answers…":questionIndex===card.questions.length-1?"Check my answers":"Continue"}</button>
+      <button className="mini-study-primary" disabled={pending||!validAnswer} onClick={nextQuestion}>{pending?"Saving your answersâ€¦":questionIndex===card.questions.length-1?"Check my answers":"Continue"}</button>
     </>}
     {phase==="feedback"&&currentFeedback&&<>
       <p className="mini-study-position">{currentFeedback.recap?"Your recap":"Your answer"}</p>
@@ -106,7 +111,7 @@ export function MiniStudyPlayer({card,initialGrade,check=checkMiniStudy,finish=f
       <p className="mini-study-feedback-answer">{currentFeedback.correctAnswer}</p>
       <p>{currentFeedback.explanation}</p>
       <button className="mini-study-primary" disabled={pending} onClick={()=>feedbackIndex<feedback.length-1?setFeedbackIndex(feedbackIndex+1):finishStep()}>
-        {pending?(savingCompletion?"Saving your completion…":"Loading feedback…"):feedbackIndex<feedback.length-1?"Continue":"Finish for today"}
+        {pending?(savingCompletion?"Saving your completionâ€¦":"Loading feedbackâ€¦"):feedbackIndex<feedback.length-1?"Continue":"Finish for today"}
       </button>
     </>}
     {error&&<p className="mini-study-error" role="alert">{error}</p>}
@@ -124,7 +129,7 @@ export function StudyDone({reward}:{reward:StudyReward}) {
     <p className="mini-study-kicker">Small steps count</p>
     <h1 ref={title} tabIndex={-1}>You&apos;re done for today</h1>
     {reward.xp>0&&<p className="mini-study-xp">+{reward.xp} XP</p>}
-    {reward.badge&&<p data-achievement-badge className="mini-study-badge"><span className="gold-badge-icon" aria-hidden="true">★</span>{reward.badge}</p>}
+    {reward.badge&&<p data-achievement-badge className="mini-study-badge"><span className="gold-badge-icon" aria-hidden="true">â˜…</span>{reward.badge}</p>}
     <p>Well done for taking this step. If you want to keep learning, you can do another lesson. It is also fine to stop here and come back another day.</p>
     <p>You can close the portal now.</p>
     <button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
@@ -135,7 +140,7 @@ export function StudyDone({reward}:{reward:StudyReward}) {
         else if(result.status==="done") setError("Your next lesson could not be opened yet. Please try again.");
         else setNext(result);
       } catch {setError("Your connection was interrupted. Your completed step is saved. Try again when you're ready.");}
-    })}>{pending?"Opening your next lesson…":"Do another lesson"}</button>
+    })}>{pending?"Opening your next lessonâ€¦":"Do another lesson"}</button>
     {error&&<p className="mini-study-error" role="alert">{error}</p>}
   </section>;
 }

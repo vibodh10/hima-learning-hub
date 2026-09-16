@@ -1,3 +1,4 @@
+import {startingPointId,startingPointQuestions,prerequisiteLessons} from "./starting-point";
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +54,7 @@ export function cardForSession(row:StudySessionRow):StudyCard {
   // Explicit allow-list; never spread a database row or answer-key object into a client payload.
   const content=row.content;
   return {sessionId:row.id,kind:row.kind,title:content.title,unitTitle:content.unitTitle,
-    lines:content.lines,example:content.example,support:content.support,thinking:content.thinking,
+    lines:content.lines,example:content.example,support:content.support,thinking:content.thinking,secondsPerQuestion:content.secondsPerQuestion,
     questions:publicStudyQuestions(row.question_keys,row.id)};
 }
 
@@ -80,15 +81,15 @@ async function studyHomeForContext(learnerId:string,context:StudyAssignment|null
   const completedToday=sessions.find(s=>s.completed_at && studyDay(new Date(s.completed_at))===today);
   const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && ["opened","review"].includes(s.status));
   if(active) return {status:"active",card:cardForSession(active),grade:active.grade};
-  if(completedToday?.reward && !continueToday) return {status:"done",reward:completedToday.reward};
+  if(completedToday?.reward && !continueToday && sessions.some(s=>s.lesson_id===startingPointId&&s.status==="completed")) return {status:"done",reward:completedToday.reward};
   const content=studyContentFor(context.unitCode);
   if(!content) return {status:"unavailable",message:"Your teacher's unit is assigned. Its short self-study steps are still being prepared."};
-  const history=studyHistoryForUnit(sessions,context.unitId);
+  const history=studyHistoryForUnit(sessions.filter(s=>s.unit_id===context.unitId||s.lesson_id===startingPointId||s.lesson_id.startsWith("prereq-")).map(s=>({...s,unit_id:context.unitId})),context.unitId);
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("id")
     .eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
   if(legacyError) throw new Error("Your existing starting point could not be checked. Please try again.");
-  if(!legacy && !history.some(h=>h.kind==="baseline")) return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
-  return nextStudyLesson(content.lessons,history)
+  if(!sessions.some(s=>s.lesson_id===startingPointId&&s.status==="completed")) return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
+  return nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history)
     ? {status:"ready",unitTitle:context.unitTitle,kind:"daily"}
     : {status:"complete",message:"You have finished the available self-study steps for this unit. Your teacher can see your learning record."};
 }
@@ -115,10 +116,10 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   if(!content) throw new Error("This unit's short steps are not ready yet.");
   const admin=createAdminClient();
   const {data:rows,error}=await admin.from("mini_study_sessions").select("*").eq("learner_id",learnerId)
-    .eq("unit_id",context.unitId).eq("status","completed");
+    .eq("status","completed");
   if(error) throw new Error("Your previous step could not be checked. Please try again.");
-  const history=studyHistoryForUnit((rows??[]) as StudySessionRow[],context.unitId);
-  const selected=nextStudyLesson(content.lessons,history);
+  const history=studyHistoryForUnit(((rows??[]) as StudySessionRow[]).filter(s=>s.unit_id===context.unitId||s.lesson_id===startingPointId||s.lesson_id.startsWith("prereq-")).map(s=>({...s,unit_id:context.unitId})),context.unitId);
+  const selected=nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history);
   if(!selected && home.kind==="daily") return {status:"complete",message:"You have finished the available steps."};
   const previousId=history.filter(h=>h.kind==="daily").at(-1)?.lessonId;
   const previous=content.lessons.find(l=>l.id===previousId);
@@ -126,11 +127,11 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   if(legacyError)throw new Error("Your starting point could not be checked. Please try again.");
   const baseline=studySupportBaseline((rows??[]) as StudySessionRow[],context.unitId,legacy);
   const card:Omit<StudyCard,"sessionId"|"questions">=home.kind==="baseline"
-    ? {kind:"baseline",title:"Your starting point",unitTitle:context.unitTitle,lines:["Four short questions, one at a time.","It is fine to choose ‘I'm not sure yet’. This helps choose your first step."],example:"",support:""}
+    ? {kind:"baseline",title:"Your starting point",unitTitle:context.unitTitle,lines:["Four short questions, one at a time.","It is fine to choose â€˜I'm not sure yetâ€™. This helps choose your first step."],example:"",support:""}
     : {kind:"daily",title:selected!.title,unitTitle:context.unitTitle,lines:selected!.lines,example:selected!.example,support:selected!.support,thinking:studyThinking(selected!,baseline)};
-  const keys=opaqueKeys(home.kind==="baseline"?content.baseline:studyQuestionSet(selected!,previous));
+  const keys=opaqueKeys(home.kind==="baseline"?startingPointQuestions:studyQuestionSet(selected!,previous));
   const {data:id,error:openError}=await admin.rpc("open_mini_study",{learner_uuid:learnerId,class_uuid:context.classId,unit_uuid:context.unitId,
-    lesson_value:home.kind==="baseline"?`${content.version}-baseline`:selected!.id,kind_value:home.kind,content_value:card,keys_value:keys});
+    lesson_value:home.kind==="baseline"?startingPointId:selected!.id,kind_value:home.kind,content_value:card,keys_value:keys});
   if(openError) {
     if(openError.message.includes("finished_today")) return getStudyHome(learnerId);
     throw new Error("Your step could not be opened. Please refresh and try again.");

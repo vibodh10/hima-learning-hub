@@ -17,7 +17,7 @@ export type StudyCompletion = { lessonId: string; completedAt: string; kind: "ba
 export type StudyCard = {
   sessionId: string; kind: "baseline" | "daily"; title: string; unitTitle: string;
   lines: string[]; example: string; support: string; thinking?: string;
-  questions: StudyQuestion[];
+  questions: StudyQuestion[]; secondsPerQuestion?:number;
 };
 export type StudyResult = { ok: false; message: string } | { ok: true; grade: StudyGrade };
 export type StudyReward = { xp: number; badge: string | null; nextOn: string };
@@ -96,6 +96,12 @@ export function nextStudyLesson(lessons: StudyLesson[], history: StudyCompletion
   const finished = new Set(history.filter(h=>h.kind==="daily").map(h=>h.lessonId));
   const baseline = history.find(h=>h.kind==="baseline");
   const weak = new Set(baseline?.feedback.filter(f=>!f.correct).map(f=>f.skill) ?? []);
+  // Later first answers refine support; the starting point is not a permanent label.
+  for(const step of [...history].sort((a,b)=>a.completedAt.localeCompare(b.completedAt))){
+    for(const skill of new Set(step.feedback.filter(f=>!f.recap).map(f=>f.skill))){
+      if(step.feedback.some(f=>!f.recap&&f.skill===skill&&!f.correct))weak.add(skill);else weak.delete(skill);
+    }
+  }
   const unseen = lessons.filter(l=>!finished.has(l.id));
   const foundations = unseen.filter(l=>!["analysis","evaluation"].includes(l.skill));
   return foundations.find(l=>weak.has(l.skill)) ?? foundations[0] ?? unseen[0];
