@@ -1,6 +1,29 @@
 # Mini-learning redesign: completion audit
 
+## Final acceptance against the user's request — 2026-09-14
+
+The requested mini-platform and the later privacy/optional-continuation corrections are implemented and deployed. The entries below are the acceptance evidence; older incomplete-checkpoint notes are retained as history, not as statements about the current release. Later user instructions replace the original compulsory daily stop with an optional extra lesson.
+
+| Requested outcome | Evidence |
+| --- | --- |
+| Basic starting point, preserved existing evidence | Authenticated QA baseline saved 3/4; refresh resumed its first answers. Planning and database checks retain existing full-unit and same-unit baselines. |
+| One small idea, example and short check at a time | Actual student preview and signed-in journey; content checks enforce short explanations and choice/matching tasks. |
+| Recap before the next idea | Authenticated simulated next-day journey recapped the last completed accessibility idea before contrast; report retained 2/2 new answers separately from 1/1 recap. |
+| Correct answers, varied presentation, matching | Source-answer permutation and malformed-answer checks; browser correct/incorrect choice and matching flows, including duplicate matching rejection. |
+| Genuine XP and badges | Isolated signed-in records contained three distinct 20-XP events and one first-step badge. Database checks verified immutable first marks, feedback-before-reward and idempotent completion. |
+| Starting-point-informed next steps, teacher-set units only | Accessibility gap selected the next lesson; authenticated learner saw assigned Unit 6 only. Assignment, transfer, removed-unit and multi-group planning checks cover the server restrictions. |
+| Analysis and evaluation support | Original Unit 6 content, Pearson/W3C source review and content/rule checks; optional analysis help inspected in the browser. Support does not claim qualification grades. |
+| Teacher progress, targets and intervention | Authenticated teacher creation/setup and own-group report verified baseline, latest first answers, recap, completion and automatic target/support. Historical evidence remains labelled and retained. |
+| Privacy and data handling | No new personal-background or sensitive free-text questions. Authenticated identity and class permissions restrict evidence; initial student payload excludes private keys. Existing accounts/rosters remain necessary and were not erased. Student-facing Privacy link removed; notice restricted to staff. |
+| Phone and desktop usability | Earlier 390×844 and 1280×900 student preview checks plus signed-in narrow-desktop checks. Current-release student lesson/matching and actual teacher report component were additionally rendered with measured 320px/300px content widths: no horizontal overflow, readable wrapping, operable controls and expanding teacher details. The teacher display fixture contained only synthetic local data and was removed after inspection. |
+| Controls, failure states and optional continuation | Authenticated Start/Continue/Finish, refresh/resume, teacher Save and joining-link close checks; focused component/action checks cover interrupted requests and optional continuation. The updated database journey verifies a second same-day lesson and no duplicate XP. |
+| Deployment and preservation | Exact release 216c5c3f2ccec79adc13da4bc10de4394672852b confirmed independently by hosting SUCCESS and the live release endpoint. Newer production homepage retained. QA accounts/group recoverably retired; no real learner evidence deleted. |
+
+Verification was incremental: the previous full suite passed 433 tests; the latest changes passed 16 focused tests, the updated database journey and the final merged build. The full suite was not repeated. No claim is made of exhaustive browser/device coverage, a separate 200%-zoom audit, or runtime testing of every optional theme. Those enhanced checks from earlier planning are not represented as completed. Browser sizing was reset and the temporary display tab closed; no application source changes remain from the display check.
+
 ## Latest scope correction and verification — 2026-09-14
+
+Deployment confirmed: Railway release `3cbc1d02-1c28-4c82-9130-2891a1382561` reached SUCCESS and `/api/release` independently returned exact revision `216c5c3f2ccec79adc13da4bc10de4394672852b`. The signed-out `/privacy` response contains the framework redirect to `/login` and no privacy-notice content (streamed HTTP 200, not a conventional HTTP redirect). The explicitly approved QA accounts and isolated group were recoverably archived, with account bans; all evidence was retained. Local test servers were stopped. These statements confirm the two latest requested changes; they do not invent missing enhanced visual-QA evidence from the earlier checklist.
 
 The user's later instructions supersede the strict daily cap below: retain the reassuring finished screen, but offer an optional **Do another lesson** button. Students still cannot choose units. Removed the student Privacy link and restricted the notice page to staff, as explicitly clarified by the user. Existing records and access protections remain unchanged.
 
@@ -18,7 +41,7 @@ Student: teacher-assigned unit only → basic starting point → one short expla
 
 Privacy: retain existing records; collect no new personal background or free-text sensitive information for mini-learning. Authentication and a teacher roster still require a learner identifier; do not claim the platform holds no student information.
 
-## Required evidence (not yet complete)
+## Original checkpoint checklist (historical; final acceptance is above)
 
 - [ ] Starting point: basic, one question at a time; existing baseline retained and distinct instruments labelled honestly.
 - [ ] Daily self-study: only one assigned short step; completion and next-day boundary enforced on the server.
