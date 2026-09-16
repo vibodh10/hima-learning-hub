@@ -80,6 +80,8 @@ async function studyHomeForContext(learnerId:string,context:StudyAssignment|null
   const today=studyDay(new Date());
   const completedToday=sessions.find(s=>s.completed_at && studyDay(new Date(s.completed_at))===today);
   const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && ["opened","review"].includes(s.status));
+  const needsStartingPoint=!sessions.some(s=>s.lesson_id===startingPointId&&s.status==="completed");
+  if(needsStartingPoint&&active?.lesson_id!==startingPointId)return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
   if(active) return {status:"active",card:cardForSession(active),grade:active.grade};
   if(completedToday?.reward && !continueToday && sessions.some(s=>s.lesson_id===startingPointId&&s.status==="completed")) return {status:"done",reward:completedToday.reward};
   const content=studyContentFor(context.unitCode);
