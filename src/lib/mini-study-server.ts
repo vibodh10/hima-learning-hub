@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { studyContentFor } from "./mini-study-content";
+import { studyContentFor } from "./mini-study-content-expanded";
 import { nextStudyLesson, publicStudyQuestions, studyDay, studyQuestionSet, studyThinking, type StudyCard, type StudyGrade, type StudyQuestionKey, type StudyReward } from "./mini-study";
 import {selectStudyAssignment,studyHistoryForUnit,studySupportBaseline,type StudyAssignment} from "./mini-study-planning";
 import {isCombinedUnit2Unit6,startingPointDisplayTitle,startingPointQuestionsForAssignment} from "./mini-study-starting-point";
@@ -87,7 +87,6 @@ export async function studyContext(learnerId:string):Promise<StudyContext|null> 
 }
 
 export function cardForSession(row:StudySessionRow):StudyCard {
-  // Explicit allow-list; never spread a database row or answer-key object into a client payload.
   const content=row.content;
   return {sessionId:row.id,kind:row.kind,title:content.title,unitTitle:content.unitTitle,
     lines:content.lines,example:content.example,support:content.support,thinking:content.thinking,secondsPerQuestion:content.secondsPerQuestion,
@@ -122,7 +121,7 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
   if(active) return {status:"active",card:cardForSession(active),grade:active.grade};
   if(completedToday?.reward && !continueToday && startingPointComplete) return {status:"done",reward:completedToday.reward};
   const content=studyContentFor(context.unitCode);
-  if(!content) return {status:"unavailable",message:"Your teacher's unit is assigned. Its short self-study steps are still being prepared."};
+  if(!content) return {status:"unavailable",message:"Your assigned unit does not have self-study content yet."};
   const history=studyHistoryForContext(sessions,context);
   const {error:legacyError}=await admin.from("unit_starting_point_baselines").select("id")
     .eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
@@ -130,10 +129,9 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
   if(!startingPointComplete) return {status:"ready",unitTitle:displayTitle,kind:"baseline"};
   return nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history)
     ? {status:"ready",unitTitle:context.unitTitle,kind:"daily"}
-    : {status:"complete",message:"You have finished the available self-study steps for this unit. Your teacher can see your learning record."};
+    : {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
 }
 
-/** Opaque response IDs prevent matching pairs by source indices rather than meaning. */
 function opaqueKeys(questions:StudyQuestionKey[]):StudyQuestionKey[] {
   return questions.map(q=>{
     const options=new Map(q.options.map(o=>[o.id,randomUUID()]));
@@ -145,8 +143,6 @@ function opaqueKeys(questions:StudyQuestionKey[]):StudyQuestionKey[] {
 }
 
 export async function openStudySession(learnerId:string,continueToday=false):Promise<StudyHome> {
-  // Plan the kind and questions against one assignment snapshot. The database
-  // rechecks that exact assignment if the teacher changes it during this request.
   const context=await studyContext(learnerId);
   const home=await studyHomeForContext(learnerId,context,continueToday);
   if(home.status!=="ready") return home;
@@ -160,7 +156,7 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const sessions=(rows??[]) as StudySessionRow[];
   const history=studyHistoryForContext(sessions,context);
   const selected=nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history);
-  if(!selected && home.kind==="daily") return {status:"complete",message:"You have finished the available steps."};
+  if(!selected && home.kind==="daily") return {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
   const previousId=history.filter(h=>h.kind==="daily").at(-1)?.lessonId;
   const previous=content.lessons.find(l=>l.id===previousId);
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("correct_count,question_count").eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
