@@ -49,7 +49,7 @@ export function TeacherLearnerSummary({
 
     <header className="mt-8">
       <p className="eyebrow">Student progress</p>
-      <h1 className="mt-2 text-4xl font-bold">Does {learnerName} need me?</h1>
+      <h1 className="mt-2 text-4xl font-bold">{learnerName}&apos;s progress</h1>
       <p className="mt-2 text-slate-600">{courseTitle} · {groupName}</p>
     </header>
 
@@ -57,10 +57,11 @@ export function TeacherLearnerSummary({
       {classChoices.map(choice => <Link className={choice.name === groupName ? "button" : "button-secondary"} href={`/teacher/learners/${learnerId}?classId=${choice.id}`} key={choice.id}>{choice.name}</Link>)}
     </nav>}
 
-    <section className={`card mt-8 ${needsAttention ? "border-red-300 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
-      <p className="eyebrow">{needsAttention ? "Needs attention" : "On track"}</p>
-      <h2 className="mt-2 text-2xl font-bold">{needsAttention ? "This student needs help" : "No teacher action is needed"}</h2>
+    <section className={`card mt-8 ${needsAttention ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
+      <p className="eyebrow">{needsAttention ? "Student action or automatic support" : "On track"}</p>
+      <h2 className="mt-2 text-2xl font-bold">{needsAttention ? "Progress signal recorded" : "Learning is progressing automatically"}</h2>
       <p className="mt-3 max-w-3xl text-slate-700">{attentionReason}</p>
+      {needsAttention&&<p className="mt-3 max-w-3xl text-sm text-slate-600">The portal continues the learner&apos;s explanation, practice and rechecking automatically. You can review the evidence below; no learning task needs to be assigned manually.</p>}
       {needsAttention&&<a className="button mt-6" href={weeklyHref}>Open this week&apos;s evidence →</a>}
     </section>
 
@@ -85,13 +86,13 @@ export function TeacherLearnerSummary({
     </section></details>
 
     <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">How the portal handles routine work</summary><section className="mt-5">
-      <p className="eyebrow">Automatic teacher assistant</p>
+      <p className="eyebrow">Automatic learning</p>
       <h2 className="mt-2 text-2xl font-bold">What happens without teacher admin</h2>
       <ol className="mt-5 grid gap-3 text-slate-700 sm:grid-cols-2">
-        <li className="rounded-xl bg-slate-50 p-4"><strong>1. Learn and practise</strong><p className="mt-1 text-sm">Only the required teaching week is shown.</p></li>
-        <li className="rounded-xl bg-slate-50 p-4"><strong>2. Weekly test</strong><p className="mt-1 text-sm">The result and mistakes are stored automatically.</p></li>
-        <li className="rounded-xl bg-slate-50 p-4"><strong>3. Targeted redo</strong><p className="mt-1 text-sm">Only weak areas return for more practice.</p></li>
-        <li className="rounded-xl bg-slate-50 p-4"><strong>4. Report ready</strong><p className="mt-1 text-sm">Feedback, improvement and targets are assembled from saved evidence.</p></li>
+        <li className="rounded-xl bg-slate-50 p-4"><strong>1. Learn and practise</strong><p className="mt-1 text-sm">The learner receives the next appropriate lesson automatically.</p></li>
+        <li className="rounded-xl bg-slate-50 p-4"><strong>2. Check understanding</strong><p className="mt-1 text-sm">First answers and mistakes are stored automatically.</p></li>
+        <li className="rounded-xl bg-slate-50 p-4"><strong>3. Reinforce or stretch</strong><p className="mt-1 text-sm">Weak areas receive more explanation and practice; secure learners continue into harder challenges.</p></li>
+        <li className="rounded-xl bg-slate-50 p-4"><strong>4. Report ready</strong><p className="mt-1 text-sm">Progress, feedback, starting point and targets are assembled from saved evidence.</p></li>
       </ol>
     </section></details>
   </main>;
