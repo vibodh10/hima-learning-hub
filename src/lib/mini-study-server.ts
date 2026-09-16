@@ -11,7 +11,7 @@ export type StudySessionRow = {
   id:string;learner_id:string;class_id:string;unit_id:string;unit_code:string;lesson_id:string;
   kind:"baseline"|"daily";status:"opened"|"review"|"completed"|"abandoned";
   content:Omit<StudyCard,"sessionId"|"questions">;question_keys:StudyQuestionKey[];
-  grade:StudyGrade|null;completed_at:string|null;reward:StudyReward|null;
+  grade:StudyGrade|null;completed_at:string|null;reward:StudyReward|null;paused_for_starting_point:boolean;
 };
 export type StudyHome =
   | {status:"unavailable";message:string}
@@ -49,7 +49,7 @@ export async function studyContext(learnerId:string) {
   }
   if(!assignments.length)return null;
   const {data:history,error:historyError}=await createAdminClient().from("mini_study_sessions")
-    .select("class_id,unit_id,status,kind,lesson_id,grade,completed_at,opened_at").eq("learner_id",learnerId).neq("status","abandoned").order("opened_at");
+    .select("class_id,unit_id,status,kind,lesson_id,grade,completed_at,opened_at,paused_for_starting_point").eq("learner_id",learnerId).neq("status","abandoned").order("opened_at");
   if(historyError)throw new Error("Your saved learning could not be checked. Please try again.");
   return selectStudyAssignment(assignments,history??[],assignment=>{
     const assignmentHistory=studyHistoryForUnit(history??[],assignment.unitId);
@@ -88,7 +88,7 @@ async function studyHomeForContext(learnerId:string,context:StudyAssignment|null
   const sessions=(rows??[]) as StudySessionRow[];
   const today=studyDay(new Date());
   const completedToday=sessions.find(s=>s.completed_at && studyDay(new Date(s.completed_at))===today);
-  const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && ["opened","review"].includes(s.status));
+  const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && !s.paused_for_starting_point && ["opened","review"].includes(s.status));
   const hasStartingPoint=sessions.some(s=>s.unit_id===context.unitId&&s.lesson_id===startingPointId&&s.status==="completed");
   if(!hasStartingPoint&&active?.lesson_id!==startingPointId)return {status:"ready",unitTitle:context.unitTitle,kind:"baseline"};
   if(active) return {status:"active",card:cardForSession(active),grade:active.grade};
