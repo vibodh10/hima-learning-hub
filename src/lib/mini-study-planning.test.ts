@@ -13,6 +13,13 @@ describe("teacher-assigned mini-learning planning",()=>{
  it("finishes a valid saved step before rotating",()=>{
   expect(selectStudyAssignment([a,b],[row({status:"review",completed_at:null})])).toEqual(a);
  });
+ it("does not treat a starting-point-paused row as the current active lesson",()=>{
+  expect(selectStudyAssignment([a,b],[
+   row({completed_at:"2026-09-10T09:00:00Z"}),
+   row({status:"review",completed_at:null,paused_for_starting_point:true}),
+   row({class_id:"b",unit_id:"11",completed_at:"2026-09-08T09:00:00Z"}),
+  ])).toEqual(b);
+ });
  it("never resumes a removed group or its old unit",()=>{
   expect(selectStudyAssignment([b],[row({status:"opened",completed_at:null})])).toEqual(b);
   expect(selectStudyAssignment([],[])).toBeUndefined();
