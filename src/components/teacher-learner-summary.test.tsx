@@ -6,7 +6,7 @@ import { TeacherLearnerSummary } from "./teacher-learner-summary";
 afterEach(cleanup);
 
 describe("teacher learner summary", () => {
-  it("keeps the teacher page focused on one action and hides secondary reports", async () => {
+  it("keeps the teacher page focused on progress evidence rather than assigning learning tasks", async () => {
     const user=userEvent.setup();
     render(<TeacherLearnerSummary
       attentionReason="Teaching Week 2 required work is incomplete."
@@ -27,7 +27,9 @@ describe("teacher learner summary", () => {
       weeklyPeriod={{ from: "2026-08-31", to: "2026-09-06" }}
     />);
 
-    expect(screen.getByRole("heading", { name: "This student needs help" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Student One's progress" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Progress signal recorded" })).toBeVisible();
+    expect(screen.getByText(/no learning task needs to be assigned manually/i)).toBeVisible();
     expect(screen.getByRole("link", { name: "Weekly report" })).toHaveAttribute(
       "href",
       "/api/reports/learners/learner-1?classId=class-1&from=2026-08-31&to=2026-09-06",
