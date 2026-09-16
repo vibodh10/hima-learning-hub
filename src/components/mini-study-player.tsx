@@ -14,7 +14,7 @@ export function MiniStudyHome({initial}:{initial:StudyHome}) {
   return <section className="mini-study-panel">
     <p className="mini-study-kicker">Your self-study</p>
     <h1>{home.status==="ready"?(home.kind==="baseline"?"Let's find your starting point":"One small step today"):home.status==="complete"?"You're up to date":"Your next step"}</h1>
-    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"10 short questions, five seconds each. The check moves on automatically.":"A quick recap, one idea and a short check. Then you're done."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
+    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"A short timed starting point, one question at a time. The check moves on automatically.":"A quick recap, one idea and a short check. Then you're done."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
     {home.status!=="complete"&&<button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
       try{setHome(await beginMiniStudy());}
       catch{setHome({status:"unavailable",message:"Your connection was interrupted. Try again to reopen your saved step."});}
