@@ -10,10 +10,10 @@ beforeEach(()=>{
  vi.clearAllMocks();mocks.profile.mockResolvedValue({role:"teacher"});mocks.rpc.mockResolvedValue({data:true,error:null});
  mocks.from.mockImplementation((table:string)=>{
   const result=table==="classes"?{data:{name:"Group"},error:null}:{data:[{unit_id:"unit-2"},{unit_id:"unit-6"}],error:null};
-  const query:any={};
+  const query:Record<string,ReturnType<typeof vi.fn>>={};
   for(const method of ["select","eq","is","order"])query[method]=vi.fn(()=>query);
   query.maybeSingle=vi.fn().mockResolvedValue(result);
-  query.then=(resolve:(value:unknown)=>unknown)=>Promise.resolve(result).then(resolve);
+  query.then=vi.fn((resolve:(value:unknown)=>unknown)=>Promise.resolve(result).then(resolve));
   return query;
  });
  mocks.evidence.mockResolvedValue({learners:[],records:[],baselines:[]});
