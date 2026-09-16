@@ -23,7 +23,6 @@ export function AssignmentOneGuide({schedule,preview=false,unit="6"}:{schedule:R
         {schedule.phase==="past"?"The planned date has passed. Check your submission or any agreed extension with your teacher.":schedule.phase==="due"?"Due today. Confirm the time and submission location with your teacher.":`${schedule.days} calendar days to the due date. Your teacher will confirm the submission time.`}
       </p>
       <p className="assignment-note">{unit==="4"?"Unit 4 Programming":"Unit 6 Website Development"} · Learning aim A. Use this preparation guide alongside your teacher&apos;s assignment brief.</p>
-      <p className="assignment-note"><a className="link" href={`${assignmentOne.specification}#page=${unit==="4"?55:77}`} target="_blank" rel="noreferrer">Open Pearson&apos;s Unit {unit} specification (PDF)</a></p>
       <details className="mini-study-help assignment-plan"><summary>See the plan or choose a step</summary>
         <label htmlFor="assignment-step">Open a preparation step</label>
         <select id="assignment-step" value={index} onChange={event=>go(Number(event.target.value))}>
@@ -43,12 +42,11 @@ export function AssignmentOneGuide({schedule,preview=false,unit="6"}:{schedule:R
           <h2>One real source, two parts</h2>
           <p>In your writing: <strong>(Pearson, 2020)</strong></p>
           <p>In your reference list:</p>
-          <p>Pearson (2020) <em>Pearson BTEC Level 3 National Diploma in Information Technology: Specification.</em> Issue 6. Available at: <a className="link" href={assignmentOne.specification} target="_blank" rel="noreferrer">Pearson specification (PDF)</a> (Accessed: [the date you opened the document]).</p>
-          <p>Replace the access-date instruction with your own date and use the full address below in your written reference. The document&apos;s year is 2020, even when you read it in 2026.</p>
-          <details className="mini-study-help"><summary>Full web address for your reference</summary><p>{assignmentOne.specification}</p></details>
+          <p>Pearson (2020) <em>Pearson BTEC Level 3 National Diploma in Information Technology: Specification.</em> Issue 6. Available at: [the web address of the source you actually used] (Accessed: [the date you opened the document]).</p>
+          <p>Replace the access-date instruction with your own date and add the address of the source you actually used to your written reference. The document&apos;s year is 2020, even when you read it in 2026.</p>
         </aside>}
         <details className="mini-study-help"><summary>A little help</summary><p>{step.help}</p></details>
-        {step.links&&<div className="assignment-tools"><h2 className="assignment-subheading">Useful links</h2><ul>{step.links.map(link=><li key={link.url}><a href={link.url} target="_blank" rel="noreferrer">{link.title} <span className="sr-only">(opens in a new tab)</span></a></li>)}</ul></div>}
+        {step.links&&<div className="assignment-tools"><h2 className="assignment-subheading">Useful links</h2><ul>{step.links.filter(link=>!new URL(link.url).hostname.endsWith("pearson.com")).map(link=><li key={link.url}><a href={link.url} target="_blank" rel="noreferrer">{link.title} <span className="sr-only">(opens in a new tab)</span></a></li>)}</ul></div>}
         <details className="mini-study-help" key={step.id}><summary>Try a quick practice check</summary>
           <fieldset className="mini-study-options"><legend>{step.check.question}</legend>
             {step.check.options.map((option,i)=><label className="mini-study-option" key={option}><input type="radio" name={`check-${step.id}`} checked={answer===i} onChange={()=>{setAnswer(i);setChecked(false);}}/>{option}</label>)}
@@ -64,7 +62,7 @@ export function AssignmentOneGuide({schedule,preview=false,unit="6"}:{schedule:R
       </section>
       <p className="assignment-note">You can stop here and close the portal, or choose another step when you feel ready.</p>
       <p className="assignment-note">Keep your evidence and writing in your own document. Reading this guide does not save assignment progress or submit work. Follow any individual deadline agreed with your teacher.</p>
-      <details className="mini-study-help"><summary>About the requirements</summary><p>{unit==="4"?programmingRequirements:"This guide supports comparison (A.P1), analysis (A.M1) and evaluation (A.D1). It does not replace your brief or cover the whole of learning aims B and C. Your assessor judges your independent work."}</p><p>Harvard is taught here as a consistent author–date format. The specification does not prescribe a Harvard variant or require the particular testing tools linked above.</p><a className="link" href={`${assignmentOne.specification}#page=${unit==="4"?55:79}`} target="_blank" rel="noreferrer">Pearson Diploma specification: Unit {unit} (opens in a new tab)</a></details>
+      <details className="mini-study-help"><summary>About the requirements</summary><p>{unit==="4"?programmingRequirements:"This guide supports comparison (A.P1), analysis (A.M1) and evaluation (A.D1). It does not replace your brief or cover the whole of learning aims B and C. Your assessor judges your independent work."}</p><p>Harvard is taught here as a consistent author–date format. The specification does not prescribe a Harvard variant or require the particular testing tools linked above.</p></details>
     </main>
     <footer className="mini-study-footer"><Link href={back}>Back to your learning</Link><a href={unit==="4"?"/programming-assignment-one-evidence-template.txt":"/assignment-one-evidence-template.txt"} download>Download a blank evidence sheet</a></footer>
   </div>;

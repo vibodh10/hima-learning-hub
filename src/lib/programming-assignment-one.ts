@@ -9,7 +9,6 @@ export const programmingSteps: AssignmentStep[] = [
     task:["Read your teacher's brief. Confirm the programs and languages you should investigate and where to submit on 28 September.","Create a document with headings for problem-solving, language choices, code examples, software quality, analysis, evaluation and references.","Open a teacher-approved program with available source code. Record its name, purpose, intended user and where the code came from. Add more examples as required by your brief."],
     evidence:"Your report outline, confirmed examples and a source log.",
     help:"A theory report still needs code evidence. You are investigating examples, not submitting a new full application for this guide. Your teacher's issued brief controls the scenario and required evidence.",
-    links:[{title:"Pearson Diploma specification — Unit 4",url:assignmentOne.specification+"#page=55"}],
     check:{question:"You are explaining an existing program. Which evidence is most useful?",options:["Its name and a general definition of software","A relevant code extract linked to a user need","A screenshot of the application without an explanation"],correct:1,feedback:"Connect a specific example to what the program helps its users do."}},
   {id:"thinking",from:"2026-09-15",until:"2026-09-17",dates:"15–17 September",title:"Break one problem into smaller parts",
     idea:"Imagine a library reservation tool. It must identify a book, check availability and record a request. Each part can be discussed separately.",
