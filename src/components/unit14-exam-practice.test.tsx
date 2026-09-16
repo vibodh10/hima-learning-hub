@@ -1,0 +1,21 @@
+import {cleanup,fireEvent,render,screen} from "@testing-library/react";
+import {afterEach,expect,it,vi} from "vitest";
+import {Unit14ExamPractice} from "./unit14-exam-practice";
+import {submitExamPractice} from "@/app/actions/exam-practice";
+vi.mock("@/app/actions/exam-practice",()=>({submitExamPractice:vi.fn(),reflectExamPractice:vi.fn()}));
+afterEach(cleanup);
+it("keeps guidance hidden after a failed save and reveals it only after success",async()=>{
+ vi.mocked(submitExamPractice).mockResolvedValueOnce({message:"Not saved"}).mockResolvedValueOnce({ok:true,id:"attempt"});
+ render(<Unit14ExamPractice classId="group"/>);
+ expect(screen.queryByText("One strong approach")).not.toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText("Your own answer"),{target:{value:"A sufficiently long answer applying choices to this organisation."}});
+ fireEvent.click(screen.getByRole("button",{name:"Save my answer and show the review"}));
+ await screen.findByText("Not saved");
+ expect(screen.queryByText("One strong approach")).not.toBeInTheDocument();
+ fireEvent.click(screen.getByRole("button",{name:"Save my answer and show the review"}));
+ await screen.findByText("One strong approach");
+ expect(screen.getByLabelText("Your own answer")).toHaveAttribute("readonly");
+ fireEvent.click(screen.getByRole("button",{name:"Start a fresh attempt"}));
+ expect(screen.queryByText("One strong approach")).not.toBeInTheDocument();
+ expect(screen.getByLabelText("Your own answer")).toHaveValue("");
+});

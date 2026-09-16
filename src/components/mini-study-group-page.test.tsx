@@ -13,6 +13,7 @@ beforeEach(()=>{
  vi.clearAllMocks();mocks.queries={};
  mocks.role.mockResolvedValue({role:"teacher",display_name:"Staff"});mocks.rpc.mockResolvedValue({data:true,error:null});
  mocks.tables={
+  class_units:{data:null,error:null},
   classes:{data:{name:"Assigned group",active_unit_id:"unit-6",published:true},error:null},
   enrolments:{data:[{student_id:"learner-a",user_profiles:{display_name:"Learner A"}}],error:null},
   mini_study_sessions:{data:[],error:null},

@@ -16,6 +16,6 @@ export default async function StudyPage() {
     <a className="mini-study-skip" href="#study-main">Skip to your step</a>
     <header className="mini-study-header"><Link href="/study">SCCB Learning</Link><form action={logout}><button type="submit">Sign out</button></form></header>
     <main id="study-main" className="mini-study-main"><MiniStudyHome initial={home}/></main>
-    <footer className="mini-study-footer"><Link href="/rewards">My rewards · points, badges and themes</Link>{showAssignment&&<Link href="/study/assignment-one">Unit 6 Assignment 1 · 28 September</Link>}{assignedUnits.includes("4")&&<Link href="/study/programming-assignment-one">Unit 4 Assignment 1 · 28 September</Link>}<Link href="/help">Need help?</Link></footer>
+    <footer className="mini-study-footer"><Link href="/rewards">My rewards · points, badges and themes</Link>{showAssignment&&<Link href="/study/assignment-one">Unit 6 Assignment 1 · 28 September</Link>}{assignedUnits.includes("4")&&<Link href="/study/programming-assignment-one">Unit 4 Assignment 1 · 28 September</Link>}{assignedUnits.includes("14")&&<Link href="/study/unit14-exam">Unit 14 · January exam preparation</Link>}<Link href="/help">Need help?</Link></footer>
   </div>;
 }

@@ -1,3 +1,4 @@
+import {serviceDeliveryStudy} from "./mini-study-service-delivery";
 import type { StudyLesson, StudyQuestionKey } from "./mini-study";
 import {dataModellingStudy} from "./mini-study-data-modelling";
 import {securityStudy} from "./mini-study-security";
@@ -122,6 +123,7 @@ export function studyContentFor(unitCode:string) {
     case "6":return {version:"u6-mini-v1",lessons:unit6StudyLessons,baseline:unit6StudyBaseline};
     case "9":return projectStudy;
     case "11":return securityStudy;
+    case "14":return serviceDeliveryStudy;
     case "16":return cloudStudy;
     case "19":return iotStudy;
     default:return undefined;
