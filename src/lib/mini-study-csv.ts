@@ -10,21 +10,22 @@ function cell(value:unknown){
 export function miniStudyCsv(group:string,learners:{id:string;name:string}[],records:MiniStudyRecord[],baselines:StudyLegacyBaseline[]){
   const rows:unknown[][]=[
     ["Short formative self-study; not assignment grades. Different topics and starting-point instruments are not directly comparable."],
-    ["Group","Student","Record type","Step","Checked at (UTC)","Correct (new learning)","Total (new learning)","Recap correct","Recap total","Completed daily steps","Status","Automatic target","Question","First answer","Expected answer","Answer result"],
+    ["Group","Student","Record type","Step","Checked at (UTC)","Correct (new learning)","Total (new learning)","Recap correct","Recap total","Completed daily steps","Starting point","Current practice level","Status","Automatic target","Question","First answer","Expected answer","Answer result"],
   ];
   for(const learner of learners){
     const own=records.filter(r=>r.learner_id===learner.id&&r.status!=="abandoned");
     const summary=miniStudyLearnerSummary(own);
+    const legacy=baselines.find(b=>b.learner_id===learner.id);
+    const startingPoint=summary.baseline?`${summary.baseline.correct} of ${summary.baseline.total}`:legacy?`${legacy.correct_count} of ${legacy.question_count}`:"Not recorded";
     rows.push([group,learner.name,"Current summary",summary.latest?.title??"No daily check recorded",summary.latest?.checkedAt,
       summary.latest?.grade.correct,summary.latest?.grade.total,summary.recap?.correct,summary.recap?.total,summary.completedSteps,
-      summary.needsHelp?"Support suggested":summary.latest?"Learning recorded":"Starting point or next step pending",summary.target]);
-    const legacy=baselines.find(b=>b.learner_id===learner.id);
-    if(legacy)rows.push([group,learner.name,"Existing full-unit starting point","Preserved full-unit assessment",legacy.completed_at,legacy.correct_count,legacy.question_count,"","","","Completed"]);
+      startingPoint,summary.practiceLevel,summary.needsHelp?"Automatic reinforcement active":summary.latest?"Learning recorded":"Starting point or next step pending",summary.target]);
+    if(legacy)rows.push([group,learner.name,"Existing full-unit starting point","Preserved full-unit assessment",legacy.completed_at,legacy.correct_count,legacy.question_count,"","","",`${legacy.correct_count} of ${legacy.question_count}`,summary.practiceLevel,"Completed"]);
     for(const record of own.filter(r=>r.grade).sort((a,b)=>(a.checked_at??"").localeCompare(b.checked_at??""))){
       const grade=record.grade!;
       const recap=grade.feedback.filter(f=>f.recap);
       for(const answer of grade.feedback)rows.push([group,learner.name,record.kind==="baseline"?"Short starting point":"Daily step",record.content.title,record.checked_at,
-        grade.correct,grade.total,recap.length?recap.filter(f=>f.correct).length:"",recap.length||"","",record.status,record.target_text,
+        grade.correct,grade.total,recap.length?recap.filter(f=>f.correct).length:"",recap.length||"","","","",record.status,record.target_text,
         `${answer.recap?"Recap: ":""}${answer.prompt??answer.skill}`,answer.selectedAnswer??"Not saved in this older record",answer.correctAnswer,answer.correct?"Correct":"Needs practice"]);
     }
   }
