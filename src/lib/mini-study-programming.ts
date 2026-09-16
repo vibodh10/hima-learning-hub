@@ -1,4 +1,5 @@
 import {makeStudyPack} from "./mini-study-pack";
+import {unit4ExtensionIdeas} from "./mini-study-unit4-extension";
 
 // Keep lesson identities stable: completed steps and saved answer keys remain intact.
 export const programmingStudy=makeStudyPack("4",[
@@ -47,4 +48,5 @@ export const programmingStudy=makeStudyPack("4",[
  evaluate:"Check an empty job, one label and several labels. Confirm both the number printed and that the program stops.",
  baselineCheck:{question:"A playlist should play each saved track once. Which approach still works when another track is added?",answers:["Loop through the tracks in the playlist","Write a separate play command for each existing track and leave the code unchanged","Keep repeating only the first track"],feedback:"A loop over the collection can process the added track without another individually written command."},
  recapCheck:{question:"An email app loops through a list of unread messages. The list is empty. How many message previews should this loop create?",answers:["None","One empty preview","The same number as yesterday"],feedback:"A loop over an empty collection processes no items. There is no unread message to preview."}},
+ ...unit4ExtensionIdeas,
 ]);
