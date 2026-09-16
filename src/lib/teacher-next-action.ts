@@ -27,7 +27,7 @@ type TeacherAttentionCandidate = {
 
 const attentionLabels: Record<string, string> = {
   intervention_required: "Intervention required",
-  action_required: "Action required",
+  action_required: "Student action required",
   catch_up_required: "Catch-up required",
 };
 
