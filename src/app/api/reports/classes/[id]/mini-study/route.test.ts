@@ -8,9 +8,15 @@ const id="11111111-1111-4111-8111-111111111111";
 const request=()=>GET(new Request("https://example.test/report"),{params:Promise.resolve({id})});
 beforeEach(()=>{
  vi.clearAllMocks();mocks.profile.mockResolvedValue({role:"teacher"});mocks.rpc.mockResolvedValue({data:true,error:null});
- const query={select:vi.fn(),eq:vi.fn(),is:vi.fn(),maybeSingle:vi.fn().mockResolvedValue({data:{name:"Group",active_unit_id:"unit"},error:null})};
- for(const method of ["select","eq","is"] as const)query[method].mockReturnValue(query);
- mocks.from.mockReturnValue(query);mocks.evidence.mockResolvedValue({learners:[],records:[],baselines:[]});
+ mocks.from.mockImplementation((table:string)=>{
+  const result=table==="classes"?{data:{name:"Group"},error:null}:{data:[{unit_id:"unit-2"},{unit_id:"unit-6"}],error:null};
+  const query:any={};
+  for(const method of ["select","eq","is","order"])query[method]=vi.fn(()=>query);
+  query.maybeSingle=vi.fn().mockResolvedValue(result);
+  query.then=(resolve:(value:unknown)=>unknown)=>Promise.resolve(result).then(resolve);
+  return query;
+ });
+ mocks.evidence.mockResolvedValue({learners:[],records:[],baselines:[]});
 });
 describe("private short-study downloads",()=>{
  it("denies signed-out and student requests before database access",async()=>{
@@ -21,11 +27,11 @@ describe("private short-study downloads",()=>{
   mocks.rpc.mockResolvedValue({data:false,error:null});
   expect((await request()).status).toBe(404);expect(mocks.from).not.toHaveBeenCalled();expect(mocks.evidence).not.toHaveBeenCalled();
  });
- it("returns a private uncached spreadsheet of the authorised active unit",async()=>{
+ it("returns a private uncached spreadsheet across all authorised active units",async()=>{
   const response=await request();
   expect(response.status).toBe(200);expect(response.headers.get("cache-control")).toBe("private, no-store");
   expect(response.headers.get("content-disposition")).toContain("attachment");
-  expect(mocks.evidence).toHaveBeenCalledWith(expect.anything(),id,"unit");
+  expect(mocks.evidence).toHaveBeenCalledWith(expect.anything(),id,["unit-2","unit-6"]);
   expect(await response.text()).toContain("not assignment grades");
  });
  it("does not download partial evidence after a read failure",async()=>{
