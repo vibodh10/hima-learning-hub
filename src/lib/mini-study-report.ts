@@ -1,7 +1,8 @@
 import type { StudyGrade } from "./mini-study";
-export type StudyLegacyBaseline={learner_id:string;correct_count:number;question_count:number;completed_at:string};
 
-export type MiniStudyRecord={id:string;learner_id:string;kind:"baseline"|"daily";status:string;content:{title?:string};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
+export type StudyUnitRef={id:string;label:string};
+export type StudyLegacyBaseline={learner_id:string;unit_id?:string;correct_count:number;question_count:number;completed_at:string};
+export type MiniStudyRecord={id:string;learner_id:string;unit_id?:string;kind:"baseline"|"daily";status:string;content:{title?:string};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
 
 function practiceLevel(records:MiniStudyRecord[],baseline:StudyGrade|null) {
   const recent=records.filter(r=>r.kind==="daily"&&r.status==="completed"&&r.grade)
@@ -21,6 +22,7 @@ function practiceLevel(records:MiniStudyRecord[],baseline:StudyGrade|null) {
   return "Building foundations";
 }
 
+/** Summarises records that already belong to one learner and one unit. */
 export function miniStudyLearnerSummary(records:MiniStudyRecord[]) {
   const checked=records.filter(r=>r.grade && r.status!=="abandoned").sort((a,b)=>(b.checked_at??"").localeCompare(a.checked_at??""));
   const baseline=checked.find(r=>r.kind==="baseline");
