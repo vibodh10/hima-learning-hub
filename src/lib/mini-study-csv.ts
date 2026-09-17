@@ -1,4 +1,7 @@
-import {miniStudyLearnerSummary,type MiniStudyRecord,type StudyLegacyBaseline} from "./mini-study-report";
+import {miniStudyLearnerSummary,type MiniStudyRecord,type StudyLegacyBaseline,type StudyUnitRef} from "./mini-study-report";
+
+const legacyUnit="__legacy__";
+const evidenceUnit=(row:{unit_id?:string})=>row.unit_id??legacyUnit;
 
 function cell(value:unknown){
   let text=String(value??"");
@@ -7,24 +10,38 @@ function cell(value:unknown){
   return `"${text.replaceAll('"','""')}"`;
 }
 
-export function miniStudyCsv(group:string,learners:{id:string;name:string}[],records:MiniStudyRecord[],baselines:StudyLegacyBaseline[]){
+function reportUnits(records:MiniStudyRecord[],baselines:StudyLegacyBaseline[],units:StudyUnitRef[]):StudyUnitRef[]{
+  if(units.length)return units;
+  const ids=[...new Set([...records.map(evidenceUnit),...baselines.map(evidenceUnit)])];
+  return (ids.length?ids:[legacyUnit]).map(id=>({id,label:id===legacyUnit?"Current unit":`Unit ${id}`}));
+}
+
+/** Exports one current summary per learner and per unit so unlike instruments are never combined. */
+export function miniStudyCsv(group:string,learners:{id:string;name:string}[],records:MiniStudyRecord[],baselines:StudyLegacyBaseline[],units:StudyUnitRef[]=[]){
+  const unitRefs=reportUnits(records,baselines,units);
+  const unitLabel=new Map(unitRefs.map(unit=>[unit.id,unit.label]));
   const rows:unknown[][]=[
     ["Short formative self-study; not assignment grades. Different topics and starting-point instruments are not directly comparable."],
-    ["Group","Student","Record type","Step","Checked at (UTC)","Correct (new learning)","Total (new learning)","Recap correct","Recap total","Completed daily steps","Starting point","Current practice level","Status","Automatic target","Question","First answer","Expected answer","Answer result"],
+    ["Group","Student","Unit","Record type","Step","Checked at (UTC)","Correct (new learning)","Total (new learning)","Recap correct","Recap total","Completed daily steps","Starting point","Current practice level","Status","Automatic target","Question","First answer","Expected answer","Answer result"],
   ];
   for(const learner of learners){
-    const own=records.filter(r=>r.learner_id===learner.id&&r.status!=="abandoned");
-    const summary=miniStudyLearnerSummary(own);
-    const legacy=baselines.find(b=>b.learner_id===learner.id);
-    const startingPoint=summary.baseline?`${summary.baseline.correct} of ${summary.baseline.total}`:legacy?`${legacy.correct_count} of ${legacy.question_count}`:"Not recorded";
-    rows.push([group,learner.name,"Current summary",summary.latest?.title??"No daily check recorded",summary.latest?.checkedAt,
-      summary.latest?.grade.correct,summary.latest?.grade.total,summary.recap?.correct,summary.recap?.total,summary.completedSteps,
-      startingPoint,summary.practiceLevel,summary.needsHelp?"Automatic reinforcement active":summary.latest?"Learning recorded":"Starting point or next step pending",summary.target]);
-    if(legacy)rows.push([group,learner.name,"Existing full-unit starting point","Preserved full-unit assessment",legacy.completed_at,legacy.correct_count,legacy.question_count,"","","",`${legacy.correct_count} of ${legacy.question_count}`,summary.practiceLevel,"Completed"]);
-    for(const record of own.filter(r=>r.grade).sort((a,b)=>(a.checked_at??"").localeCompare(b.checked_at??""))){
+    for(const unit of unitRefs){
+      const own=records.filter(r=>r.learner_id===learner.id&&r.status!=="abandoned"&&evidenceUnit(r)===unit.id);
+      const summary=miniStudyLearnerSummary(own);
+      const legacy=baselines.find(b=>b.learner_id===learner.id&&evidenceUnit(b)===unit.id);
+      const startingPoint=summary.baseline?`${summary.baseline.correct} of ${summary.baseline.total}`:legacy?`${legacy.correct_count} of ${legacy.question_count}`:"Not recorded";
+      rows.push([group,learner.name,unit.label,"Current summary",summary.latest?.title??"No daily check recorded",summary.latest?.checkedAt,
+        summary.latest?.grade.correct,summary.latest?.grade.total,summary.recap?.correct,summary.recap?.total,summary.completedSteps,
+        startingPoint,summary.practiceLevel,summary.needsHelp?"Automatic reinforcement active":summary.latest?"Learning recorded":"Starting point or next step pending",summary.target]);
+      if(legacy)rows.push([group,learner.name,unit.label,"Existing full-unit starting point","Preserved full-unit assessment",legacy.completed_at,legacy.correct_count,legacy.question_count,"","","",`${legacy.correct_count} of ${legacy.question_count}`,summary.practiceLevel,"Completed"]);
+    }
+    const own=records.filter(r=>r.learner_id===learner.id&&r.status!=="abandoned"&&r.grade)
+      .sort((a,b)=>(a.checked_at??"").localeCompare(b.checked_at??""));
+    for(const record of own){
       const grade=record.grade!;
       const recap=grade.feedback.filter(f=>f.recap);
-      for(const answer of grade.feedback)rows.push([group,learner.name,record.kind==="baseline"?"Short starting point":"Daily step",record.content.title,record.checked_at,
+      const label=unitLabel.get(evidenceUnit(record))??"Current unit";
+      for(const answer of grade.feedback)rows.push([group,learner.name,label,record.kind==="baseline"?"Short starting point":"Daily step",record.content.title,record.checked_at,
         grade.correct,grade.total,recap.length?recap.filter(f=>f.correct).length:"",recap.length||"","","","",record.status,record.target_text,
         `${answer.recap?"Recap: ":""}${answer.prompt??answer.skill}`,answer.selectedAnswer??"Not saved in this older record",answer.correctAnswer,answer.correct?"Correct":"Needs practice"]);
     }
