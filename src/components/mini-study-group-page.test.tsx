@@ -17,7 +17,7 @@ beforeEach(()=>{
   classes:{data:{name:"Assigned group",active_unit_id:"unit-6",published:true},error:null},
   enrolments:{data:[{student_id:"learner-a",user_profiles:{display_name:"Learner A"}}],error:null},
   mini_study_sessions:{data:[],error:null},
-  unit_starting_point_baselines:{data:[{learner_id:"learner-a",correct_count:16,question_count:21,completed_at:"2026-09-08T09:00:00Z"}],error:null},
+  unit_starting_point_baselines:{data:[{learner_id:"learner-a",unit_id:"unit-6",correct_count:16,question_count:21,completed_at:"2026-09-08T09:00:00Z"}],error:null},
  };
  mocks.from.mockImplementation((table:string)=>{
   const query:Record<string,ReturnType<typeof vi.fn>>={};
