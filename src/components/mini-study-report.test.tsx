@@ -17,4 +17,15 @@ describe("teacher mini-study evidence",()=>{
   expect(screen.getByText("No daily check recorded yet.")).toBeInTheDocument();
   expect(screen.queryByText("First answer: Nobody")).not.toBeInTheDocument();
  });
+ it("shows multi-unit progress separately instead of combining the learner's evidence",()=>{
+  const unit2:MiniStudyRecord={...record,id:"u2",unit_id:"unit-2",status:"completed",completed_at:"2026-09-08T09:02:00Z",content:{title:"Database keys"},grade:{correct:2,total:2,feedback:[]},target_text:"Continue Unit 2.",needs_help:false};
+  const unit6:MiniStudyRecord={...record,id:"u6",unit_id:"unit-6",status:"completed",completed_at:"2026-09-08T09:03:00Z",content:{title:"Website purpose"},grade:{correct:0,total:2,feedback:[]},target_text:"Reinforce Unit 6.",needs_help:true};
+  render(<MiniStudyReport learners={[{id:"a",name:"Learner A"}]} records={[unit2,unit6]} units={[{id:"unit-2",label:"Unit 2: Creating Systems"},{id:"unit-6",label:"Unit 6: Website Development"}]}/>);
+  expect(screen.getByText("Unit 2: Creating Systems")).toBeInTheDocument();
+  expect(screen.getByText("Unit 6: Website Development")).toBeInTheDocument();
+  expect(screen.getByText("Continue Unit 2.")).toBeInTheDocument();
+  expect(screen.getByText("Reinforce Unit 6.")).toBeInTheDocument();
+  expect(screen.getByText("Secure on recent practice")).toBeInTheDocument();
+  expect(screen.getByText("Building foundations")).toBeInTheDocument();
+ });
 });

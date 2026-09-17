@@ -7,11 +7,13 @@ describe("teacher short-study evidence",()=>{
   const summary=miniStudyLearnerSummary([record({needs_help:true,grade:{correct:0,total:2,feedback:[]}})]);
   expect(summary.completedSteps).toBe(1);
   expect(summary.supportReason).toContain("0 of 2");
-  expect(summary.supportReason).toContain("The step is completed");
+  expect(summary.supportReason).toContain("Automatic reinforcement");
+  expect(summary.practiceLevel).toBe("Building foundations");
  });
  it("keeps absent evidence unknown, not zero",()=>{
   const summary=miniStudyLearnerSummary([]);
   expect(summary.baseline).toBeNull();expect(summary.latest).toBeNull();expect(summary.recap).toBeNull();
+  expect(summary.practiceLevel).toBe("Not enough evidence yet");
  });
  it("separates starting point, new learning and recap without inventing a progress percentage",()=>{
   const summary=miniStudyLearnerSummary([record({id:"baseline",kind:"baseline",grade:{correct:3,total:4,feedback:[]},checked_at:"2026-09-07T12:00:00Z"}),record()]);
@@ -25,5 +27,12 @@ describe("teacher short-study evidence",()=>{
  it("ignores abandoned attempts and selects the latest dated evidence",()=>{
   const summary=miniStudyLearnerSummary([record({id:"old",checked_at:"2026-09-01T12:00:00Z",needs_help:true}),record(),record({id:"abandoned",status:"abandoned",checked_at:"2026-09-10T12:00:00Z",needs_help:true})]);
   expect(summary.latest?.checkedAt).toBe("2026-09-08T12:00:00Z");expect(summary.needsHelp).toBe(false);
+ });
+ it("reports stretch readiness from consistent strong recent first answers",()=>{
+  const summary=miniStudyLearnerSummary([
+   record({id:"a",grade:{correct:2,total:2,feedback:[]},checked_at:"2026-09-08T12:00:00Z",completed_at:"2026-09-08T12:01:00Z"}),
+   record({id:"b",grade:{correct:2,total:2,feedback:[]},checked_at:"2026-09-09T12:00:00Z",completed_at:"2026-09-09T12:01:00Z"}),
+  ]);
+  expect(summary.practiceLevel).toBe("Stretch-ready on recent practice");
  });
 });

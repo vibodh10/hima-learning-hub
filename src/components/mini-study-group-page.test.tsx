@@ -13,11 +13,11 @@ beforeEach(()=>{
  vi.clearAllMocks();mocks.queries={};
  mocks.role.mockResolvedValue({role:"teacher",display_name:"Staff"});mocks.rpc.mockResolvedValue({data:true,error:null});
  mocks.tables={
-  class_units:{data:null,error:null},
+  class_units:{data:[{unit_id:"unit-6",units:{code:"6",title:"Website Development"}}],error:null},
   classes:{data:{name:"Assigned group",active_unit_id:"unit-6",published:true},error:null},
   enrolments:{data:[{student_id:"learner-a",user_profiles:{display_name:"Learner A"}}],error:null},
   mini_study_sessions:{data:[],error:null},
-  unit_starting_point_baselines:{data:[{learner_id:"learner-a",correct_count:16,question_count:21,completed_at:"2026-09-08T09:00:00Z"}],error:null},
+  unit_starting_point_baselines:{data:[{learner_id:"learner-a",unit_id:"unit-6",correct_count:16,question_count:21,completed_at:"2026-09-08T09:00:00Z"}],error:null},
  };
  mocks.from.mockImplementation((table:string)=>{
   const query:Record<string,ReturnType<typeof vi.fn>>={};
@@ -32,10 +32,11 @@ describe("current teacher group view",()=>{
   await expect(MiniStudyGroupPage({params:Promise.resolve({id:"other-class"})})).rejects.toThrow("not-found");
   expect(mocks.from).not.toHaveBeenCalled();
  });
- it("scopes evidence to the active group, unit and enrolled learners",async()=>{
+ it("scopes evidence to all active units in the group and enrolled learners",async()=>{
   render(await MiniStudyGroupPage({params:Promise.resolve({id:"class-a"})}));
   expect(mocks.queries.mini_study_sessions.eq).toHaveBeenCalledWith("class_id","class-a");
-  expect(mocks.queries.mini_study_sessions.eq).toHaveBeenCalledWith("unit_id","unit-6");
+  expect(mocks.queries.mini_study_sessions.in).toHaveBeenCalledWith("unit_id",["unit-6"]);
+  expect(mocks.queries.unit_starting_point_baselines.in).toHaveBeenCalledWith("unit_id",["unit-6"]);
   expect(mocks.queries.unit_starting_point_baselines.in).toHaveBeenCalledWith("learner_id",["learner-a"]);
   expect(mocks.queries.enrolments.is).toHaveBeenCalledWith("archived_at",null);
   expect(screen.getByText(/Existing full-unit starting point: 16 of 21/)).toBeInTheDocument();
@@ -50,6 +51,7 @@ describe("current teacher group view",()=>{
  });
  it("gives an unpublished group one clear setup action",async()=>{
   mocks.tables.classes={data:{name:"New group",active_unit_id:null,published:false},error:null};
+  mocks.tables.class_units={data:[],error:null};
   render(await MiniStudyGroupPage({params:Promise.resolve({id:"class-a"})}));
   expect(screen.getByRole("link",{name:"Set up group →"})).toHaveAttribute("href","/teacher/classes/class-a/settings");
   expect(mocks.queries.mini_study_sessions).toBeUndefined();

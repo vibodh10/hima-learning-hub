@@ -20,4 +20,18 @@ describe("short-study spreadsheet",()=>{
   const csv=miniStudyCsv("Group",[{id:"a",name:"Student"}],[],[{learner_id:"a",correct_count:16,question_count:21,completed_at:"2026-09-01"}]);
   expect(csv).toContain('"Existing full-unit starting point","Preserved full-unit assessment","2026-09-01","16","21"');
  });
+ it("keeps current practice and starting evidence separate for each active unit",()=>{
+  const unit2:MiniStudyRecord={...record,id:"u2",unit_id:"unit-2",content:{title:"Database keys"},target_text:"Continue Unit 2."};
+  const unit6:MiniStudyRecord={...record,id:"u6",unit_id:"unit-6",content:{title:"Website purpose"},grade:{correct:0,total:2,feedback:[]},target_text:"Reinforce Unit 6.",needs_help:true};
+  const csv=miniStudyCsv("Thursday",[{id:"a",name:"Student"}],[unit2,unit6],[
+    {learner_id:"a",unit_id:"unit-2",correct_count:8,question_count:10,completed_at:"2026-09-01"},
+    {learner_id:"a",unit_id:"unit-6",correct_count:4,question_count:10,completed_at:"2026-09-02"},
+  ],[{id:"unit-2",label:"Unit 2: Creating Systems"},{id:"unit-6",label:"Unit 6: Website Development"}]);
+  expect(csv).toContain('"Unit 2: Creating Systems"');
+  expect(csv).toContain('"Unit 6: Website Development"');
+  expect(csv).toContain('"8 of 10"');
+  expect(csv).toContain('"4 of 10"');
+  expect(csv).toContain('"Secure on recent practice"');
+  expect(csv).toContain('"Building foundations"');
+ });
 });

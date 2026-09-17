@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { studyContentFor } from "./mini-study-content";
+import { studyContentFor } from "./mini-study-content-expanded";
 import { nextStudyLesson, publicStudyQuestions, studyDay, studyQuestionSet, studyThinking, type StudyCard, type StudyGrade, type StudyQuestionKey, type StudyReward } from "./mini-study";
 import {selectStudyAssignment,studyHistoryForUnit,studySupportBaseline,type StudyAssignment} from "./mini-study-planning";
 import {isCombinedUnit2Unit6,startingPointDisplayTitle,startingPointQuestionsForAssignment} from "./mini-study-starting-point";
@@ -52,10 +52,13 @@ function studySupportBaselineForContext(rows:StudySessionRow[],context:StudyCont
 
 export async function studyContext(learnerId:string):Promise<StudyContext|null> {
   const client=await createClient();
+  // A registration link defines the learner's study group. If a test account has
+  // been joined to several groups, the most recently joined active group wins so
+  // lessons from another timetable group are never mixed into the same study run.
   const {data,error}=await client.from("enrolments")
-    .select("class_id,classes!inner(id,name,published,archived_at)")
+    .select("class_id,enrolled_at,classes!inner(id,name,published,archived_at)")
     .eq("student_id",learnerId).is("archived_at",null).is("classes.archived_at",null)
-    .eq("classes.published",true).order("class_id");
+    .eq("classes.published",true).order("enrolled_at",{ascending:false}).limit(1);
   if(error) throw new Error("Your assigned learning could not be loaded. Please try again.");
   const assignments:StudyAssignment[]=[];
   for(const row of data??[]) {
@@ -87,7 +90,6 @@ export async function studyContext(learnerId:string):Promise<StudyContext|null> 
 }
 
 export function cardForSession(row:StudySessionRow):StudyCard {
-  // Explicit allow-list; never spread a database row or answer-key object into a client payload.
   const content=row.content;
   return {sessionId:row.id,kind:row.kind,title:content.title,unitTitle:content.unitTitle,
     lines:content.lines,example:content.example,support:content.support,thinking:content.thinking,secondsPerQuestion:content.secondsPerQuestion,
@@ -114,7 +116,7 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
   if(error) throw new Error("Your short learning steps are not available yet. Please try again later.");
   const sessions=(rows??[]) as StudySessionRow[];
   const today=studyDay(new Date());
-  const completedToday=sessions.find(s=>s.completed_at && studyDay(new Date(s.completed_at))===today);
+  const completedToday=sessions.find(s=>s.class_id===context.classId&&s.completed_at&&studyDay(new Date(s.completed_at))===today);
   const active=sessions.find(s=>s.class_id===context.classId && s.unit_id===context.unitId && !s.paused_for_starting_point && ["opened","review"].includes(s.status));
   const startingPointComplete=hasStartingPoint(sessions,context);
   const displayTitle=startingPointDisplayTitle(context.unitTitle,context.classUnitCodes);
@@ -122,7 +124,7 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
   if(active) return {status:"active",card:cardForSession(active),grade:active.grade};
   if(completedToday?.reward && !continueToday && startingPointComplete) return {status:"done",reward:completedToday.reward};
   const content=studyContentFor(context.unitCode);
-  if(!content) return {status:"unavailable",message:"Your teacher's unit is assigned. Its short self-study steps are still being prepared."};
+  if(!content) return {status:"unavailable",message:"Your assigned unit does not have self-study content yet."};
   const history=studyHistoryForContext(sessions,context);
   const {error:legacyError}=await admin.from("unit_starting_point_baselines").select("id")
     .eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
@@ -130,10 +132,9 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
   if(!startingPointComplete) return {status:"ready",unitTitle:displayTitle,kind:"baseline"};
   return nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history)
     ? {status:"ready",unitTitle:context.unitTitle,kind:"daily"}
-    : {status:"complete",message:"You have finished the available self-study steps for this unit. Your teacher can see your learning record."};
+    : {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
 }
 
-/** Opaque response IDs prevent matching pairs by source indices rather than meaning. */
 function opaqueKeys(questions:StudyQuestionKey[]):StudyQuestionKey[] {
   return questions.map(q=>{
     const options=new Map(q.options.map(o=>[o.id,randomUUID()]));
@@ -145,8 +146,6 @@ function opaqueKeys(questions:StudyQuestionKey[]):StudyQuestionKey[] {
 }
 
 export async function openStudySession(learnerId:string,continueToday=false):Promise<StudyHome> {
-  // Plan the kind and questions against one assignment snapshot. The database
-  // rechecks that exact assignment if the teacher changes it during this request.
   const context=await studyContext(learnerId);
   const home=await studyHomeForContext(learnerId,context,continueToday);
   if(home.status!=="ready") return home;
@@ -154,13 +153,18 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const content=studyContentFor(context.unitCode);
   if(!content) throw new Error("This unit's short steps are not ready yet.");
   const admin=createAdminClient();
+  // A stale open step from another group must not be returned by the database
+  // when the learner has since joined a different registration group.
+  const {error:staleError}=await admin.from("mini_study_sessions").update({status:"abandoned"})
+    .eq("learner_id",learnerId).in("status",["opened","review"]).neq("class_id",context.classId);
+  if(staleError) throw new Error("Your previous group step could not be closed safely. Please refresh and try again.");
   const {data:rows,error}=await admin.from("mini_study_sessions").select("*").eq("learner_id",learnerId)
     .eq("status","completed");
   if(error) throw new Error("Your previous step could not be checked. Please try again.");
   const sessions=(rows??[]) as StudySessionRow[];
   const history=studyHistoryForContext(sessions,context);
   const selected=nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history);
-  if(!selected && home.kind==="daily") return {status:"complete",message:"You have finished the available steps."};
+  if(!selected && home.kind==="daily") return {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
   const previousId=history.filter(h=>h.kind==="daily").at(-1)?.lessonId;
   const previous=content.lessons.find(l=>l.id===previousId);
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("correct_count,question_count").eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
