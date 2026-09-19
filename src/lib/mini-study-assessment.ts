@@ -43,6 +43,16 @@ function windowFor(kind:StudyAssessmentKind,number:number):StudyAssessmentWindow
   const start=addDays(first,(number-1)*interval);
   return {kind,number,start,end:addDays(start,weekDays-1),title:`${kind==="formative"?"Formative":"Summative"} Assessment ${number}`};
 }
+function scheduledWindowsThrough(day:string):StudyAssessmentWindow[]{
+  const windows:StudyAssessmentWindow[]=[];
+  for(let number=1;number<=40;number++){
+    for(const kind of ["formative","summative"] as const){
+      const window=windowFor(kind,number);
+      if(dayNumber(window.start)<=dayNumber(day))windows.push(window);
+    }
+  }
+  return windows.sort((a,b)=>a.start.localeCompare(b.start)||a.kind.localeCompare(b.kind));
+}
 
 export function activeAssessmentWindow(day:string):StudyAssessmentWindow|null{
   const summative=dueNumber(day,firstSummativeWeek,summativeIntervalDays);
@@ -96,13 +106,16 @@ export function assessmentPreviewPlan(window:StudyAssessmentWindow,unitCode:stri
 }
 
 /**
- * A due formal assessment takes priority over ordinary Hima practice. It does
- * not depend on the learner completing Hima lessons first because first teaching
- * happens in class. Hima supplies reinforcement after the formal check if needed.
+ * The oldest scheduled formal assessment that has not been completed remains
+ * compulsory even after its original assessment week has ended. Newer checks
+ * cannot silently replace a missed Formative/Summative Assessment.
  */
 export function assessmentPlanFor(day:string,unitCode:string,lessons:StudyLesson[],history:StudyCompletion[]):StudyAssessmentPlan|null{
-  const window=activeAssessmentWindow(day);
-  return window?planFor(window,unitCode,lessons,history):null;
+  for(const window of scheduledWindowsThrough(day)){
+    const plan=planFor(window,unitCode,lessons,history);
+    if(plan)return plan;
+  }
+  return null;
 }
 
 /**
