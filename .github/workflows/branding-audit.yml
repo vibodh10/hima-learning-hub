@@ -1,0 +1,20 @@
+name: Branding audit
+
+on:
+  push:
+    branches: [fix/digital-learning-hub-branding]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit-branding:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find remaining SCCB references
+        run: |
+          echo 'Remaining SCCB references:'
+          git grep -n -I 'SCCB' -- . ':(exclude).github/workflows/branding-audit.yml' || true
