@@ -43,7 +43,7 @@ function historyForContext(rows:StudyHistoryRow[],assignment:StudyAssignment,cla
   if(own.some(item=>item.kind==="baseline"))return own;
   const shared=sharedStartingPoint(rows,assignment,classUnitCodes);
   if(!shared?.completed_at)return own;
-  return [...own,{lessonId:startingPointId,completedAt:shared.completed_at,kind:"baseline",feedback:(shared.grade as StudyGrade|null)?.feedback??[]}]
+  return [...own,{lessonId:startingPointId,completedAt:shared.completed_at,kind:"baseline" as const,feedback:(shared.grade as StudyGrade|null)?.feedback??[]}]
     .sort((a,b)=>a.completedAt.localeCompare(b.completedAt));
 }
 function prerequisitePractice(history:StudyCompletion[]){
