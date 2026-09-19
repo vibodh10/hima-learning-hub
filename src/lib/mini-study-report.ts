@@ -6,7 +6,7 @@ export type StudyLegacyBaseline={learner_id:string;unit_id?:string;correct_count
 export type StudyIntegrityEvent={session_id:string;event_type:"fullscreen_exit"|"tab_hidden"|"fullscreen_return";occurred_at:string};
 export type StudyPracticeMiss={id:string;learner_id:string;class_id:string;unit_id:string|null;missed_on:string;learner_notified_at:string|null;teacher_notified_at:string|null;created_at:string};
 export type StudyIntervention={id:string;learner_id:string;class_id:string;kind:string;status:string;evidence:unknown;note:string|null;created_at:string;resolved_at:string|null};
-export type MiniStudyRecord={id:string;learner_id:string;unit_id?:string;lesson_id:string;kind:"baseline"|"daily";status:string;content:{title?:string;assessmentKind?:"formative"|"summative";assessmentNumber?:number};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
+export type MiniStudyRecord={id:string;learner_id:string;unit_id?:string;lesson_id?:string;kind:"baseline"|"daily";status:string;content:{title?:string;assessmentKind?:"formative"|"summative";assessmentNumber?:number};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
 
 function practiceLevel(records:MiniStudyRecord[],baseline:StudyGrade|null) {
   const recent=records.filter(r=>r.kind==="daily"&&r.status==="completed"&&r.grade)
