@@ -27,22 +27,27 @@ describe("Unit 4 SOW-driven release",()=>{
 });
 
 describe("Unit 19 SOW-driven release",()=>{
-  it("follows the supplied IoT delivery plan rather than any Unit 10 sequence",()=>{
+  it("keeps Unit 19 completely locked until January after Unit 14",()=>{
     expect(sowReleasesFor("10")).toEqual([]);
-    expect(releasedSowLessonIds("19","2026-09-20")).toEqual(expect.arrayContaining([
-      "u19-iot-foundations-v1","u19-applications-v1",
-    ]));
-    expect(releasedSowLessonIds("19","2026-09-20")).not.toContain("u19-principles-v1");
+    expect(releasedSowLessonIds("19","2026-09-20")).toEqual([]);
+    expect(releasedSowLessonIds("19","2026-12-31")).toEqual([]);
+    expect(nextSowRelease("19","2026-12-31")).toEqual({
+      lessonId:"u19-iot-foundations-v1",
+      releaseOn:"2027-01-08",
+      title:"Recognise a complete IoT system",
+    });
   });
 
-  it("releases the next IoT topic after its teaching week",()=>{
-    expect(nextSowRelease("19","2026-09-20")).toEqual({
-      lessonId:"u19-principles-v1",
-      releaseOn:"2026-09-25",
-      title:"IoT principles and data-to-action",
+  it("starts the IoT sequence automatically in January 2027",()=>{
+    expect(releasedSowLessonIds("19","2027-01-08")).toContain("u19-iot-foundations-v1");
+    expect(releasedSowLessonIds("19","2027-01-08")).not.toContain("u19-applications-v1");
+    expect(nextSowRelease("19","2027-01-08")).toEqual({
+      lessonId:"u19-applications-v1",
+      releaseOn:"2027-01-15",
+      title:"Purpose and applications of IoT",
     });
-    expect(releasedSowLessonIds("19","2026-11-27")).toContain("u19-design-docs-v1");
-    expect(releasedSowLessonIds("19","2027-02-05")).toContain("u19-evaluation-v1");
+    expect(releasedSowLessonIds("19","2027-03-26")).toContain("u19-design-docs-v1");
+    expect(releasedSowLessonIds("19","2027-05-21")).toContain("u19-evaluation-v1");
   });
 });
 

@@ -31,27 +31,28 @@ const unit4Releases:SowRelease[]=[
   {lessonId:"u4-libraries-reuse-v1",releaseOn:"2026-12-02",title:"Libraries and reusable routines"},
 ];
 
-// Unit 19 follows the supplied 20-week IoT delivery plan. Friday release dates
-// place Hub practice after that week's teaching focus.
+// Unit 19 must not begin while learners are still completing Unit 14. Its
+// second-practice sequence therefore starts in January 2027, after the Unit 14
+// assessment window, and continues automatically from the SOW calendar.
 const unit19Releases:SowRelease[]=[
-  {lessonId:"u19-iot-foundations-v1",releaseOn:"2026-09-11",title:"Recognise a complete IoT system"},
-  {lessonId:"u19-applications-v1",releaseOn:"2026-09-18",title:"Purpose and applications of IoT"},
-  {lessonId:"u19-principles-v1",releaseOn:"2026-09-25",title:"IoT principles and data-to-action"},
-  {lessonId:"u19-architecture-v1",releaseOn:"2026-10-02",title:"IoT architecture and characteristics"},
-  {lessonId:"u19-edge-cloud-v1",releaseOn:"2026-10-02",title:"Local and cloud processing"},
-  {lessonId:"u19-risks-v1",releaseOn:"2026-10-09",title:"IoT risks and issues"},
-  {lessonId:"u19-compare-sectors-v1",releaseOn:"2026-10-16",title:"Compare and evaluate IoT systems"},
-  {lessonId:"u19-client-requirements-v1",releaseOn:"2026-10-23",title:"Robot scenario and client requirements"},
-  {lessonId:"u19-sense-act-v1",releaseOn:"2026-11-13",title:"Sensors, controllers and actuators"},
-  {lessonId:"u19-communication-v1",releaseOn:"2026-11-20",title:"IoT communication choices"},
-  {lessonId:"u19-design-docs-v1",releaseOn:"2026-11-27",title:"Design documentation and diagrams"},
-  {lessonId:"u19-prototype-evidence-v1",releaseOn:"2026-12-04",title:"Prototype build evidence"},
-  {lessonId:"u19-data-handling-v1",releaseOn:"2026-12-11",title:"Capture, display and store IoT data"},
-  {lessonId:"u19-failure-v1",releaseOn:"2026-12-18",title:"Test missing and implausible readings"},
-  {lessonId:"u19-feedback-improvement-v1",releaseOn:"2027-01-08",title:"Improve the design from feedback"},
-  {lessonId:"u19-security-reliability-v1",releaseOn:"2027-01-22",title:"Security and reliability review"},
-  {lessonId:"u19-final-evidence-v1",releaseOn:"2027-01-29",title:"Final testing evidence"},
-  {lessonId:"u19-evaluation-v1",releaseOn:"2027-02-05",title:"Evaluate against requirements"},
+  {lessonId:"u19-iot-foundations-v1",releaseOn:"2027-01-08",title:"Recognise a complete IoT system"},
+  {lessonId:"u19-applications-v1",releaseOn:"2027-01-15",title:"Purpose and applications of IoT"},
+  {lessonId:"u19-principles-v1",releaseOn:"2027-01-22",title:"IoT principles and data-to-action"},
+  {lessonId:"u19-architecture-v1",releaseOn:"2027-01-29",title:"IoT architecture and characteristics"},
+  {lessonId:"u19-edge-cloud-v1",releaseOn:"2027-01-29",title:"Local and cloud processing"},
+  {lessonId:"u19-risks-v1",releaseOn:"2027-02-05",title:"IoT risks and issues"},
+  {lessonId:"u19-compare-sectors-v1",releaseOn:"2027-02-12",title:"Compare and evaluate IoT systems"},
+  {lessonId:"u19-client-requirements-v1",releaseOn:"2027-02-19",title:"Robot scenario and client requirements"},
+  {lessonId:"u19-sense-act-v1",releaseOn:"2027-03-12",title:"Sensors, controllers and actuators"},
+  {lessonId:"u19-communication-v1",releaseOn:"2027-03-19",title:"IoT communication choices"},
+  {lessonId:"u19-design-docs-v1",releaseOn:"2027-03-26",title:"Design documentation and diagrams"},
+  {lessonId:"u19-prototype-evidence-v1",releaseOn:"2027-04-02",title:"Prototype build evidence"},
+  {lessonId:"u19-data-handling-v1",releaseOn:"2027-04-09",title:"Capture, display and store IoT data"},
+  {lessonId:"u19-failure-v1",releaseOn:"2027-04-16",title:"Test missing and implausible readings"},
+  {lessonId:"u19-feedback-improvement-v1",releaseOn:"2027-04-23",title:"Improve the design from feedback"},
+  {lessonId:"u19-security-reliability-v1",releaseOn:"2027-05-07",title:"Security and reliability review"},
+  {lessonId:"u19-final-evidence-v1",releaseOn:"2027-05-14",title:"Final testing evidence"},
+  {lessonId:"u19-evaluation-v1",releaseOn:"2027-05-21",title:"Evaluate against requirements"},
 ];
 
 const alwaysAvailable:Record<string,SowRelease[]>={
