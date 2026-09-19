@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { getStudyHome, type StudyHome } from "@/lib/mini-study-server";
+import {studentSafeStudyHome} from "@/lib/mini-study-public";
 import { MiniStudyHome } from "@/components/mini-study-player";
 import {assignedCurriculumUnitCodes} from "@/lib/curriculum-access";
 
@@ -10,7 +11,7 @@ export default async function StudyPage() {
   const assignedUnits=await assignedCurriculumUnitCodes();
   const showAssignment=assignedUnits.includes("6");
   let home:StudyHome;
-  try{home=await getStudyHome(actor.id);}
+  try{home=studentSafeStudyHome(await getStudyHome(actor.id));}
   catch{home={status:"unavailable",message:"Your learning step could not be loaded. Please try again in a moment."};}
   return <div className="mini-study-surface">
     <a className="mini-study-skip" href="#study-main">Skip to your step</a>
