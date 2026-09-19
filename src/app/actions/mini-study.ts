@@ -4,13 +4,14 @@ import { getSessionProfile } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { gradeStudy, type StudyResult, type StudyReward } from "@/lib/mini-study";
 import { openStudySession, studySessionFor, type StudyHome } from "@/lib/mini-study-server";
+import {studentSafeStudyHome} from "@/lib/mini-study-public";
 
 export type AssessmentIntegrityEventType="fullscreen_exit"|"tab_hidden"|"fullscreen_return";
 
 export async function beginMiniStudy(continueToday=false):Promise<StudyHome> {
   const actor=await getSessionProfile();
   if(!actor || actor.role!=="student") return {status:"unavailable",message:"Please sign in as a student."};
-  try { return await openStudySession(actor.id,continueToday===true); }
+  try { return studentSafeStudyHome(await openStudySession(actor.id,continueToday===true)); }
   catch { return {status:"unavailable",message:"Your step could not be opened. Please refresh and try again."}; }
 }
 
