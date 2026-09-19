@@ -50,17 +50,20 @@ export function miniStudyLearnerSummary(records:MiniStudyRecord[]) {
   const lastEvidence=latest??baseline;
   const recap=latest?.grade?.feedback.filter(f=>f.recap)??[];
   const baselineGrade=baseline?.grade??null;
+  const assessment=assessmentEvidence(records);
+  const assessmentNeedsHelp=Boolean(assessment.latest?.skills.some(skill=>skill.state==="Needs reinforcement"));
+  const needsHelp=(lastEvidence?.needs_help??false)||assessmentNeedsHelp;
   return {
     baseline:baselineGrade,
     latest:latest?{title:latest.content.title??"Short self-study",grade:latest.grade!,checkedAt:latest.checked_at,finished:latest.status==="completed"}:null,
     recap:recap.length?{correct:recap.filter(r=>r.correct).length,total:recap.length}:null,
     completedSteps:records.filter(r=>r.kind==="daily" && r.status==="completed").length,
     practiceLevel:practiceLevel(records,baselineGrade),
-    assessment:assessmentEvidence(records),
-    needsHelp:lastEvidence?.needs_help??false,
+    assessment,
+    needsHelp,
     supportReason:lastEvidence?.needs_help&&lastEvidence.grade
       ? `${lastEvidence.kind==="baseline"?"Starting point":lastEvidence.content.title??"Latest short lesson"}: ${lastEvidence.grade.correct} of ${lastEvidence.grade.total} new first answers correct. ${lastEvidence.status==="completed"?"The step is completed. Automatic reinforcement will continue from this evidence.":"Feedback review is not yet finished."}`
-      :null,
+      :assessmentNeedsHelp?"The latest automated assessment contains one or more skills marked Needs reinforcement. Hima will reteach and recheck those skills automatically.":null,
     target:lastEvidence?.target_text??"Continue with the next automatic short step; support and stretch are selected from the learner's saved evidence.",
   };
 }
