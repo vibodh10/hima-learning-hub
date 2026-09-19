@@ -24,7 +24,7 @@ export default async function MiniStudyGroupPage({params}:{params:Promise<{id:st
  const evidence=!unitsError?await loadMiniStudyEvidence(client,id,activeUnitIds).catch(()=>null):null;
  const unitNames=reportUnits.map(unit=>unit.label);
  return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell max-w-5xl py-8">
-  <Link className="link" href="/dashboard#groups">← Your groups</Link>
+  <div className="flex flex-wrap items-center justify-between gap-3"><Link className="link" href="/dashboard#groups">← Your groups</Link><Link className="button-secondary" href={`/teacher/classes/${id}/student-view`}>Preview student view</Link></div>
   <p className="eyebrow mt-6">{group.name}</p>
   {unitNames.length>0&&<p className="mt-2 text-slate-600">{unitNames.join(" · ")}</p>}
   {!activeUnitIds.length||!group.published?<section className="card mt-5"><h1 className="text-3xl font-bold">Finish this group’s setup</h1><p className="mt-3">Choose the units you teach before students begin.</p><Link className="button mt-5" href={`/teacher/classes/${id}/settings`}>Set up group →</Link></section>:<>
