@@ -19,7 +19,8 @@ export function MiniStudyReport({learners,records,baselines=[],units=[],classId,
       const legacy=baselines.find(b=>b.learner_id===learner.id&&evidenceUnit(b)===unit.id);
       return {unit,own,legacy,summary:miniStudyLearnerSummary(own)};
     });
-    return {...learner,learnerUnits,reviewRequired:learnerUnits.some(item=>item.summary.assessment.teacherReviewRequired),needsHelp:learnerUnits.some(item=>item.summary.needsHelp),hasLearning:learnerUnits.some(item=>Boolean(item.summary.latest)),hasStartingPoint:learnerUnits.some(item=>Boolean(item.summary.baseline||item.legacy))};
+    const warningCount=learnerUnits.reduce((sum,item)=>sum+item.summary.assessment.warningCount,0);
+    return {...learner,learnerUnits,warningCount,reviewRequired:warningCount>=3,needsHelp:learnerUnits.some(item=>item.summary.needsHelp),hasLearning:learnerUnits.some(item=>Boolean(item.summary.latest)),hasStartingPoint:learnerUnits.some(item=>Boolean(item.summary.baseline||item.legacy))};
   }).sort((a,b)=>Number(b.reviewRequired)-Number(a.reviewRequired)||Number(b.needsHelp)-Number(a.needsHelp)||a.name.localeCompare(b.name));
 
   return <section aria-labelledby="mini-report-title">
@@ -27,9 +28,9 @@ export function MiniStudyReport({learners,records,baselines=[],units=[],classId,
     <p className="mt-3 max-w-3xl">Starting points, recent practice, automatic fortnightly formative assessments, monthly summative assessments and next targets. Each unit is kept separate. Hima automatically reteaches and rechecks weak skills; the teacher view is for oversight and reporting.</p>
     {!rows.length?<p className="card mt-6">No students have joined this group yet.</p>:<div className="mt-6 grid gap-4">{rows.map(row=><details className="card" key={row.id} open={expanded}>
       <summary className="cursor-pointer text-lg font-bold">{row.name} · {row.reviewRequired?"Teacher review required":row.needsHelp?"Automatic reinforcement active":row.hasLearning?"Learning recorded":row.hasStartingPoint?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}</summary>
+      {row.reviewRequired&&<p className="mt-4 rounded-lg bg-red-50 p-4"><strong>Teacher review required. </strong>{row.warningCount} low first-attempt learning checks have been recorded across this learner&apos;s active units in the last seven days. Review the evidence before deciding the cause or any behaviour action.</p>}
       <div className="mt-5 grid gap-5">{row.learnerUnits.map(item=><article key={item.unit.id} className="rounded-xl border border-slate-200 p-5">
         <h2 className="text-xl font-bold">{item.unit.label}</h2>
-        {item.summary.assessment.teacherReviewRequired&&<p className="mt-4 rounded-lg bg-red-50 p-4"><strong>Teacher review required. </strong>This learner has recorded three or more low first-attempt learning checks in the last seven days. Review the evidence below before deciding the cause or any behaviour action.</p>}
         {item.summary.supportReason&&<p className="mt-4 rounded-lg bg-amber-50 p-4"><strong>Automatic support signal: </strong>{item.summary.supportReason}</p>}
         {item.summary.baseline?.feedback.some(f=>f.questionId.startsWith("prereq:"))&&<p className="mt-4 font-semibold">Starting route: {startingPointRoute(item.summary.baseline)}. Provisional guidance, not a grade. {item.summary.latest&&`Latest practice: ${item.summary.latest.grade.correct/item.summary.latest.grade.total<0.5?"reinforcement continues automatically":item.summary.latest.grade.correct/item.summary.latest.grade.total<0.8?"core practice":"stretch work is available"}.`}</p>}
         <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
@@ -37,7 +38,7 @@ export function MiniStudyReport({learners,records,baselines=[],units=[],classId,
           <div><dt className="font-semibold">Current expertise</dt><dd>{item.summary.practiceLevel}</dd></div>
           <div><dt className="font-semibold">Latest learning check</dt><dd>{item.summary.latest?`${item.summary.latest.title}: ${item.summary.latest.grade.correct} of ${item.summary.latest.grade.total} correct on first answers. ${item.summary.latest.finished?"Feedback reviewed and step completed.":"Feedback review not yet finished."}`:"No daily check recorded yet."}</dd></div>
           <div><dt className="font-semibold">Recall of the previous idea</dt><dd>{item.summary.recap?`${item.summary.recap.correct} of ${item.summary.recap.total} correct` : "Not checked yet"}</dd></div>
-          <div><dt className="font-semibold">Learning warnings · 7 days</dt><dd>{item.summary.assessment.warningCount}{item.summary.assessment.warningCount>=3?" · review required":""}</dd></div>
+          <div><dt className="font-semibold">Learning warnings · 7 days</dt><dd>{item.summary.assessment.warningCount}</dd></div>
         </dl>
         {item.summary.assessment.latest&&<div className="mt-5 rounded-lg border border-slate-300 p-4">
           <h3 className="font-bold">Latest automated assessment</h3>
