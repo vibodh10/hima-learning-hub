@@ -5,11 +5,37 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { gradeStudy, type StudyResult, type StudyReward } from "@/lib/mini-study";
 import { openStudySession, studySessionFor, type StudyHome } from "@/lib/mini-study-server";
 
+export type AssessmentIntegrityEventType="fullscreen_exit"|"tab_hidden"|"fullscreen_return";
+
 export async function beginMiniStudy(continueToday=false):Promise<StudyHome> {
   const actor=await getSessionProfile();
   if(!actor || actor.role!=="student") return {status:"unavailable",message:"Please sign in as a student."};
   try { return await openStudySession(actor.id,continueToday===true); }
   catch { return {status:"unavailable",message:"Your step could not be opened. Please refresh and try again."}; }
+}
+
+/** Browser integrity evidence is factual only; it never auto-fails or accuses a learner. */
+export async function recordAssessmentIntegrityEvent(sessionId:string,eventType:AssessmentIntegrityEventType):Promise<void> {
+  const actor=await getSessionProfile();
+  if(!actor || actor.role!=="student")return;
+  if(typeof sessionId!=="string"||!/^[a-f0-9-]{36}$/i.test(sessionId))return;
+  if(!["fullscreen_exit","tab_hidden","fullscreen_return"].includes(eventType))return;
+  try{
+    const admin=createAdminClient();
+    const {data:session,error}=await admin.from("mini_study_sessions").select("id,status,content")
+      .eq("id",sessionId).eq("learner_id",actor.id).maybeSingle();
+    if(error||!session||!["opened","review"].includes(session.status))return;
+    const content=session.content as {assessmentKind?:unknown}|null;
+    if(!content||!["formative","summative"].includes(String(content.assessmentKind??"")))return;
+    // Browser events can arrive in a burst. Keep one same-type event per second so
+    // a single transition does not create a misleadingly large teacher record.
+    const {data:last}=await admin.from("mini_study_integrity_events").select("occurred_at")
+      .eq("session_id",sessionId).eq("event_type",eventType).order("occurred_at",{ascending:false}).limit(1).maybeSingle();
+    if(last?.occurred_at&&Date.now()-Date.parse(last.occurred_at)<1000)return;
+    await admin.from("mini_study_integrity_events").insert({session_id:sessionId,event_type:eventType});
+  }catch{
+    // Integrity logging must never destroy or submit a learner's assessment.
+  }
 }
 
 export async function checkMiniStudy(sessionId:string,responses:unknown):Promise<StudyResult> {
