@@ -63,8 +63,12 @@ export function upcomingAssessmentWindows(day:string,count=4):StudyAssessmentWin
   return result.sort((a,b)=>a.start.localeCompare(b.start)||a.kind.localeCompare(b.kind)).slice(0,count);
 }
 
-/** Formal assessment coverage is only the tutor-confirmed taught pool. */
-function eligibleLessons(unitCode:string,lessons:StudyLesson[]){
+/**
+ * Hima is second practice. Ordinary Hima study as well as formal assessment
+ * coverage stays inside the tutor-confirmed taught pool; it must not become the
+ * learner's first exposure to a future curriculum topic.
+ */
+export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[]){
   const lessonById=new Map(lessons.map(lesson=>[lesson.id,lesson]));
   const skills=new Set<string>();
   return (seededLessonIds[unitCode]??[]).flatMap(id=>{
@@ -77,7 +81,7 @@ function eligibleLessons(unitCode:string,lessons:StudyLesson[]){
 function planFor(window:StudyAssessmentWindow,unitCode:string,lessons:StudyLesson[],history:StudyCompletion[],ignoreCompletion=false):StudyAssessmentPlan|null{
   const lessonId=`assessment:u${unitCode}:${window.kind}:${window.number}`;
   if(!ignoreCompletion&&history.some(item=>item.lessonId===lessonId))return null;
-  const eligible=eligibleLessons(unitCode,lessons);
+  const eligible=taughtPracticeLessons(unitCode,lessons);
   const skillLimit=window.kind==="summative"?5:4;
   const selected=eligible.slice(0,skillLimit);
   if(selected.length<2)return null;
