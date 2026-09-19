@@ -1,6 +1,8 @@
 import "server-only";
 import type {createClient} from "./supabase/server";
-import type {MiniStudyRecord,StudyIntegrityEvent,StudyLegacyBaseline} from "./mini-study-report";
+import type {MiniStudyRecord,StudyIntegrityEvent,StudyIntervention,StudyLegacyBaseline,StudyPracticeMiss} from "./mini-study-report";
+import {studyDay} from "./mini-study";
+import {practiceWeekEnd,practiceWeekStart} from "./mini-study-attendance";
 
 type Page<T>={data:T[]|null;error:unknown;count:number|null};
 /** Never silently turn the database's default row limit into a complete report. */
@@ -27,10 +29,10 @@ export async function loadMiniStudyEvidence(client:Awaited<ReturnType<typeof cre
     .eq("class_id",classId).is("archived_at",null).order("student_id").range(from,to));
   const learners=roster.map(r=>({id:r.student_id,name:(Array.isArray(r.user_profiles)?r.user_profiles[0]:r.user_profiles)?.display_name??"Learner"}));
   const activeUnitIds=Array.isArray(unitIds)?unitIds:unitIds?[unitIds]:[];
-  if(!activeUnitIds.length||!learners.length)return {learners,records:[] as MiniStudyRecord[],baselines:[] as StudyLegacyBaseline[],integrityEvents:[] as StudyIntegrityEvent[]};
+  if(!activeUnitIds.length||!learners.length)return {learners,records:[] as MiniStudyRecord[],baselines:[] as StudyLegacyBaseline[],integrityEvents:[] as StudyIntegrityEvent[],practiceMisses:[] as StudyPracticeMiss[],interventions:[] as StudyIntervention[]};
   const ids=new Set(learners.map(l=>l.id));
   const records=await allStudyRows((from,to)=>client.from("mini_study_sessions")
-    .select("id,learner_id,unit_id,kind,status,content,grade,target_text,needs_help,checked_at,completed_at",{count:"exact"})
+    .select("id,learner_id,unit_id,lesson_id,kind,status,content,grade,target_text,needs_help,checked_at,completed_at",{count:"exact"})
     .eq("class_id",classId).in("unit_id",activeUnitIds).neq("status","abandoned").order("id").range(from,to));
   const baselines:StudyLegacyBaseline[]=[];
   for(let offset=0;offset<learners.length;offset+=100){
@@ -40,9 +42,6 @@ export async function loadMiniStudyEvidence(client:Awaited<ReturnType<typeof cre
   }
   const scopedRecords=records.filter(r=>ids.has(r.learner_id)) as MiniStudyRecord[];
   const integrityEvents:StudyIntegrityEvent[]=[];
-  // Keep the existing teacher page usable during a rolling deployment before the
-  // new integrity migration is applied; once present, incomplete event data is
-  // never presented as a complete log.
   try{
     const sessionIds=scopedRecords.map(record=>record.id);
     for(let offset=0;offset<sessionIds.length;offset+=100){
@@ -55,5 +54,23 @@ export async function loadMiniStudyEvidence(client:Awaited<ReturnType<typeof cre
   }catch{
     // Table may not exist for the brief period between app deploy and db push.
   }
-  return {learners,records:scopedRecords,baselines,integrityEvents};
+  const practiceMisses:StudyPracticeMiss[]=[];
+  const interventions:StudyIntervention[]=[];
+  try{
+    const today=studyDay(new Date());const weekStart=practiceWeekStart(today),weekEnd=practiceWeekEnd(today);
+    for(let offset=0;offset<learners.length;offset+=100){
+      const learnerIds=learners.slice(offset,offset+100).map(l=>l.id);
+      practiceMisses.push(...await allStudyRows((from,to)=>client.from("mini_study_practice_misses")
+        .select("id,learner_id,class_id,unit_id,missed_on,learner_notified_at,teacher_notified_at,created_at",{count:"exact"})
+        .eq("class_id",classId).in("learner_id",learnerIds).gte("missed_on",weekStart).lte("missed_on",weekEnd)
+        .order("missed_on").range(from,to)) as StudyPracticeMiss[]);
+      interventions.push(...await allStudyRows((from,to)=>client.from("interventions")
+        .select("id,learner_id,class_id,kind,status,evidence,note,created_at,resolved_at",{count:"exact"})
+        .eq("class_id",classId).in("learner_id",learnerIds).eq("kind","missed_self_study").eq("status","open")
+        .order("created_at").range(from,to)) as StudyIntervention[]);
+    }
+  }catch{
+    // Attendance migration may be applied immediately after the app deploy.
+  }
+  return {learners,records:scopedRecords,baselines,integrityEvents,practiceMisses,interventions};
 }
