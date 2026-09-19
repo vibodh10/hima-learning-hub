@@ -36,7 +36,7 @@ export default async function FormativeReportPage({params,searchParams}:{params:
       <h1 className="mt-2 text-3xl font-bold">{learner.name}</h1>
       <p className="mt-2">{group.name} · Unit {unit.code}: {unit.title}</p>
       <p className="mt-1 text-sm text-slate-600">Generated {generated} · Tutor view: {actor.display_name}</p>
-      <p className="mt-3 text-sm">This report is generated from the learner&apos;s saved first responses and recorded Hima feedback. It keeps the original response evidence alongside improvement targets and later progress.</p>
+      <p className="mt-3 text-sm">This report is generated from the learner&apos;s saved first responses and recorded SCCB Digital Learning Hub feedback. It keeps the original response evidence alongside improvement targets and later progress.</p>
     </header>
 
     {!report.assessments.length?<section className="card mt-6"><h2 className="text-xl font-bold">No completed formative assessment yet</h2><p className="mt-2">The report will populate automatically after Formative Assessment 1 is submitted.</p></section>:<>
@@ -63,7 +63,7 @@ export default async function FormativeReportPage({params,searchParams}:{params:
           </div>
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             <div><h3 className="font-bold">Target areas</h3>{assessment.targetAreas.length?<ul className="mt-2 list-disc space-y-1 pl-5">{assessment.targetAreas.map(item=><li key={item}>{item}</li>)}</ul>:<p className="mt-2">Continue normal second practice on taught topics.</p>}</div>
-            <div><h3 className="font-bold">Practice assigned by Hima</h3><ul className="mt-2 list-disc space-y-1 pl-5">{assessment.practice.map(item=><li key={item}>{item}</li>)}</ul></div>
+            <div><h3 className="font-bold">Automatically assigned practice</h3><ul className="mt-2 list-disc space-y-1 pl-5">{assessment.practice.map(item=><li key={item}>{item}</li>)}</ul></div>
           </div>
         </div>
 

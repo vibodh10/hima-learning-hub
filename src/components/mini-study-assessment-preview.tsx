@@ -27,7 +27,7 @@ export function MiniStudyAssessmentPreview({units}:{units:{code:string;title:str
   return <section className="card mt-5" aria-labelledby="upcoming-assessments-title">
     <p className="eyebrow">Teacher preview</p>
     <h1 id="upcoming-assessments-title" className="mt-2 text-2xl font-bold">Upcoming assessments</h1>
-    <p className="mt-3">The next required formal check is <strong>{next.title}</strong>, available {dateLabel(next.start)} to {dateLabel(next.end)}. Students cannot replace it by completing Hima practice first. The questions below are visible only in the teacher view.</p>
+    <p className="mt-3">The next required formal check is <strong>{next.title}</strong>, available {dateLabel(next.start)} to {dateLabel(next.end)}. Students cannot replace it by completing ordinary practice first. The questions below are visible only in the teacher view.</p>
     <div className="mt-4 flex flex-wrap gap-2 text-sm">{windows.map(window=><span key={`${window.kind}-${window.number}`} className="rounded-full border border-slate-300 px-3 py-1"><strong>{window.title}</strong> · {dateLabel(window.start)}–{dateLabel(window.end)}</span>)}</div>
     <div className="mt-5 grid gap-4">{previews.map(({unit,plan})=>{
       const skills=[...new Set(plan.questions.map(question=>question.skill))];

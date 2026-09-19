@@ -171,7 +171,7 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
     ??nextStudyLesson([...prerequisitePractice(history),...taughtPracticeLessons(context.unitCode,content.lessons)],history));
   return hasStep
     ? {status:"ready",unitTitle:context.unitTitle,kind:"daily"}
-    : {status:"complete",message:"You are up to date with the topics your tutor has taught so far. Hima will wait for the next formal check or give second practice automatically when evidence shows a skill needs reinforcement."};
+    : {status:"complete",message:"You are up to date with the topics your tutor has taught so far. The SCCB Digital Learning Hub will wait for the next formal check or give second practice automatically when evidence shows a skill needs reinforcement."};
 }
 
 function opaqueKeys(questions:StudyQuestionKey[]):StudyQuestionKey[] {
@@ -203,7 +203,7 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const assessment=assessmentPlanFor(studyDay(new Date()),context.unitCode,content.lessons,history);
   const reinforcement=assessment?undefined:reinforcementLessonFor(content.lessons,history);
   const selected=reinforcement??(assessment?undefined:nextStudyLesson([...prerequisitePractice(history),...taughtPracticeLessons(context.unitCode,content.lessons)],history));
-  if(!selected&&!assessment&&home.kind==="daily") return {status:"complete",message:"You are up to date with the topics your tutor has taught so far. Hima will wait for the next formal check or give second practice automatically when evidence shows a skill needs reinforcement."};
+  if(!selected&&!assessment&&home.kind==="daily") return {status:"complete",message:"You are up to date with the topics your tutor has taught so far. The SCCB Digital Learning Hub will wait for the next formal check or give second practice automatically when evidence shows a skill needs reinforcement."};
   const previousId=history.filter(h=>h.kind==="daily"&&!h.lessonId.startsWith("assessment:")&&!h.lessonId.startsWith("reinforce:")).at(-1)?.lessonId;
   const previous=content.lessons.find(l=>l.id===previousId);
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("correct_count,question_count").eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
@@ -215,7 +215,7 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
     ? {kind:"baseline",title:`${displayTitle} starting point`,unitTitle:displayTitle,secondsPerQuestion:5,lines:[`${baselineQuestions.length} short starting-point questions covering your assigned units. Five seconds each, with automatic advance.`,`Timeouts need another check; they do not prove a missing skill.`],example:"",support:""}
     : assessment
       ? {kind:"daily",title:assessment.title,unitTitle:context.unitTitle,assessmentKind:assessment.kind,assessmentNumber:assessment.number,
-          lines:["This formal learning check covers material your tutor has already taught in class.","Answer independently. If a skill is not secure, Hima will automatically give you relevant second practice and recheck it."],example:"",support:""}
+          lines:["This formal learning check covers material your tutor has already taught in class.","Answer independently. If a skill is not secure, the SCCB Digital Learning Hub will automatically give you relevant second practice and recheck it."],example:"",support:""}
       : {kind:"daily",title:selected!.title,unitTitle:context.unitTitle,lines:selected!.lines,example:selected!.example,support:selected!.support,thinking:studyThinking(selected!,baseline)};
   const questionSource=home.kind==="baseline"?baselineQuestions:assessment?assessment.questions:isReinforcementLessonId(selected!.id)?selected!.questions:studyQuestionSet(selected!,previous);
   const keys=opaqueKeys(questionSource);

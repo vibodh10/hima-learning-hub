@@ -58,7 +58,7 @@ export async function checkMiniStudy(sessionId:string,responses:unknown):Promise
       const first=session.question_keys[0];
       const safeFeedback=first?[{
         questionId:first.id,correct:grade.correct===grade.total,recap:false,skill:"assessment",
-        explanation:"Detailed question feedback is kept for your tutor during the assessment period. Hima will automatically select any second practice you need.",
+        explanation:"Detailed question feedback is kept for your tutor during the assessment period. The SCCB Digital Learning Hub will automatically select any second practice you need.",
         correctAnswer:"Detailed answers are not released during the assessment period.",prompt:"Your assessment has been submitted."
       }]:[];
       // Teachers and automatic reinforcement retain the complete grade in the DB.

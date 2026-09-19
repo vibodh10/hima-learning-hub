@@ -49,7 +49,7 @@ export function buildFormativeAssessmentReport(records:MiniStudyRecord[]):{asses
     const targetAreas=improvement.map(item=>displaySkill(item.skill));
     const practice=linkedPractice.length
       ? linkedPractice.map(item=>`${item.content.title??"Automatic reinforcement"} · ${item.status==="completed"?"completed":"in progress"}`)
-      : targetAreas.length?targetAreas.map(skill=>`Automatic second practice and recheck: ${skill}`):["Continue normal Hima second practice on taught topics."];
+      : targetAreas.length?targetAreas.map(skill=>`Automatic second practice and recheck: ${skill}`):["Continue normal second practice on taught topics."];
     return {
       sessionId:record.id,
       number:record.content.assessmentNumber??0,
@@ -57,7 +57,7 @@ export function buildFormativeAssessmentReport(records:MiniStudyRecord[]):{asses
       checkedAt:record.checked_at,
       correct:grade.correct,total:grade.total,percentage:rate(grade.correct,grade.total),
       whatWentWell,needsImprovement,targetAreas,practice,
-      feedback:`${grade.correct} of ${grade.total} answers were correct (${rate(grade.correct,grade.total)}%). ${targetAreas.length?`Hima has identified ${targetAreas.join(", ")} for automatic practice and rechecking.`:"The assessed skills were secure enough to continue with normal second practice."}`,
+      feedback:`${grade.correct} of ${grade.total} answers were correct (${rate(grade.correct,grade.total)}%). ${targetAreas.length?`The following target areas have been identified for automatic practice and rechecking: ${targetAreas.join(", ")}.`:"The assessed skills were secure enough to continue with normal second practice."}`,
       originalWork:grade.feedback.filter(answer=>!answer.recap).map(answer=>({
         question:answer.prompt??displaySkill(answer.skill),answer:answer.selectedAnswer??"Not saved in this older record",correct:answer.correct,
         expected:answer.correctAnswer,feedback:answer.explanation,skill:displaySkill(answer.skill),
