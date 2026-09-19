@@ -17,7 +17,7 @@ export default async function StudyPage() {
   catch{home={status:"unavailable",message:"Your learning step could not be loaded. Please try again in a moment."};}
   return <div className="mini-study-surface">
     <a className="mini-study-skip" href="#study-main">Skip to your step</a>
-    <header className="mini-study-header"><Link href="/study">SCCB Digital Learning Hub</Link><form action={logout}><button type="submit">Sign out</button></form></header>
+    <header className="mini-study-header"><Link href="/study">Digital Learning Hub</Link><form action={logout}><button type="submit">Sign out</button></form></header>
     <main id="study-main" className="mini-study-main">
       {misses.length>0&&<section className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4" aria-label="Missed practice badges">
         <p className="font-semibold">Missed practice this week</p>
