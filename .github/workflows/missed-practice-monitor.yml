@@ -10,7 +10,7 @@ jobs:
   check-missed-practice:
     runs-on: ubuntu-latest
     steps:
-      - name: Run Hima practice monitor
+      - name: Run SCCB Digital Learning Hub practice monitor
         env:
           HIMA_CRON_URL: ${{ secrets.HIMA_CRON_URL }}
           HIMA_CRON_SECRET: ${{ secrets.HIMA_CRON_SECRET }}
