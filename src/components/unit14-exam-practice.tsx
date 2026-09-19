@@ -4,25 +4,26 @@ import {submitExamPractice,reflectExamPractice} from "@/app/actions/exam-practic
 import {unit14Activities,unit14Papers} from "@/lib/unit14-exam";
 import {unit14Models,unit14PracticeScenario} from "@/lib/unit14-models";
 
-export function Unit14ExamPractice({classId,staff=false}:{classId:string;staff?:boolean}){
+export function Unit14ExamPractice({classId,staff=false,activityOnly}:{classId:string;staff?:boolean;activityOnly?:number}){
  const [attempt,setAttempt]=useState(0);
- return <PracticeAttempt key={attempt} classId={classId} staff={staff} restart={()=>setAttempt(value=>value+1)}/>;
+ return <PracticeAttempt key={attempt} classId={classId} staff={staff} activityOnly={activityOnly} restart={()=>setAttempt(value=>value+1)}/>;
 }
-function PracticeAttempt({classId,staff,restart}:{classId:string;staff:boolean;restart:()=>void}){
- const [paper,setPaper]=useState("guided");const [activity,setActivity]=useState(0);
+function PracticeAttempt({classId,staff,activityOnly,restart}:{classId:string;staff:boolean;activityOnly?:number;restart:()=>void}){
+ const fixedActivity=typeof activityOnly==="number";
+ const [paper,setPaper]=useState("guided");const [activity,setActivity]=useState(activityOnly??0);
  const [state,action,pending]=useActionState(submitExamPractice,{});
  const [review,reviewAction,reviewPending]=useActionState(reflectExamPractice,{});
  const [preview,setPreview]=useState(false);const [response,setResponse]=useState("");const [reflection,setReflection]=useState("");
  const revealed=Boolean(state.ok||preview);const model=unit14Models[activity];
  const chosen=unit14Papers.find(p=>p.id===paper);
  return <section className="mini-study-panel mt-6"><h2 className="text-2xl font-bold">Write first, then review</h2>
- <p>Choose one activity. For timed practice, agree a time limit with your teacher and record it in your response. A full mock follows the chosen paper&apos;s instructions.</p>
+ <p>{fixedActivity?"This group is currently practising Activity 3 only. Use the diagram practice above, then write the explanation that would accompany your solution.":"Choose one activity. For timed practice, agree a time limit with your teacher and record it in your response. A full mock follows the chosen paper's instructions."}</p>
  <form action={action} className="grid gap-4">
  <input type="hidden" name="classId" value={classId}/>
  <label>Practice source<select className="input w-full" name="paper" value={paper} disabled={revealed||pending} onChange={e=>setPaper(e.target.value)}><option value="guided">Original guided scenario</option>{unit14Papers.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
- <label>Activity<select className="input w-full" name="activity" value={activity} disabled={revealed||pending} onChange={e=>setActivity(Number(e.target.value))}>{unit14Activities.map((a,i)=><option key={a} value={i}>{i+1}. {a}</option>)}</select></label>
- {paper==="guided"?<><aside className="mini-study-example"><h3 className="font-bold">Riverside Leisure</h3><p>{unit14PracticeScenario}</p></aside><p className="font-bold">{model.task}</p></>:<div><p>Use the question-only copy of {chosen?.title} supplied by your teacher. Read its scenario and answer activity {activity+1} from that paper. Use the matching Part A and templates. Paste your response here; retain diagrams and formatted templates in your own files.</p>{chosen?.links.filter(l=>!l.title.includes("scheme")&&!l.title.includes("report")).map(l=><p key={l.url}><a className="link" href={l.url} target="_blank" rel="noreferrer">{l.title}</a></p>)}</div>}
- <label>Your own answer<textarea className="input w-full min-h-56" name="response" value={response} onChange={e=>setResponse(e.target.value)} minLength={40} maxLength={50000} required readOnly={revealed} placeholder="Apply your answer to the organisation. Explain your reasons and any limitations."/></label>
+ {fixedActivity?<div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><input type="hidden" name="activity" value={activity}/><strong>Activity 3 · {unit14Activities[activity]}</strong><p className="mt-1 text-sm">Locked for the Wednesday group while Task 3 preparation is the current priority.</p></div>:<label>Activity<select className="input w-full" name="activity" value={activity} disabled={revealed||pending} onChange={e=>setActivity(Number(e.target.value))}>{unit14Activities.map((a,i)=><option key={a} value={i}>{i+1}. {a}</option>)}</select></label>}
+ {paper==="guided"?<><aside className="mini-study-example"><h3 className="font-bold">Riverside Leisure</h3><p>{unit14PracticeScenario}</p></aside><p className="font-bold">{model.task}</p></>:<div><p>Use the question-only copy of {chosen?.title} supplied by your teacher. Read its scenario and answer activity {activity+1} from that paper. Use the matching Part A and templates. Paste your written explanation here; retain diagrams and formatted templates in your own files.</p>{chosen?.links.filter(l=>!l.title.includes("scheme")&&!l.title.includes("report")).map(l=><p key={l.url}><a className="link" href={l.url} target="_blank" rel="noreferrer">{l.title}</a></p>)}</div>}
+ <label>Your own answer<textarea className="input w-full min-h-56" name="response" value={response} onChange={e=>setResponse(e.target.value)} minLength={40} maxLength={50000} required readOnly={revealed} placeholder={fixedActivity?"Explain your diagram: rooms/sites, connections, hardware, software, data/information flows and how the solution works for the scenario.":"Apply your answer to the organisation. Explain your reasons and any limitations."}/></label>
  {!revealed&&!staff&&<button className="mini-study-primary" disabled={pending}>{pending?"Saving…":"Save my answer and show the review"}</button>}
  {staff&&!revealed&&<button className="button-secondary" type="button" onClick={()=>setPreview(true)}>Preview the review as a teacher</button>}
  {state.message&&<p role="status">{state.message}</p>}
@@ -41,4 +42,3 @@ export function ExamReflectionForm({id,initial=""}:{id:string;initial?:string}){
  const [state,action,pending]=useActionState(reflectExamPractice,{});const [reflection,setReflection]=useState(initial);
  return <form action={action}><input name="id" type="hidden" value={id}/><label>My review and improved paragraph<textarea name="reflection" className="input w-full min-h-36" value={reflection} onChange={e=>setReflection(e.target.value)} minLength={20} maxLength={6000} required/></label><button className="button" disabled={pending}>Save my review</button>{state.message&&<p role="status">{state.message}</p>}</form>;
 }
-
