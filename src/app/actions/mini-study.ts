@@ -49,9 +49,14 @@ export async function checkMiniStudy(sessionId:string,responses:unknown):Promise
     if(!grade) return {ok:false,message:"Answer each question once. For matching, use each answer once."};
     const missed=grade.feedback.find(f=>!f.correct);
     const target=missed?`Practise ${missed.skill}: review the example and explain the correct idea in your next short check.`:"Recall this idea in your next short check, then explain it with an example.";
-    const {data,error}=await createAdminClient().rpc("check_mini_study",{learner_uuid:actor.id,session_uuid:sessionId,grade_value:grade,target_value:target});
+    const {error}=await createAdminClient().rpc("check_mini_study",{learner_uuid:actor.id,session_uuid:sessionId,grade_value:grade,target_value:target});
     if(error) return {ok:false,message:"Your answers could not be saved. Keep this page open and try again."};
-    return {ok:true,grade:data};
+    const content=session.content as {assessmentKind?:unknown}|null;
+    const formal=Boolean(content&&["formative","summative"].includes(String(content.assessmentKind??"")));
+    // Teachers and automatic reinforcement retain the complete grade in the DB.
+    // Students receive the score only, so the first finisher cannot harvest the
+    // answer key and explanations for classmates during the assessment window.
+    return {ok:true,grade:formal?{correct:grade.correct,total:grade.total,feedback:[]}:grade};
   } catch { return {ok:false,message:"Your answers could not be saved. Keep this page open and try again."}; }
 }
 
