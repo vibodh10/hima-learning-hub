@@ -14,7 +14,7 @@ export function MiniStudyHome({initial}:{initial:StudyHome}) {
   return <section className="mini-study-panel">
     <p className="mini-study-kicker">Your self-study</p>
     <h1>{home.status==="ready"?(home.kind==="baseline"?"Let's find your starting point":"One small step today"):home.status==="complete"?"You're up to date":"Your next step"}</h1>
-    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"A short timed starting point, one question at a time. The check moves on automatically.":"A quick recap, one idea and a short check. Then you're done."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
+    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"A short timed starting point, one question at a time. The check moves on automatically.":"Hima will automatically choose your next lesson, assessment, reinforcement or stretch challenge from your saved learning."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
     {home.status!=="complete"&&<button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
       try{setHome(await beginMiniStudy());}
       catch{setHome({status:"unavailable",message:"Your connection was interrupted. Try again to reopen your saved step."});}
@@ -75,7 +75,12 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
       }catch{setError("We couldn't save your completion. Please try again; you won't receive duplicate rewards.");}
     });
   }
-  if(reward) return <StudyDone reward={reward}/>;
+  const attentionNotice=grade&&grade.total>0&&grade.correct/grade.total<.5
+    ? card.assessmentKind
+      ? "Learning check warning: this assessment needs reinforcement. Hima has recorded it and will automatically give you relevant practice and recheck the skills."
+      : "Learning check warning: this first-attempt check needs attention. Hima will automatically give you extra explanation, practice and another check."
+    : undefined;
+  if(reward) return <StudyDone reward={reward} attentionNotice={attentionNotice}/>;
 
   return <section className="mini-study-panel" aria-busy={pending}>
     <p className="mini-study-kicker">{card.unitTitle}</p>
@@ -85,10 +90,10 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
       {card.example&&<aside className="mini-study-example"><h2>For example</h2><p>{card.example}</p></aside>}
       {card.support&&<details className="mini-study-help"><summary>A little help</summary><p>{card.support}</p></details>}
       {card.thinking&&<details className="mini-study-help"><summary>Take the idea further</summary><p>{card.thinking}</p></details>}
-      <button className="mini-study-primary" onClick={()=>setPhase("questions")}>{card.kind==="baseline"?"First question":"Try a short check"}</button>
+      <button className="mini-study-primary" onClick={()=>setPhase("questions")}>{card.kind==="baseline"?"First question":card.assessmentKind?"Start assessment":"Try a short check"}</button>
     </>}
     {phase==="questions"&&question&&<>
-      <p className="mini-study-position">{question.recap?"From your last step":card.kind==="baseline"?`Question ${questionIndex+1} of ${card.questions.length}`:"Your short check"}</p>
+      <p className="mini-study-position">{question.recap?"From your last step":card.kind==="baseline"?`Question ${questionIndex+1} of ${card.questions.length}`:card.assessmentKind?`Assessment question ${questionIndex+1} of ${card.questions.length}`:"Your short check"}</p>
       <h1 ref={heading} tabIndex={-1}>{question.prompt}</h1>
       {question.kind==="choice"?<fieldset className="mini-study-options"><legend className="sr-only">Choose one answer</legend>
         {question.options.map(option=><label key={option.id} className="mini-study-option">
@@ -118,7 +123,7 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
   </section>;
 }
 
-export function StudyDone({reward}:{reward:StudyReward}) {
+export function StudyDone({reward,attentionNotice}:{reward:StudyReward;attentionNotice?:string}) {
   const title=useRef<HTMLHeadingElement>(null);
   const [next,setNext]=useState<StudyHome|null>(null);
   const [error,setError]=useState("");
@@ -130,7 +135,8 @@ export function StudyDone({reward}:{reward:StudyReward}) {
     <h1 ref={title} tabIndex={-1}>You&apos;re done for today</h1>
     {reward.xp>0&&<p className="mini-study-xp">+{reward.xp} XP</p>}
     {reward.badge&&<p data-achievement-badge className="mini-study-badge"><span className="gold-badge-icon" aria-hidden="true">★</span>{reward.badge}</p>}
-    <p>Well done for taking this step. If you want to keep learning, you can do another lesson. It is also fine to stop here and come back another day.</p>
+    {attentionNotice&&<p className="mini-study-error" role="status">{attentionNotice}</p>}
+    <p>Well done for taking this step. Hima has saved the result and will choose what you need next automatically. If you want to keep learning, you can do another lesson.</p>
     <p>You can close the portal now.</p>
     <button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
       setError("");
@@ -140,7 +146,7 @@ export function StudyDone({reward}:{reward:StudyReward}) {
         else if(result.status==="done") setError("Your next lesson could not be opened yet. Please try again.");
         else setNext(result);
       } catch {setError("Your connection was interrupted. Your completed step is saved. Try again when you're ready.");}
-    })}>{pending?"Opening your next lesson…":"Do another lesson"}</button>
+    })}>{pending?"Opening your next step…":"Continue learning"}</button>
     {error&&<p className="mini-study-error" role="alert">{error}</p>}
   </section>;
 }
