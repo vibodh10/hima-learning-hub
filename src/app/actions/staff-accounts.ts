@@ -129,7 +129,7 @@ export async function setupTeacherAccount(
   if (setupUrl) return {
     ok: true,
     setupUrl,
-    message: `${parsed.data.name}'s private setup link is ready. Send it only to that tutor through their verified SCCB Teams account.`,
+    message: `${parsed.data.name}'s private setup link is ready. Send it only to that tutor through their verified staff Teams account.`,
   };
   return { ok: true, message: created
     ? `${parsed.data.name}'s teacher account was created. A secure first-password link has been sent.`

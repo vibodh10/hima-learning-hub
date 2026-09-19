@@ -90,7 +90,7 @@ export async function createClass(_: ActionState, formData: FormData): Promise<A
   const parsed = classInput.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { message: "Check the group name, programme and academic year." };
   const supabase = await createClient();
-  const enrolmentCode = `SCCB-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+  const enrolmentCode = `DLH-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
   const { data, error } = await supabase.rpc("create_class", {
     class_name: parsed.data.className, course_uuid: parsed.data.courseId,
     academic_year_uuid: parsed.data.academicYearId, enrolment_code: enrolmentCode,
@@ -593,7 +593,7 @@ export async function duplicateClass(_: ActionState, formData: FormData): Promis
     sourceClassId:databaseUuid,newName:z.string().trim().min(2).max(80),
   }).safeParse(Object.fromEntries(formData));
   if(!parsed.success)return{message:"Enter a new class name."};
-  const internalCode=`SCCB-${randomUUID().replaceAll("-","").slice(0,12).toUpperCase()}`;
+  const internalCode=`DLH-${randomUUID().replaceAll("-","").slice(0,12).toUpperCase()}`;
   const supabase=await createClient();
   const{error}=await supabase.rpc("teacher_duplicate_class",{
     source_class_uuid:parsed.data.sourceClassId,new_name:parsed.data.newName,

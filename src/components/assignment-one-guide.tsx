@@ -17,7 +17,7 @@ export function AssignmentOneGuide({schedule,preview=false,unit="6"}:{schedule:R
   const back=preview?"/study/preview":"/study";
   return <div className="mini-study-surface">
     <a className="mini-study-skip" href="#assignment-main">Skip to your preparation</a>
-    <header className="mini-study-header"><Link href={back}>SCCB Learning{preview?" · Preview only":""}</Link></header>
+    <header className="mini-study-header"><Link href={back}>Digital Learning Hub{preview?" · Preview only":""}</Link></header>
     <main id="assignment-main" className="mini-study-main">
       <p className="assignment-deadline"><strong>Assignment 1 · Due {assignmentOne.dueLabel}</strong><br/>
         {schedule.phase==="past"?"The planned date has passed. Check your submission or any agreed extension with your teacher.":schedule.phase==="due"?"Due today. Confirm the time and submission location with your teacher.":`${schedule.days} calendar days to the due date. Your teacher will confirm the submission time.`}

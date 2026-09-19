@@ -74,7 +74,7 @@ export function upcomingAssessmentWindows(day:string,count=4):StudyAssessmentWin
 }
 
 /**
- * The SCCB Digital Learning Hub is second practice. Ordinary study as well as
+ * The Digital Learning Hub is second practice. Ordinary study as well as
  * formal assessment coverage stays inside the tutor-confirmed taught pool; it
  * must not become the learner's first exposure to a future curriculum topic.
  */

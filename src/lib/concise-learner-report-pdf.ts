@@ -28,7 +28,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   let page = pdf.addPage([595, 842]); let y = 790; let pageNumber = 1;
   const footer = () => {
     page.drawLine({ start: { x: 45, y: 38 }, end: { x: 550, y: 38 }, thickness: .5, color: rgb(.72, .77, .8) });
-    page.drawText(`SCCB Digital Learning Hub | Individual Learner Report | Page ${pageNumber}`, { x: 45, y: 22, size: 8, font: regular, color: rgb(.32, .39, .43) });
+    page.drawText(`Digital Learning Hub | Individual Learner Report | Page ${pageNumber}`, { x: 45, y: 22, size: 8, font: regular, color: rgb(.32, .39, .43) });
   };
   const newPage = () => { footer(); page = pdf.addPage([595, 842]); pageNumber += 1; y = 790; };
   const ensure = (minimum: number) => { if (y < minimum) newPage(); };
@@ -269,7 +269,7 @@ export async function buildConciseLearnerReportPdf(data: ConciseReportEvidence) 
   footer();
   pdf.setTitle(`${data.learnerName} - Individual Learner Report`);
   pdf.setSubject("Concise starting-point, progress, feedback and target summary");
-  pdf.setAuthor("SCCB Digital Learning Hub"); pdf.setCreator("SCCB Digital Learning Hub"); pdf.setCreationDate(asAt);
+  pdf.setAuthor("Digital Learning Hub"); pdf.setCreator("Digital Learning Hub"); pdf.setCreationDate(asAt);
   return pdf.save();
 }
 
