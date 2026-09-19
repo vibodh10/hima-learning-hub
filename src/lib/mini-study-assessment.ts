@@ -7,8 +7,8 @@ export type StudyAssessmentPlan={
 };
 export type StudySkillState={skill:string;correct:number;total:number;state:"Secure"|"Developing"|"Needs reinforcement"};
 
-// Formal checks follow the tutor's taught curriculum, not completion of Hima's
-// second-practice lessons. Formative 1 is deliberately available for the full
+// Formal checks follow the tutor's taught curriculum, not completion of the
+// hub's second-practice lessons. Formative 1 is deliberately available for the full
 // teaching week beginning 21 September 2026.
 const firstFormativeWeek="2026-09-21";
 const firstSummativeWeek="2026-10-12";
@@ -18,8 +18,8 @@ const summativeIntervalDays=28;
 
 const seededLessonIds:Record<string,string[]>={
   // Tutor-confirmed material already taught in class. Update this map as the
-  // teaching sequence advances; Hima lessons themselves do not unlock formal
-  // assessment topics because Hima is the reinforcement layer, not first teaching.
+  // teaching sequence advances; hub lessons themselves do not unlock formal
+  // assessment topics because this is the reinforcement layer, not first teaching.
   "2":["u2-records-v1","u2-validation-v1","u2-queries-reports-v1"],
   "4":["u4-variables-v1","u4-selection-v1","u4-iteration-v1","u4-data-types-operators-v1","u4-functions-basics-v1"],
   "6":["u6-html-page-basics-v1","u6-links-images-folders-v1","u6-css-methods-v1"],
@@ -74,9 +74,9 @@ export function upcomingAssessmentWindows(day:string,count=4):StudyAssessmentWin
 }
 
 /**
- * Hima is second practice. Ordinary Hima study as well as formal assessment
- * coverage stays inside the tutor-confirmed taught pool; it must not become the
- * learner's first exposure to a future curriculum topic.
+ * The SCCB Digital Learning Hub is second practice. Ordinary study as well as
+ * formal assessment coverage stays inside the tutor-confirmed taught pool; it
+ * must not become the learner's first exposure to a future curriculum topic.
  */
 export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[]){
   const lessonById=new Map(lessons.map(lesson=>[lesson.id,lesson]));
@@ -119,8 +119,8 @@ export function assessmentPlanFor(day:string,unitCode:string,lessons:StudyLesson
 }
 
 /**
- * After a check exposes a gap, Hima automatically re-teaches and re-checks the
- * first unresolved skill. A correct later check clears it. Up to three direct
+ * After a check exposes a gap, the hub automatically re-teaches and re-checks
+ * the first unresolved skill. A correct later check clears it. Up to three direct
  * retries are used before normal adaptive lessons continue and the teacher view
  * keeps the evidence visible for review.
  */
@@ -146,7 +146,7 @@ export function reinforcementLessonFor(lessons:StudyLesson[],history:StudyComple
     if(!source)continue;
     return {...source,id:`${prefix}${retries+1}`,title:`Practice again: ${source.title}`,
       lines:["Your last assessment showed that this idea needs another check.",...source.lines],
-      support:`Hima has selected this automatically from your assessment evidence. ${source.support}`};
+      support:`This practice was selected automatically from your assessment evidence. ${source.support}`};
   }
   return undefined;
 }
