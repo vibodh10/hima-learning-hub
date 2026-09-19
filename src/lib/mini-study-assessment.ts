@@ -1,4 +1,5 @@
 import type {StudyCompletion,StudyGrade,StudyLesson,StudyQuestionKey} from "./mini-study";
+import {releasedSowLessonIds} from "./mini-study-sow-release";
 
 export type StudyAssessmentKind="formative"|"summative";
 export type StudyAssessmentWindow={kind:StudyAssessmentKind;number:number;title:string;start:string;end:string};
@@ -7,23 +8,14 @@ export type StudyAssessmentPlan={
 };
 export type StudySkillState={skill:string;correct:number;total:number;state:"Secure"|"Developing"|"Needs reinforcement"};
 
-// Formal checks follow the tutor's taught curriculum, not completion of the
-// hub's second-practice lessons. Formative 1 is deliberately available for the full
+// Formal checks follow the taught curriculum, not completion of the hub's
+// second-practice lessons. Formative 1 is deliberately available for the full
 // teaching week beginning 21 September 2026.
 const firstFormativeWeek="2026-09-21";
 const firstSummativeWeek="2026-10-12";
 const weekDays=7;
 const formativeIntervalDays=14;
 const summativeIntervalDays=28;
-
-const seededLessonIds:Record<string,string[]>={
-  // Tutor-confirmed material already taught in class. Update this map as the
-  // teaching sequence advances; hub lessons themselves do not unlock formal
-  // assessment topics because this is the reinforcement layer, not first teaching.
-  "2":["u2-records-v1","u2-validation-v1","u2-queries-reports-v1"],
-  "4":["u4-variables-v1","u4-selection-v1","u4-iteration-v1","u4-data-types-operators-v1","u4-functions-basics-v1"],
-  "6":["u6-html-page-basics-v1","u6-links-images-folders-v1","u6-css-methods-v1"],
-};
 
 export function isAssessmentLessonId(id:string){return id.startsWith("assessment:");}
 export function isReinforcementLessonId(id:string){return id.startsWith("reinforce:");}
@@ -74,14 +66,13 @@ export function upcomingAssessmentWindows(day:string,count=4):StudyAssessmentWin
 }
 
 /**
- * The Digital Learning Hub is second practice. Ordinary study as well as
- * formal assessment coverage stays inside the tutor-confirmed taught pool; it
- * must not become the learner's first exposure to a future curriculum topic.
+ * The Digital Learning Hub is second practice. The SOW/date controls what can be
+ * selected; completing an unreleased lesson cannot unlock it early.
  */
-export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[]){
+export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[],day:string){
   const lessonById=new Map(lessons.map(lesson=>[lesson.id,lesson]));
   const skills=new Set<string>();
-  return (seededLessonIds[unitCode]??[]).flatMap(id=>{
+  return releasedSowLessonIds(unitCode,day).flatMap(id=>{
     const lesson=lessonById.get(id);
     if(!lesson||["analysis","evaluation"].includes(lesson.skill)||skills.has(lesson.skill))return [];
     skills.add(lesson.skill);return [lesson];
@@ -91,9 +82,13 @@ export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[]){
 function planFor(window:StudyAssessmentWindow,unitCode:string,lessons:StudyLesson[],history:StudyCompletion[],ignoreCompletion=false):StudyAssessmentPlan|null{
   const lessonId=`assessment:u${unitCode}:${window.kind}:${window.number}`;
   if(!ignoreCompletion&&history.some(item=>item.lessonId===lessonId))return null;
-  const eligible=taughtPracticeLessons(unitCode,lessons);
+  // Freeze each assessment to the SOW position at the start of its scheduled
+  // window. An overdue Formative 1 therefore never gains topics taught later.
+  const eligible=taughtPracticeLessons(unitCode,lessons,window.start);
   const skillLimit=5;
-  const selected=eligible.slice(0,skillLimit);
+  // Use the newest five released skills so later formatives naturally include
+  // recent teaching while retaining overlap with earlier checks where possible.
+  const selected=eligible.slice(-skillLimit);
   if(selected.length<2)return null;
   const questions=selected.flatMap(lesson=>lesson.questions.slice(0,2).map(question=>({...question,recap:false})));
   if(questions.length<4)return null;
