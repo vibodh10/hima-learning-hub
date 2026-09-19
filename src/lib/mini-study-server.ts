@@ -7,7 +7,7 @@ import { studyContentFor } from "./mini-study-content-expanded";
 import { nextStudyLesson, publicStudyQuestions, studyDay, studyQuestionSet, studyThinking, type StudyCard, type StudyGrade, type StudyQuestionKey, type StudyReward } from "./mini-study";
 import {selectStudyAssignment,studyHistoryForUnit,studySupportBaseline,type StudyAssignment} from "./mini-study-planning";
 import {isCombinedUnit2Unit6,startingPointDisplayTitle,startingPointQuestionsForAssignment} from "./mini-study-starting-point";
-import {assessmentPlanFor,isReinforcementLessonId,reinforcementLessonFor} from "./mini-study-assessment";
+import {assessmentPlanFor,isReinforcementLessonId,reinforcementLessonFor,taughtPracticeLessons} from "./mini-study-assessment";
 
 export type StudySessionRow = {
   id:string;learner_id:string;class_id:string;unit_id:string;unit_code:string;lesson_id:string;
@@ -55,19 +55,20 @@ function prerequisitePractice(history:ReturnType<typeof studyHistoryForUnit>){
   return prerequisiteLessons.filter(lesson=>history.some(item=>item.kind==="baseline"&&item.feedback.some(answer=>!answer.correct&&answer.skill===lesson.skill)));
 }
 
+function availablePractice(unitCode:string,lessons:ReturnType<typeof studyContentFor> extends {lessons:infer T}?T:never,history:ReturnType<typeof studyHistoryForUnit>){
+  return [...prerequisitePractice(history),...taughtPracticeLessons(unitCode,lessons as never)];
+}
+
 function hasAutomaticStep(unitCode:string,history:ReturnType<typeof studyHistoryForUnit>){
   const content=studyContentFor(unitCode);
   if(!content)return false;
   if(assessmentPlanFor(studyDay(new Date()),unitCode,content.lessons,history))return true;
   if(reinforcementLessonFor(content.lessons,history))return true;
-  return Boolean(nextStudyLesson([...prerequisitePractice(history),...content.lessons],history));
+  return Boolean(nextStudyLesson([...prerequisitePractice(history),...taughtPracticeLessons(unitCode,content.lessons)],history));
 }
 
 export async function studyContext(learnerId:string):Promise<StudyContext|null> {
   const client=await createClient();
-  // A registration link defines the learner's study group. If a test account has
-  // been joined to several groups, the most recently joined active group wins so
-  // lessons from another timetable group are never mixed into the same study run.
   const {data,error}=await client.from("enrolments")
     .select("class_id,enrolled_at,classes!inner(id,name,published,archived_at)")
     .eq("student_id",learnerId).is("archived_at",null).is("classes.archived_at",null)
@@ -162,17 +163,15 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
   if(legacyError) throw new Error("Your existing starting point could not be checked. Please try again.");
   if(!startingPointComplete) return {status:"ready",unitTitle:displayTitle,kind:"baseline"};
 
-  // A due formal assessment is compulsory and outranks the one-step-per-day
-  // convenience message. Classroom teaching, not Hima lesson completion, unlocks it.
   const dueAssessment=assessmentPlanFor(today,context.unitCode,content.lessons,history);
   if(dueAssessment)return {status:"ready",unitTitle:context.unitTitle,kind:"daily"};
   if(completedToday?.reward && !continueToday) return {status:"done",reward:completedToday.reward};
 
   const hasStep=Boolean(reinforcementLessonFor(content.lessons,history)
-    ??nextStudyLesson([...prerequisitePractice(history),...content.lessons],history));
+    ??nextStudyLesson([...prerequisitePractice(history),...taughtPracticeLessons(context.unitCode,content.lessons)],history));
   return hasStep
     ? {status:"ready",unitTitle:context.unitTitle,kind:"daily"}
-    : {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
+    : {status:"complete",message:"You are up to date with the topics your tutor has taught so far. Hima will wait for the next formal check or give second practice automatically when evidence shows a skill needs reinforcement."};
 }
 
 function opaqueKeys(questions:StudyQuestionKey[]):StudyQuestionKey[] {
@@ -193,8 +192,6 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const content=studyContentFor(context.unitCode);
   if(!content) throw new Error("This unit's short steps are not ready yet.");
   const admin=createAdminClient();
-  // A stale open step from another group must not be returned by the database
-  // when the learner has since joined a different registration group.
   const {error:staleError}=await admin.from("mini_study_sessions").update({status:"abandoned"})
     .eq("learner_id",learnerId).in("status",["opened","review"]).neq("class_id",context.classId);
   if(staleError) throw new Error("Your previous group step could not be closed safely. Please refresh and try again.");
@@ -205,8 +202,8 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const history=studyHistoryForContext(sessions,context);
   const assessment=assessmentPlanFor(studyDay(new Date()),context.unitCode,content.lessons,history);
   const reinforcement=assessment?undefined:reinforcementLessonFor(content.lessons,history);
-  const selected=reinforcement??(assessment?undefined:nextStudyLesson([...prerequisitePractice(history),...content.lessons],history));
-  if(!selected&&!assessment&&home.kind==="daily") return {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
+  const selected=reinforcement??(assessment?undefined:nextStudyLesson([...prerequisitePractice(history),...taughtPracticeLessons(context.unitCode,content.lessons)],history));
+  if(!selected&&!assessment&&home.kind==="daily") return {status:"complete",message:"You are up to date with the topics your tutor has taught so far. Hima will wait for the next formal check or give second practice automatically when evidence shows a skill needs reinforcement."};
   const previousId=history.filter(h=>h.kind==="daily"&&!h.lessonId.startsWith("assessment:")&&!h.lessonId.startsWith("reinforce:")).at(-1)?.lessonId;
   const previous=content.lessons.find(l=>l.id===previousId);
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("correct_count,question_count").eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
