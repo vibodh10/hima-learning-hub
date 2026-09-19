@@ -21,8 +21,8 @@ const seededLessonIds:Record<string,string[]>={
   // teaching sequence advances; Hima lessons themselves do not unlock formal
   // assessment topics because Hima is the reinforcement layer, not first teaching.
   "2":["u2-records-v1","u2-validation-v1","u2-queries-reports-v1"],
-  "4":["u4-variables-v1","u4-selection-v1","u4-iteration-v1","u4-data-types-operators-v1"],
-  "6":["u6-semantic-html-v1","u6-navigation-v1","u6-css-box-layout-v1"],
+  "4":["u4-variables-v1","u4-selection-v1","u4-iteration-v1","u4-data-types-operators-v1","u4-functions-basics-v1"],
+  "6":["u6-html-page-basics-v1","u6-links-images-folders-v1","u6-css-methods-v1"],
 };
 
 export function isAssessmentLessonId(id:string){return id.startsWith("assessment:");}
@@ -92,7 +92,7 @@ function planFor(window:StudyAssessmentWindow,unitCode:string,lessons:StudyLesso
   const lessonId=`assessment:u${unitCode}:${window.kind}:${window.number}`;
   if(!ignoreCompletion&&history.some(item=>item.lessonId===lessonId))return null;
   const eligible=taughtPracticeLessons(unitCode,lessons);
-  const skillLimit=window.kind==="summative"?5:4;
+  const skillLimit=5;
   const selected=eligible.slice(0,skillLimit);
   if(selected.length<2)return null;
   const questions=selected.flatMap(lesson=>lesson.questions.slice(0,2).map(question=>({...question,recap:false})));
