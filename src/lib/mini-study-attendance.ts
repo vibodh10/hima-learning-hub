@@ -61,17 +61,27 @@ function hasAutomaticStep(day:string,assignment:StudyAssignment,classUnitCodes:s
 /**
  * Uses the same saved evidence and automatic-selection rules as the learner study
  * screen, but with the service-role client so a scheduled job can check every learner.
+ * Weekends and organisation calendar holidays/closures never create red badges.
  */
 export async function practiceExpectationForLearner(learnerId:string,now=new Date()):Promise<PracticeExpectation>{
   const day=studyDay(now);
   if(["Sat","Sun"].includes(schoolWeekday(now)))return {required:false,day};
   const admin=createAdminClient();
   const {data:enrolments,error:enrolmentError}=await admin.from("enrolments")
-    .select("class_id,enrolled_at,classes!inner(id,published,archived_at)")
+    .select("class_id,enrolled_at,classes!inner(id,published,archived_at,academic_year_id)")
     .eq("student_id",learnerId).is("archived_at",null).is("classes.archived_at",null)
     .eq("classes.published",true).order("enrolled_at",{ascending:false}).limit(1);
   if(enrolmentError||!enrolments?.length)return {required:false,day};
   const classId=enrolments[0].class_id;
+  const group=related(enrolments[0].classes);
+  const academicYearId=group?.academic_year_id;
+  if(!academicYearId)return {required:false,day};
+  const {data:closures,error:closureError}=await admin.from("academic_calendar_events").select("id")
+    .eq("academic_year_id",academicYearId).is("archived_at",null).in("kind",["holiday","college_closure"])
+    .lte("starts_on",day).gte("ends_on",day).limit(1);
+  // Attendance automation fails safe: if the calendar cannot be checked, do not
+  // create a red badge that might represent a college closure as non-attendance.
+  if(closureError||closures?.length)return {required:false,day,classId};
   const {data:assigned,error:assignedError}=await admin.from("class_units")
     .select("units!inner(id,code,title)").eq("class_id",classId).eq("active",true).is("archived_at",null).order("unit_id");
   if(assignedError)return {required:false,day};
