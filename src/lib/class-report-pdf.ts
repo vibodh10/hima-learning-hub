@@ -18,7 +18,7 @@ export async function buildClassReportPdf(data: ClassReport) {
       start: { x: MARGIN, y: 43 }, end: { x: PAGE_WIDTH - MARGIN, y: 43 },
       thickness: 0.6, color: rgb(0.75, 0.8, 0.82),
     });
-    target.drawText("SCCB Digital Learning Hub - formative evidence only", {
+    target.drawText("Digital Learning Hub - formative evidence only", {
       x: MARGIN, y: FOOTER_Y, size: 7.5, font: regular, color: rgb(0.35, 0.42, 0.45),
     });
     const pageText = `Page ${pageNumber}`;
@@ -110,15 +110,15 @@ export async function buildClassReportPdf(data: ClassReport) {
   ensureSpace(70);
   y -= 10;
   line("Accuracy and scope", 10, true);
-  line("This report includes active learners and active selected units only. Starting points require sufficient stored evidence. Progress is shown only where a dated, comparable progress point exists. Missing evidence is labelled explicitly. Formal qualification assignments and grades are outside SCCB Digital Learning Hub.", 8);
+  line("This report includes active learners and active selected units only. Starting points require sufficient stored evidence. Progress is shown only where a dated, comparable progress point exists. Missing evidence is labelled explicitly. Formal qualification assignments and grades are outside Digital Learning Hub.", 8);
   line("This educational evidence report supports professional review but does not guarantee Ofsted compliance or replace the centre's approved attendance, safeguarding, SEND, qualification-assessment or statutory records.", 8);
   footer(page, pdf.getPageCount());
 
   const generatedAt = new Date(data.generatedAt);
   pdf.setTitle(`${data.name} - Class Evidence Report`);
   pdf.setSubject("Active cohort starting point, verified progress, pathways and allocated learning evidence");
-  pdf.setAuthor("SCCB Digital Learning Hub");
-  pdf.setCreator("SCCB Digital Learning Hub");
+  pdf.setAuthor("Digital Learning Hub");
+  pdf.setCreator("Digital Learning Hub");
   if (!Number.isNaN(generatedAt.getTime())) pdf.setCreationDate(generatedAt);
   return pdf.save();
 }

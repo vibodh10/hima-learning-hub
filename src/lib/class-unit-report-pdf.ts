@@ -77,14 +77,14 @@ export async function buildClassUnitReportPdf(report: ClassUnitReport) {
   });
 
   heading("Accuracy and scope");
-  line("This report organises factual evidence already stored in SCCB Digital Learning Hub. Missing evidence is shown explicitly. Secure module completion requires the recorded mastery threshold and independent attempts; progress is only stated from sufficient comparable evidence.", 8);
+  line("This report organises factual evidence already stored in Digital Learning Hub. Missing evidence is shown explicitly. Secure module completion requires the recorded mastery threshold and independent attempts; progress is only stated from sufficient comparable evidence.", 8);
   line("This educational evidence report supports professional review but does not guarantee Ofsted compliance or replace the centre's approved attendance, safeguarding, SEND, qualification-assessment or statutory records.", 8);
 
   addFooters(pdf.getPages(), regular, bold, report);
   pdf.setTitle(`${report.className} - Unit ${report.unitCode} Evidence Report`);
   pdf.setSubject("Unit-scoped starting point, learning, assessment, feedback, target, intervention and next-step evidence");
-  pdf.setAuthor("SCCB Digital Learning Hub");
-  pdf.setCreator("SCCB Digital Learning Hub");
+  pdf.setAuthor("Digital Learning Hub");
+  pdf.setCreator("Digital Learning Hub");
   pdf.setCreationDate(new Date(report.generatedAt));
   return pdf.save();
 }

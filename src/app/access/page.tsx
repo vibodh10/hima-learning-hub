@@ -17,7 +17,7 @@ export default async function AccessPage({
         <div className="simple-portal-width flex min-h-20 items-center">
           <Link href="/" className="flex min-h-11 items-center gap-3 font-bold text-white">
             <Mark>S</Mark>
-            <span>SCCB Digital Learning Hub</span>
+            <span>Digital Learning Hub</span>
           </Link>
         </div>
       </header>
@@ -62,12 +62,12 @@ function AccessInstructions({ choice }: { choice: AccessChoice }) {
     <>
       <p className="mt-5 text-lg text-slate-600">Get access</p>
       <h1 className="mt-2 max-w-2xl text-4xl font-bold leading-tight text-slate-950 sm:text-5xl">
-        {isStudent ? "Ask your teacher for your class link" : "Ask an SCCB administrator for a setup link"}
+        {isStudent ? "Ask your teacher for your class link" : "Ask an administrator for a setup link"}
       </h1>
       <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-700">
         {isStudent
           ? "Your teacher will give you a temporary registration link for the correct class. Open that link to create your account."
-          : "Staff accounts are approved and created securely by an SCCB administrator. They will send the setup link to your verified SCCB account."}
+          : "Staff accounts are approved and created securely by an administrator. They will send the setup link to your verified staff account."}
       </p>
       <div className="mt-9 flex flex-wrap gap-4">
         <Link className="button" href="/login">I already have an account</Link>

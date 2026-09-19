@@ -1,4 +1,4 @@
-# SCCB Digital Learning Hub
+# Digital Learning Hub
 
 The build explanation and invitation-only student onboarding procedure are in [docs/HIMA_WEBSITE_AND_STUDENT_ONBOARDING.md](docs/HIMA_WEBSITE_AND_STUDENT_ONBOARDING.md).
 

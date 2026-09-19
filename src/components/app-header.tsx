@@ -30,7 +30,7 @@ const navigation: Record<Role, { href: string; label: string }[]> = {
 export function AppHeader({ name, role }: { name: string; role: Role }) {
   return <header className="site-header">
     <div className="shell flex min-h-20 flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
-      <Link href="/dashboard" className="flex items-center gap-3 font-bold"><Mark>S</Mark><span className="hidden sm:block">SCCB Digital Learning Hub</span></Link>
+      <Link href="/dashboard" className="flex items-center gap-3 font-bold"><Mark>D</Mark><span className="hidden sm:block">Digital Learning Hub</span></Link>
       <nav aria-label={`${roleLabels[role]} navigation`} className="site-nav order-3 flex w-full flex-wrap items-center gap-x-5 gap-y-2 border-t pt-3 text-sm font-semibold md:order-none md:w-auto md:border-0 md:pt-0">
         {navigation[role].map(item=><Link href={item.href} key={item.label}>{item.label}</Link>)}
       </nav>

@@ -38,7 +38,7 @@ export async function findOpenClassRegistration(
     linkId: data.id,
     classId: data.class_id,
     className: String(classData.name),
-    courseTitle: String(related(classData.courses)?.title ?? "SCCB course"),
+    courseTitle: String(related(classData.courses)?.title ?? "course"),
     expiresAt: data.expires_at,
   };
 }

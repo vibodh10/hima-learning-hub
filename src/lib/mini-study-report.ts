@@ -78,7 +78,7 @@ export function miniStudyLearnerSummary(records:MiniStudyRecord[]) {
     needsHelp,
     supportReason:lastEvidence?.needs_help&&lastEvidence.grade
       ? `${lastEvidence.kind==="baseline"?"Starting point":lastEvidence.content.title??"Latest short lesson"}: ${lastEvidence.grade.correct} of ${lastEvidence.grade.total} new first answers correct. ${lastEvidence.status==="completed"?"The step is completed. Automatic reinforcement will continue from this evidence.":"Feedback review is not yet finished."}`
-      :assessmentNeedsHelp?"The latest automated assessment contains one or more skills marked Needs reinforcement. The SCCB Digital Learning Hub will reteach and recheck those skills automatically.":null,
+      :assessmentNeedsHelp?"The latest automated assessment contains one or more skills marked Needs reinforcement. The Digital Learning Hub will reteach and recheck those skills automatically.":null,
     target:lastEvidence?.target_text??"Continue with the next automatic short step; support and stretch are selected from the learner's saved evidence.",
   };
 }
