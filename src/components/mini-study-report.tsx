@@ -1,6 +1,6 @@
 import {startingPointRoute} from "@/lib/starting-point-route";
 import Link from "next/link";
-import {miniStudyLearnerSummary,type MiniStudyRecord,type StudyIntegrityEvent,type StudyLegacyBaseline,type StudyUnitRef} from "@/lib/mini-study-report";
+import {miniStudyLearnerSummary,type MiniStudyRecord,type StudyIntegrityEvent,type StudyIntervention,type StudyLegacyBaseline,type StudyPracticeMiss,type StudyUnitRef} from "@/lib/mini-study-report";
 
 const legacyUnit="__legacy__";
 const evidenceUnit=(row:{unit_id?:string})=>row.unit_id??legacyUnit;
@@ -12,35 +12,42 @@ function inferredUnits(records:MiniStudyRecord[],baselines:StudyLegacyBaseline[]
   return (ids.length?ids:[legacyUnit]).map(id=>({id,label:id===legacyUnit?"Current unit":`Unit ${id}`}));
 }
 
-export function MiniStudyReport({learners,records,baselines=[],integrityEvents=[],units=[],classId,expanded=false}:{learners:{id:string;name:string}[];records:MiniStudyRecord[];baselines?:StudyLegacyBaseline[];integrityEvents?:StudyIntegrityEvent[];units?:StudyUnitRef[];classId?:string;expanded?:boolean}) {
+export function MiniStudyReport({learners,records,baselines=[],integrityEvents=[],practiceMisses=[],interventions=[],units=[],classId,expanded=false}:{learners:{id:string;name:string}[];records:MiniStudyRecord[];baselines?:StudyLegacyBaseline[];integrityEvents?:StudyIntegrityEvent[];practiceMisses?:StudyPracticeMiss[];interventions?:StudyIntervention[];units?:StudyUnitRef[];classId?:string;expanded?:boolean}) {
   const reportUnits=units.length?units:inferredUnits(records,baselines);
   const unitLabel=new Map(reportUnits.map(unit=>[unit.id,unit.label]));
   const rows=learners.map(learner=>{
     const learnerRecords=records.filter(record=>record.learner_id===learner.id);
     const learnerSessionIds=new Set(learnerRecords.map(record=>record.id));
     const integrityConcernCount=integrityEvents.filter(event=>learnerSessionIds.has(event.session_id)&&concernEvent(event)).length;
+    const learnerMisses=practiceMisses.filter(item=>item.learner_id===learner.id).sort((a,b)=>a.missed_on.localeCompare(b.missed_on));
+    const attendanceIntervention=interventions.find(item=>item.learner_id===learner.id&&item.kind==="missed_self_study"&&item.status==="open");
     const learnerUnits=reportUnits.map(unit=>{
       const own=learnerRecords.filter(r=>evidenceUnit(r)===unit.id);
       const legacy=baselines.find(b=>b.learner_id===learner.id&&evidenceUnit(b)===unit.id);
-      return {unit,own,legacy,summary:miniStudyLearnerSummary(own)};
+      return {unit,own,legacy,summary:miniStudyLearnerSummary(own),hasFormative:own.some(record=>record.content.assessmentKind==="formative"&&record.grade)};
     });
     const warningCount=learnerUnits.reduce((sum,item)=>sum+item.summary.assessment.warningCount,0);
-    return {...learner,learnerUnits,warningCount,integrityConcernCount,reviewRequired:warningCount>=3,needsHelp:learnerUnits.some(item=>item.summary.needsHelp),hasLearning:learnerUnits.some(item=>Boolean(item.summary.latest)),hasStartingPoint:learnerUnits.some(item=>Boolean(item.summary.baseline||item.legacy))};
-  }).sort((a,b)=>Number(b.reviewRequired)-Number(a.reviewRequired)||b.integrityConcernCount-a.integrityConcernCount||Number(b.needsHelp)-Number(a.needsHelp)||a.name.localeCompare(b.name));
+    const assessmentReviewRequired=warningCount>=3;
+    const attendanceReviewRequired=learnerMisses.length>=3||Boolean(attendanceIntervention);
+    return {...learner,learnerUnits,warningCount,integrityConcernCount,learnerMisses,attendanceIntervention,assessmentReviewRequired,attendanceReviewRequired,reviewRequired:assessmentReviewRequired||attendanceReviewRequired,needsHelp:learnerUnits.some(item=>item.summary.needsHelp),hasLearning:learnerUnits.some(item=>Boolean(item.summary.latest)),hasStartingPoint:learnerUnits.some(item=>Boolean(item.summary.baseline||item.legacy))};
+  }).sort((a,b)=>Number(b.reviewRequired)-Number(a.reviewRequired)||b.learnerMisses.length-a.learnerMisses.length||b.integrityConcernCount-a.integrityConcernCount||Number(b.needsHelp)-Number(a.needsHelp)||a.name.localeCompare(b.name));
 
   return <section aria-labelledby="mini-report-title">
     <h1 id="mini-report-title" className="text-3xl font-bold">Short self-study records</h1>
-    <p className="mt-3 max-w-3xl">Starting points, recent practice, automatic fortnightly formative assessments, monthly summative assessments and next targets. Each unit is kept separate. Hima automatically reteaches and rechecks weak skills; assessment integrity events are factual browser events for teacher review, not an automatic finding of cheating.</p>
+    <p className="mt-3 max-w-3xl">Starting points, recent practice, automatic fortnightly formative assessments, monthly summative assessments, missed-practice attendance and next targets. Each unit is kept separate. Hima automatically reteaches and rechecks weak skills; assessment integrity events are factual browser events for teacher review, not an automatic finding of cheating.</p>
     {!rows.length?<p className="card mt-6">No students have joined this group yet.</p>:<div className="mt-6 grid gap-4">{rows.map(row=><details className="card" key={row.id} open={expanded}>
-      <summary className="cursor-pointer text-lg font-bold">{row.name} · {row.reviewRequired?"Teacher review required":row.needsHelp?"Automatic reinforcement active":row.hasLearning?"Learning recorded":row.hasStartingPoint?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}{row.integrityConcernCount>0?` · integrity events ${row.integrityConcernCount}`:""}</summary>
-      {row.reviewRequired&&<p className="mt-4 rounded-lg bg-red-50 p-4"><strong>Teacher review required. </strong>{row.warningCount} low first-attempt learning checks have been recorded across this learner&apos;s active units in the last seven days. Review the evidence before deciding the cause or any behaviour action.</p>}
+      <summary className="cursor-pointer text-lg font-bold">{row.name} · {row.reviewRequired?"Teacher attention required":row.needsHelp?"Automatic reinforcement active":row.hasLearning?"Learning recorded":row.hasStartingPoint?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}{row.learnerMisses.length?` · red badges ${row.learnerMisses.length}`:""}{row.integrityConcernCount>0?` · integrity events ${row.integrityConcernCount}`:""}</summary>
+      {row.attendanceReviewRequired&&<div className="mt-4 rounded-lg bg-red-50 p-4"><p><strong>Missed-practice intervention. </strong>{row.learnerMisses.length} required practice day{row.learnerMisses.length===1?"":"s"} missed this school week. At three badges Hima creates an intervention record and alerts the tutor when email is configured.</p><div className="mt-2 flex flex-wrap gap-2">{row.learnerMisses.map(miss=><span key={miss.id} className="rounded-full bg-red-700 px-3 py-1 text-xs font-bold text-white">Red badge · {miss.missed_on}</span>)}</div><p className="mt-2 text-sm">Review barriers and support with the learner. These badges record attendance only; they do not grade ability or automatically apply a sanction.</p></div>}
+      {!row.attendanceReviewRequired&&row.learnerMisses.length>0&&<div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4"><strong>Missed practice: </strong>{row.learnerMisses.length} red badge{row.learnerMisses.length===1?"":"s"} this week. Teacher escalation starts automatically at three.</div>}
+      {row.assessmentReviewRequired&&<p className="mt-4 rounded-lg bg-red-50 p-4"><strong>Learning evidence review required. </strong>{row.warningCount} low first-attempt learning checks have been recorded across this learner&apos;s active units in the last seven days. Review the evidence before deciding the cause or any behaviour action.</p>}
       {row.integrityConcernCount>0&&<p className="mt-4 rounded-lg bg-amber-50 p-4"><strong>Assessment integrity record: </strong>{row.integrityConcernCount} full-screen or page-visibility event{row.integrityConcernCount===1?" has":"s have"} been recorded. Review the timestamps below in context; Hima does not automatically fail or accuse the learner.</p>}
       <div className="mt-5 grid gap-5">{row.learnerUnits.map(item=>{
         const latestSession=item.summary.assessment.latest?.sessionId;
         const assessmentEvents=latestSession?integrityEvents.filter(event=>event.session_id===latestSession):[];
         const assessmentConcerns=assessmentEvents.filter(concernEvent);
+        const formativeProgress=item.summary.assessment.formativeProgress;
         return <article key={item.unit.id} className="rounded-xl border border-slate-200 p-5">
-        <h2 className="text-xl font-bold">{item.unit.label}</h2>
+        <div className="flex flex-wrap items-start justify-between gap-3"><h2 className="text-xl font-bold">{item.unit.label}</h2>{classId&&item.hasFormative&&<Link className="button-secondary" href={`/teacher/classes/${classId}/learners/${row.id}/formative-report?unitId=${item.unit.id}`}>Open submission-ready formative report</Link>}</div>
         {item.summary.supportReason&&<p className="mt-4 rounded-lg bg-amber-50 p-4"><strong>Automatic support signal: </strong>{item.summary.supportReason}</p>}
         {item.summary.baseline?.feedback.some(f=>f.questionId.startsWith("prereq:"))&&<p className="mt-4 font-semibold">Starting route: {startingPointRoute(item.summary.baseline)}. Provisional guidance, not a grade. {item.summary.latest&&`Latest practice: ${item.summary.latest.grade.correct/item.summary.latest.grade.total<0.5?"reinforcement continues automatically":item.summary.latest.grade.correct/item.summary.latest.grade.total<0.8?"core practice":"stretch work is available"}.`}</p>}
         <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
@@ -50,6 +57,7 @@ export function MiniStudyReport({learners,records,baselines=[],integrityEvents=[
           <div><dt className="font-semibold">Recall of the previous idea</dt><dd>{item.summary.recap?`${item.summary.recap.correct} of ${item.summary.recap.total} correct` : "Not checked yet"}</dd></div>
           <div><dt className="font-semibold">Learning warnings · 7 days</dt><dd>{item.summary.assessment.warningCount}</dd></div>
         </dl>
+        {formativeProgress&&<div className="mt-5 rounded-lg border border-slate-300 p-4"><h3 className="font-bold">Formative progress</h3>{formativeProgress.from?<p className="mt-2">Formative Assessment {formativeProgress.from.number}: {formativeProgress.from.correct}/{formativeProgress.from.total} → Formative Assessment {formativeProgress.to.number}: {formativeProgress.to.correct}/{formativeProgress.to.total} ({formativeProgress.percentagePointChange!>0?"+":""}{formativeProgress.percentagePointChange} percentage points).</p>:<p className="mt-2">Formative Assessment {formativeProgress.to.number} is recorded. The comparison will populate automatically after the next formative assessment.</p>}</div>}
         {item.summary.assessment.latest&&<div className="mt-5 rounded-lg border border-slate-300 p-4">
           <h3 className="font-bold">Latest automated assessment</h3>
           <p className="mt-2">{item.summary.assessment.latest.title}: {item.summary.assessment.latest.grade.correct} of {item.summary.assessment.latest.grade.total} correct.</p>
