@@ -114,7 +114,8 @@ export function assessmentPlanFor(day:string,unitCode:string,lessons:StudyLesson
 export function reinforcementLessonFor(lessons:StudyLesson[],history:StudyCompletion[]):StudyLesson|undefined{
   const assessment=[...history].filter(item=>item.kind==="daily"&&isAssessmentLessonId(item.lessonId)).at(-1);
   if(!assessment)return undefined;
-  const missed=[...new Set(assessment.feedback.filter(item=>!item.recap&&!item.correct).map(item=>item.skill))];
+  const missedFeedback=assessment.feedback.filter(item=>!item.recap&&!item.correct);
+  const missed=[...new Set(missedFeedback.map(item=>item.skill))];
   for(const skill of missed){
     const later=history.filter(item=>item.completedAt>assessment.completedAt);
     const corrected=later.some(item=>{
@@ -126,7 +127,9 @@ export function reinforcementLessonFor(lessons:StudyLesson[],history:StudyComple
     const prefix=`reinforce:${assessment.lessonId}:${slug}:`;
     const retries=later.filter(item=>item.lessonId.startsWith(prefix)).length;
     if(retries>=3)continue;
-    const source=lessons.find(lesson=>lesson.skill===skill);
+    const missedQuestionIds=new Set(missedFeedback.filter(item=>item.skill===skill).map(item=>item.questionId));
+    const source=lessons.find(lesson=>lesson.skill===skill&&lesson.questions.some(question=>missedQuestionIds.has(question.id)))
+      ??lessons.find(lesson=>lesson.skill===skill);
     if(!source)continue;
     return {...source,id:`${prefix}${retries+1}`,title:`Practice again: ${source.title}`,
       lines:["Your last assessment showed that this idea needs another check.",...source.lines],
