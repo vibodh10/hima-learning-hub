@@ -1,4 +1,5 @@
 import {describe,expect,it} from "vitest";
+import {studyContentFor} from "./mini-study-content-expanded";
 import {nextSowRelease,releasedSowLessonIds,sowReleasesFor} from "./mini-study-sow-release";
 
 describe("Unit 4 SOW-driven release",()=>{
@@ -23,5 +24,11 @@ describe("Unit 4 SOW-driven release",()=>{
     expect(releasedSowLessonIds("4","2026-11-06")).toContain("u4-pygame-events-v1");
     expect(releasedSowLessonIds("4","2026-12-02")).toContain("u4-libraries-reuse-v1");
     expect(sowReleasesFor("4").length).toBeGreaterThanOrEqual(20);
+  });
+
+  it("has real lesson content for every scheduled release",()=>{
+    const content=studyContentFor("4");
+    const ids=new Set(content?.lessons.map(lesson=>lesson.id)??[]);
+    for(const release of sowReleasesFor("4"))expect(ids.has(release.lessonId),release.lessonId).toBe(true);
   });
 });
