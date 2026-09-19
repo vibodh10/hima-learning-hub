@@ -1,4 +1,4 @@
-import type {StudyCompletion,StudyGrade,StudyLesson,StudyQuestionKey} from "./mini-study";
+import {studyDay,type StudyCompletion,type StudyGrade,type StudyLesson,type StudyQuestionKey} from "./mini-study";
 import {releasedSowLessonIds} from "./mini-study-sow-release";
 
 export type StudyAssessmentKind="formative"|"summative";
@@ -69,7 +69,7 @@ export function upcomingAssessmentWindows(day:string,count=4):StudyAssessmentWin
  * The Digital Learning Hub is second practice. The SOW/date controls what can be
  * selected; completing an unreleased lesson cannot unlock it early.
  */
-export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[],day:string){
+export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[],day=studyDay(new Date())){
   const lessonById=new Map(lessons.map(lesson=>[lesson.id,lesson]));
   const skills=new Set<string>();
   return releasedSowLessonIds(unitCode,day).flatMap(id=>{
