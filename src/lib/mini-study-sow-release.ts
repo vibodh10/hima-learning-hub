@@ -2,11 +2,8 @@ export type SowRelease={lessonId:string;releaseOn:string;title:string};
 
 /**
  * Automatic second-practice release dates for the 2026-27 teaching sequence.
- * Unit 4 follows the tutor's current Tuesday/Friday progression: existing
- * foundations first, then functions with parameters/returns, files, data
- * structures, error handling/modularity, event-driven work and project skills.
- * Release dates are deliberately after the relevant classroom teaching point so
- * the Digital Learning Hub remains reinforcement rather than first teaching.
+ * Dates are placed after the corresponding classroom teaching point so the
+ * Digital Learning Hub reinforces taught content rather than introducing it.
  */
 const unit4Releases:SowRelease[]=[
   {lessonId:"u4-variables-v1",releaseOn:"2026-09-01",title:"Variables"},
@@ -34,6 +31,29 @@ const unit4Releases:SowRelease[]=[
   {lessonId:"u4-libraries-reuse-v1",releaseOn:"2026-12-02",title:"Libraries and reusable routines"},
 ];
 
+// Unit 19 follows the supplied 20-week IoT delivery plan. Friday release dates
+// place Hub practice after that week's teaching focus.
+const unit19Releases:SowRelease[]=[
+  {lessonId:"u19-iot-foundations-v1",releaseOn:"2026-09-11",title:"Recognise a complete IoT system"},
+  {lessonId:"u19-applications-v1",releaseOn:"2026-09-18",title:"Purpose and applications of IoT"},
+  {lessonId:"u19-principles-v1",releaseOn:"2026-09-25",title:"IoT principles and data-to-action"},
+  {lessonId:"u19-architecture-v1",releaseOn:"2026-10-02",title:"IoT architecture and characteristics"},
+  {lessonId:"u19-edge-cloud-v1",releaseOn:"2026-10-02",title:"Local and cloud processing"},
+  {lessonId:"u19-risks-v1",releaseOn:"2026-10-09",title:"IoT risks and issues"},
+  {lessonId:"u19-compare-sectors-v1",releaseOn:"2026-10-16",title:"Compare and evaluate IoT systems"},
+  {lessonId:"u19-client-requirements-v1",releaseOn:"2026-10-23",title:"Robot scenario and client requirements"},
+  {lessonId:"u19-sense-act-v1",releaseOn:"2026-11-13",title:"Sensors, controllers and actuators"},
+  {lessonId:"u19-communication-v1",releaseOn:"2026-11-20",title:"IoT communication choices"},
+  {lessonId:"u19-design-docs-v1",releaseOn:"2026-11-27",title:"Design documentation and diagrams"},
+  {lessonId:"u19-prototype-evidence-v1",releaseOn:"2026-12-04",title:"Prototype build evidence"},
+  {lessonId:"u19-data-handling-v1",releaseOn:"2026-12-11",title:"Capture, display and store IoT data"},
+  {lessonId:"u19-failure-v1",releaseOn:"2026-12-18",title:"Test missing and implausible readings"},
+  {lessonId:"u19-feedback-improvement-v1",releaseOn:"2027-01-08",title:"Improve the design from feedback"},
+  {lessonId:"u19-security-reliability-v1",releaseOn:"2027-01-22",title:"Security and reliability review"},
+  {lessonId:"u19-final-evidence-v1",releaseOn:"2027-01-29",title:"Final testing evidence"},
+  {lessonId:"u19-evaluation-v1",releaseOn:"2027-02-05",title:"Evaluate against requirements"},
+];
+
 const alwaysAvailable:Record<string,SowRelease[]>={
   "2":[
     {lessonId:"u2-records-v1",releaseOn:"0001-01-01",title:"Records and fields"},
@@ -49,6 +69,7 @@ const alwaysAvailable:Record<string,SowRelease[]>={
 
 export function sowReleasesFor(unitCode:string):SowRelease[]{
   if(unitCode==="4")return unit4Releases;
+  if(unitCode==="19")return unit19Releases;
   return alwaysAvailable[unitCode]??[];
 }
 
