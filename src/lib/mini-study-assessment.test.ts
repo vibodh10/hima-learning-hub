@@ -9,7 +9,7 @@ function lesson(id:string,skill:string):StudyLesson{return {
   {id:`${id}-2`,skill,kind:"choice",prompt:"Q2",options:[{id:"a",text:"A"},{id:"b",text:"B"}],answer:"a",explanation:"A"},
  ]
 };}
-const lessons=[lesson("u4-variables-v1","variables"),lesson("u4-selection-v1","selection"),lesson("u4-iteration-v1","iteration"),lesson("u4-data-types-operators-v1","data-types"),lesson("u4-functions-parameters-v1","functions")];
+const lessons=[lesson("u4-variables-v1","variables"),lesson("u4-selection-v1","selection"),lesson("u4-iteration-v1","iteration"),lesson("u4-data-types-operators-v1","data-types"),lesson("u4-functions-basics-v1","functions"),lesson("u4-functions-parameters-v1","parameters")];
 const correct=(skill:string)=>({questionId:`${skill}-q`,correct:true,recap:false,skill,explanation:"",correctAnswer:"A"});
 const wrong=(skill:string)=>({...correct(skill),correct:false});
 function completed(id:string,day:string,skill="variables",ok=true):StudyCompletion{return {lessonId:id,completedAt:`${day}T12:00:00Z`,kind:"daily",feedback:[ok?correct(skill):wrong(skill)]};}
@@ -21,7 +21,7 @@ describe("automatic assessment schedule",()=>{
  it("opens Formative Assessment 1 for the whole week beginning 21 September without requiring Hima lesson completion",()=>{
   const monday=assessmentPlanFor("2026-09-21","4",lessons,[]);
   const sunday=assessmentPlanFor("2026-09-27","4",lessons,[]);
-  expect(monday?.kind).toBe("formative");expect(monday?.title).toBe("Formative Assessment 1");expect(monday?.questions.length).toBe(8);
+  expect(monday?.kind).toBe("formative");expect(monday?.title).toBe("Formative Assessment 1");expect(monday?.questions.length).toBe(10);
   expect(sunday?.title).toBe("Formative Assessment 1");
  });
  it("keeps Formative Assessment 1 compulsory after its original week if it was missed",()=>{
@@ -42,17 +42,22 @@ describe("automatic assessment schedule",()=>{
   const history=[completed("assessment:u4:formative:1","2026-09-22")];
   expect(assessmentPlanFor("2026-09-25","4",lessons,history)).toBeNull();
  });
+ it("includes taught simple functions but not untaught parameter passing",()=>{
+  const plan=assessmentPlanFor("2026-09-21","4",lessons,[]);
+  expect(plan?.questions.some(question=>question.skill==="functions")).toBe(true);
+  expect(plan?.questions.some(question=>question.skill==="parameters")).toBe(false);
+ });
  it("does not add untaught formal topics just because a Hima lesson was completed",()=>{
-  const history=[completed("u4-functions-parameters-v1","2026-09-20","functions")];
+  const history=[completed("u4-functions-parameters-v1","2026-09-20","parameters")];
   const plan=assessmentPlanFor("2026-09-21","4",lessons,history);
-  expect(plan?.questions.some(question=>question.skill==="functions")).toBe(false);
+  expect(plan?.questions.some(question=>question.skill==="parameters")).toBe(false);
  });
  it("lets the teacher preview Formative Assessment 1 before the student window opens",()=>{
   const window=upcomingAssessmentWindows("2026-09-19",4)[0];
   const preview=assessmentPreviewPlan(window,"4",lessons);
   expect(window.title).toBe("Formative Assessment 1");
   expect(window.start).toBe("2026-09-21");expect(window.end).toBe("2026-09-27");
-  expect(preview?.questions.length).toBe(8);
+  expect(preview?.questions.length).toBe(10);
  });
 });
 
