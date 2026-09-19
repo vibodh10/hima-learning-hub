@@ -52,7 +52,7 @@ export async function POST(request:Request){
     ]);
     const learnerName=profile?.display_name??"Learner";
     if(!currentMiss.learner_notified_at&&authUser.user?.email){
-      const sent=await sendHimaEmail(authUser.user.email,"Hima practice reminder",`<p>Hello ${safeEmailText(learnerName)},</p><p>A required Hima practice step was still incomplete at the end of ${safeEmailText(day)}. A red missed-practice badge has been added for this week.</p><p>Please sign in and continue your saved step. Hima will choose the practice or assessment you need next automatically.</p><p>This badge records a missed practice day; it is not a grade or judgement of ability.</p>`);
+      const sent=await sendHimaEmail(authUser.user.email,"SCCB Digital Learning Hub practice reminder",`<p>Hello ${safeEmailText(learnerName)},</p><p>A required SCCB Digital Learning Hub practice step was still incomplete at the end of ${safeEmailText(day)}. A red missed-practice badge has been added for this week.</p><p>Please sign in and continue your saved step. The SCCB Digital Learning Hub will choose the practice or assessment you need next automatically.</p><p>This badge records a missed practice day; it is not a grade or judgement of ability.</p>`);
       if(sent){await admin.from("mini_study_practice_misses").update({learner_notified_at:new Date().toISOString()}).eq("id",currentMiss.id);learnerEmails+=1;}
     }
 
@@ -68,14 +68,14 @@ export async function POST(request:Request){
       const inserted=await admin.from("interventions").insert({
         learner_id:learnerId,class_id:expectation.classId,kind:"missed_self_study",status:"open",
         evidence:{week_start:weekStart,week_end:weekEnd,miss_count:weekMisses.length,missed_dates:weekMisses.map(item=>item.missed_on),source:"automated_practice_monitor"},
-        note:"Three or more required Hima practice days were missed in the same school week. Review the pattern with the learner and record support or contact as appropriate. The attendance badges are not a judgement of ability.",
+        note:"Three or more required SCCB Digital Learning Hub practice days were missed in the same school week. Review the pattern with the learner and record support or contact as appropriate. The attendance badges are not a judgement of ability.",
       }).select("id,evidence").single();
       if(!inserted.error&&inserted.data){intervention=inserted.data;created=true;interventionsCreated+=1;}
     }
     if(created&&group?.teacher_id){
       const teacherAuth=await admin.auth.admin.getUserById(group.teacher_id);
       if(teacherAuth.data.user?.email){
-        const sent=await sendHimaEmail(teacherAuth.data.user.email,`Hima teacher attention: ${learnerName}`,`<p>${safeEmailText(learnerName)} has ${weekMisses.length} missed-practice badges for the week beginning ${safeEmailText(weekStart)}${group.name?` in ${safeEmailText(group.name)}`:""}.</p><p>Hima has opened a teacher intervention record. Please review the learner's practice and assessment evidence, check for barriers, and record any support or contact you decide is appropriate.</p><p>The missed-practice badges are attendance evidence only and do not determine ability or behaviour.</p>`);
+        const sent=await sendHimaEmail(teacherAuth.data.user.email,`SCCB Digital Learning Hub teacher attention: ${learnerName}`,`<p>${safeEmailText(learnerName)} has ${weekMisses.length} missed-practice badges for the week beginning ${safeEmailText(weekStart)}${group.name?` in ${safeEmailText(group.name)}`:""}.</p><p>The SCCB Digital Learning Hub has opened a teacher intervention record. Please review the learner's practice and assessment evidence, check for barriers, and record any support or contact you decide is appropriate.</p><p>The missed-practice badges are attendance evidence only and do not determine ability or behaviour.</p>`);
         if(sent){await admin.from("mini_study_practice_misses").update({teacher_notified_at:new Date().toISOString()}).eq("id",currentMiss.id);teacherEmails+=1;}
       }
     }
