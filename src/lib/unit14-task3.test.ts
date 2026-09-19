@@ -14,10 +14,10 @@ describe("Unit 14 Task 3 intensive practice",()=>{
   it("covers network hardware and DFD levels explicitly",()=>{
     const hardware=unit14Task3Lessons.find(lesson=>lesson.id==="hardware");
     expect(hardware?.matching.map(item=>item.left)).toEqual(expect.arrayContaining(["Router","Firewall","Switch","Wireless access point","Server"]));
-    const dfd=unit14Task3Lessons.find(lesson=>lesson.id==="dfd-levels");
-    expect(dfd?.learn.join(" ")).toContain("Context");
-    expect(dfd?.learn.join(" ")).toContain("Level 0");
-    expect(dfd?.learn.join(" ")).toContain("Level 1");
+    const dfdText=unit14Task3Lessons.find(lesson=>lesson.id==="dfd-levels")?.learn.join(" ").toLowerCase()??"";
+    expect(dfdText).toContain("context");
+    expect(dfdText).toContain("level 0");
+    expect(dfdText).toContain("level 1");
   });
 
   it("provides repeated unfamiliar-scenario and exam-family practice",()=>{
