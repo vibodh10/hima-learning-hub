@@ -24,15 +24,21 @@ describe("automatic assessment schedule",()=>{
   expect(monday?.kind).toBe("formative");expect(monday?.title).toBe("Formative Assessment 1");expect(monday?.questions.length).toBe(8);
   expect(sunday?.title).toBe("Formative Assessment 1");
  });
- it("presents Formative Assessment 2 two weeks later",()=>{
-  const plan=assessmentPlanFor("2026-10-05","4",lessons,[]);
+ it("keeps Formative Assessment 1 compulsory after its original week if it was missed",()=>{
+  expect(assessmentPlanFor("2026-09-28","4",lessons,[])?.title).toBe("Formative Assessment 1");
+  expect(assessmentPlanFor("2026-10-05","4",lessons,[])?.title).toBe("Formative Assessment 1");
+ });
+ it("presents Formative Assessment 2 once Formative Assessment 1 is complete",()=>{
+  const history=[completed("assessment:u4:formative:1","2026-09-22")];
+  const plan=assessmentPlanFor("2026-10-05","4",lessons,history);
   expect(plan?.kind).toBe("formative");expect(plan?.title).toBe("Formative Assessment 2");
  });
- it("runs Summative Assessment 1 on its own intervening week",()=>{
-  const plan=assessmentPlanFor("2026-10-12","4",lessons,[]);
+ it("runs Summative Assessment 1 after the earlier formative checks are complete",()=>{
+  const history=[completed("assessment:u4:formative:1","2026-09-22"),completed("assessment:u4:formative:2","2026-10-06")];
+  const plan=assessmentPlanFor("2026-10-12","4",lessons,history);
   expect(plan?.kind).toBe("summative");expect(plan?.title).toBe("Summative Assessment 1");
  });
- it("does not repeat a completed numbered assessment",()=>{
+ it("does not repeat a completed numbered assessment inside its week",()=>{
   const history=[completed("assessment:u4:formative:1","2026-09-22")];
   expect(assessmentPlanFor("2026-09-25","4",lessons,history)).toBeNull();
  });
