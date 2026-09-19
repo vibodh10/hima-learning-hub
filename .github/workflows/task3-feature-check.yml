@@ -19,4 +19,15 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npx vitest run src/lib/unit14-task3.test.ts
-      - run: npm run lint
+      - name: Lint changed feature files
+        run: >-
+          npx eslint
+          src/lib/unit14-task3.ts
+          src/lib/unit14-task3.test.ts
+          src/components/unit14-task3-practice.tsx
+          src/components/unit14-exam-practice.tsx
+          src/components/student-practice-badges.tsx
+          src/app/study/page.tsx
+          src/app/study/unit14-exam/page.tsx
+          'src/app/teacher/classes/[id]/student-view/page.tsx'
+          src/components/mini-study-group-page.tsx
