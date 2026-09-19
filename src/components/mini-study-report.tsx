@@ -19,27 +19,34 @@ export function MiniStudyReport({learners,records,baselines=[],units=[],classId,
       const legacy=baselines.find(b=>b.learner_id===learner.id&&evidenceUnit(b)===unit.id);
       return {unit,own,legacy,summary:miniStudyLearnerSummary(own)};
     });
-    return {...learner,learnerUnits,needsHelp:learnerUnits.some(item=>item.summary.needsHelp),hasLearning:learnerUnits.some(item=>Boolean(item.summary.latest)),hasStartingPoint:learnerUnits.some(item=>Boolean(item.summary.baseline||item.legacy))};
-  }).sort((a,b)=>Number(b.needsHelp)-Number(a.needsHelp)||a.name.localeCompare(b.name));
+    return {...learner,learnerUnits,reviewRequired:learnerUnits.some(item=>item.summary.assessment.teacherReviewRequired),needsHelp:learnerUnits.some(item=>item.summary.needsHelp),hasLearning:learnerUnits.some(item=>Boolean(item.summary.latest)),hasStartingPoint:learnerUnits.some(item=>Boolean(item.summary.baseline||item.legacy))};
+  }).sort((a,b)=>Number(b.reviewRequired)-Number(a.reviewRequired)||Number(b.needsHelp)-Number(a.needsHelp)||a.name.localeCompare(b.name));
 
   return <section aria-labelledby="mini-report-title">
     <h1 id="mini-report-title" className="text-3xl font-bold">Short self-study records</h1>
-    <p className="mt-3 max-w-3xl">Starting points, recent practice level, first answers and automatic next targets. Each unit is shown separately so evidence from different units is never combined. These are formative learning checks, not assignment grades.</p>
+    <p className="mt-3 max-w-3xl">Starting points, recent practice, automatic fortnightly formative assessments, monthly summative assessments and next targets. Each unit is kept separate. Hima automatically reteaches and rechecks weak skills; the teacher view is for oversight and reporting.</p>
     {!rows.length?<p className="card mt-6">No students have joined this group yet.</p>:<div className="mt-6 grid gap-4">{rows.map(row=><details className="card" key={row.id} open={expanded}>
-      <summary className="cursor-pointer text-lg font-bold">{row.name} · {row.needsHelp?"Automatic reinforcement active":row.hasLearning?"Learning recorded":row.hasStartingPoint?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}</summary>
+      <summary className="cursor-pointer text-lg font-bold">{row.name} · {row.reviewRequired?"Teacher review required":row.needsHelp?"Automatic reinforcement active":row.hasLearning?"Learning recorded":row.hasStartingPoint?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}</summary>
       <div className="mt-5 grid gap-5">{row.learnerUnits.map(item=><article key={item.unit.id} className="rounded-xl border border-slate-200 p-5">
         <h2 className="text-xl font-bold">{item.unit.label}</h2>
+        {item.summary.assessment.teacherReviewRequired&&<p className="mt-4 rounded-lg bg-red-50 p-4"><strong>Teacher review required. </strong>This learner has recorded three or more low first-attempt learning checks in the last seven days. Review the evidence below before deciding the cause or any behaviour action.</p>}
         {item.summary.supportReason&&<p className="mt-4 rounded-lg bg-amber-50 p-4"><strong>Automatic support signal: </strong>{item.summary.supportReason}</p>}
         {item.summary.baseline?.feedback.some(f=>f.questionId.startsWith("prereq:"))&&<p className="mt-4 font-semibold">Starting route: {startingPointRoute(item.summary.baseline)}. Provisional guidance, not a grade. {item.summary.latest&&`Latest practice: ${item.summary.latest.grade.correct/item.summary.latest.grade.total<0.5?"reinforcement continues automatically":item.summary.latest.grade.correct/item.summary.latest.grade.total<0.8?"core practice":"stretch work is available"}.`}</p>}
         <dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
           <div><dt className="font-semibold">Starting point</dt><dd>{item.summary.baseline?`Short starting point: ${item.summary.baseline.correct} of ${item.summary.baseline.total} correct`:item.legacy?`Existing full-unit starting point: ${item.legacy.correct_count} of ${item.legacy.question_count} correct. Preserved; no repeat needed.`:"Not recorded yet."}</dd></div>
-          <div><dt className="font-semibold">Current practice level</dt><dd>{item.summary.practiceLevel}</dd></div>
-          <div><dt className="font-semibold">Latest new-learning check</dt><dd>{item.summary.latest?`${item.summary.latest.title}: ${item.summary.latest.grade.correct} of ${item.summary.latest.grade.total} correct on first answers. ${item.summary.latest.finished?"Feedback reviewed and step completed.":"Feedback review not yet finished."}`:"No daily check recorded yet."}</dd></div>
+          <div><dt className="font-semibold">Current expertise</dt><dd>{item.summary.practiceLevel}</dd></div>
+          <div><dt className="font-semibold">Latest learning check</dt><dd>{item.summary.latest?`${item.summary.latest.title}: ${item.summary.latest.grade.correct} of ${item.summary.latest.grade.total} correct on first answers. ${item.summary.latest.finished?"Feedback reviewed and step completed.":"Feedback review not yet finished."}`:"No daily check recorded yet."}</dd></div>
           <div><dt className="font-semibold">Recall of the previous idea</dt><dd>{item.summary.recap?`${item.summary.recap.correct} of ${item.summary.recap.total} correct` : "Not checked yet"}</dd></div>
-          <div><dt className="font-semibold">Completed short steps</dt><dd>{item.summary.completedSteps}</dd></div>
+          <div><dt className="font-semibold">Learning warnings · 7 days</dt><dd>{item.summary.assessment.warningCount}{item.summary.assessment.warningCount>=3?" · review required":""}</dd></div>
         </dl>
+        {item.summary.assessment.latest&&<div className="mt-5 rounded-lg border border-slate-300 p-4">
+          <h3 className="font-bold">Latest automated assessment</h3>
+          <p className="mt-2">{item.summary.assessment.latest.title}: {item.summary.assessment.latest.grade.correct} of {item.summary.assessment.latest.grade.total} correct.</p>
+          <ul className="mt-3 space-y-1">{item.summary.assessment.latest.skills.map(skill=><li key={skill.skill}><strong>{skill.skill.replaceAll("-"," ")}:</strong> {skill.state} · {skill.correct}/{skill.total}</li>)}</ul>
+          <p className="mt-3 text-sm">Skills marked Developing or Needs reinforcement are selected for automatic follow-up practice. No teacher assignment is required.</p>
+        </div>}
         <div className="mt-5 rounded-lg border border-slate-300 p-4"><h3 className="font-bold">Automatic next target</h3><p className="mt-2">{item.summary.target}</p></div>
-        {item.summary.needsHelp&&<p className="mt-4">The portal will give this learner more explanation, practice and rechecking automatically. This signal is based on recorded answers and is not a fixed judgement of ability. No teacher learning task is required.</p>}
+        {item.summary.needsHelp&&<p className="mt-4">The portal will give this learner more explanation, practice and rechecking automatically. This signal is based on recorded answers and is not a fixed judgement of ability or proof of inattentive behaviour.</p>}
       </article>)}</div>
       {classId&&<p className="mt-5"><Link className="link" href={`/teacher/learners/${row.id}?classId=${classId}`}>Open full learner progress</Link></p>}
       <details className="mt-5 border-t border-slate-200 pt-4">
