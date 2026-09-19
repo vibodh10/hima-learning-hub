@@ -7,6 +7,7 @@ import { studyContentFor } from "./mini-study-content-expanded";
 import { nextStudyLesson, publicStudyQuestions, studyDay, studyQuestionSet, studyThinking, type StudyCard, type StudyGrade, type StudyQuestionKey, type StudyReward } from "./mini-study";
 import {selectStudyAssignment,studyHistoryForUnit,studySupportBaseline,type StudyAssignment} from "./mini-study-planning";
 import {isCombinedUnit2Unit6,startingPointDisplayTitle,startingPointQuestionsForAssignment} from "./mini-study-starting-point";
+import {assessmentPlanFor,isReinforcementLessonId,reinforcementLessonFor} from "./mini-study-assessment";
 
 export type StudySessionRow = {
   id:string;learner_id:string;class_id:string;unit_id:string;unit_code:string;lesson_id:string;
@@ -50,6 +51,18 @@ function studySupportBaselineForContext(rows:StudySessionRow[],context:StudyCont
   return sharedStartingPointSession(rows,context)?.grade??undefined;
 }
 
+function prerequisitePractice(history:ReturnType<typeof studyHistoryForUnit>){
+  return prerequisiteLessons.filter(lesson=>history.some(item=>item.kind==="baseline"&&item.feedback.some(answer=>!answer.correct&&answer.skill===lesson.skill)));
+}
+
+function hasAutomaticStep(unitCode:string,history:ReturnType<typeof studyHistoryForUnit>){
+  const content=studyContentFor(unitCode);
+  if(!content)return false;
+  if(reinforcementLessonFor(content.lessons,history))return true;
+  if(assessmentPlanFor(studyDay(new Date()),unitCode,content.lessons,history))return true;
+  return Boolean(nextStudyLesson([...prerequisitePractice(history),...content.lessons],history));
+}
+
 export async function studyContext(learnerId:string):Promise<StudyContext|null> {
   const client=await createClient();
   // A registration link defines the learner's study group. If a test account has
@@ -82,8 +95,7 @@ export async function studyContext(learnerId:string):Promise<StudyContext|null> 
     const classUnitCodes=assignments.filter(item=>item.classId===assignment.classId).map(item=>item.unitCode);
     const sharedComplete=isCombinedUnit2Unit6(classUnitCodes)&&(history??[]).some(row=>row.class_id===assignment.classId&&row.lesson_id===startingPointId&&row.status==="completed");
     if(!assignmentHistory.some(item=>item.kind==="baseline")&&!sharedComplete) return true;
-    const content=studyContentFor(assignment.unitCode);
-    return Boolean(content&&nextStudyLesson(content.lessons,assignmentHistory));
+    return hasAutomaticStep(assignment.unitCode,assignmentHistory);
   });
   if(!selected)return null;
   return {...selected,classUnitCodes:assignments.filter(item=>item.classId===selected.classId).map(item=>item.unitCode)};
@@ -93,6 +105,7 @@ export function cardForSession(row:StudySessionRow):StudyCard {
   const content=row.content;
   return {sessionId:row.id,kind:row.kind,title:content.title,unitTitle:content.unitTitle,
     lines:content.lines,example:content.example,support:content.support,thinking:content.thinking,secondsPerQuestion:content.secondsPerQuestion,
+    assessmentKind:content.assessmentKind,assessmentNumber:content.assessmentNumber,
     questions:publicStudyQuestions(row.question_keys,row.id)};
 }
 
@@ -130,7 +143,10 @@ async function studyHomeForContext(learnerId:string,context:StudyContext|null,co
     .eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
   if(legacyError) throw new Error("Your existing starting point could not be checked. Please try again.");
   if(!startingPointComplete) return {status:"ready",unitTitle:displayTitle,kind:"baseline"};
-  return nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history)
+  const hasStep=Boolean(reinforcementLessonFor(content.lessons,history)
+    ??assessmentPlanFor(today,context.unitCode,content.lessons,history)
+    ??nextStudyLesson([...prerequisitePractice(history),...content.lessons],history));
+  return hasStep
     ? {status:"ready",unitTitle:context.unitTitle,kind:"daily"}
     : {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
 }
@@ -163,9 +179,11 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   if(error) throw new Error("Your previous step could not be checked. Please try again.");
   const sessions=(rows??[]) as StudySessionRow[];
   const history=studyHistoryForContext(sessions,context);
-  const selected=nextStudyLesson([...prerequisiteLessons.filter(l=>history.some(h=>h.kind==="baseline"&&h.feedback.some(f=>!f.correct&&f.skill===l.skill))),...content.lessons],history);
-  if(!selected && home.kind==="daily") return {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
-  const previousId=history.filter(h=>h.kind==="daily").at(-1)?.lessonId;
+  const reinforcement=reinforcementLessonFor(content.lessons,history);
+  const assessment=reinforcement?null:assessmentPlanFor(studyDay(new Date()),context.unitCode,content.lessons,history);
+  const selected=reinforcement??(assessment?undefined:nextStudyLesson([...prerequisitePractice(history),...content.lessons],history));
+  if(!selected&&!assessment&&home.kind==="daily") return {status:"complete",message:"No outstanding prerequisite practice. You have completed the current lessons and stretch challenges for this unit. Your learning record has been saved."};
+  const previousId=history.filter(h=>h.kind==="daily"&&!h.lessonId.startsWith("assessment:")&&!h.lessonId.startsWith("reinforce:")).at(-1)?.lessonId;
   const previous=content.lessons.find(l=>l.id===previousId);
   const {data:legacy,error:legacyError}=await admin.from("unit_starting_point_baselines").select("correct_count,question_count").eq("learner_id",learnerId).eq("unit_id",context.unitId).maybeSingle();
   if(legacyError)throw new Error("Your starting point could not be checked. Please try again.");
@@ -174,10 +192,15 @@ export async function openStudySession(learnerId:string,continueToday=false):Pro
   const displayTitle=startingPointDisplayTitle(context.unitTitle,context.classUnitCodes);
   const card:Omit<StudyCard,"sessionId"|"questions">=home.kind==="baseline"
     ? {kind:"baseline",title:`${displayTitle} starting point`,unitTitle:displayTitle,secondsPerQuestion:5,lines:[`${baselineQuestions.length} short starting-point questions covering your assigned units. Five seconds each, with automatic advance.`,`Timeouts need another check; they do not prove a missing skill.`],example:"",support:""}
-    : {kind:"daily",title:selected!.title,unitTitle:context.unitTitle,lines:selected!.lines,example:selected!.example,support:selected!.support,thinking:studyThinking(selected!,baseline)};
-  const keys=opaqueKeys(home.kind==="baseline"?baselineQuestions:studyQuestionSet(selected!,previous));
+    : assessment
+      ? {kind:"daily",title:assessment.title,unitTitle:context.unitTitle,assessmentKind:assessment.kind,assessmentNumber:assessment.number,
+          lines:["This automatic assessment checks topics already taught or completed in Hima.","Answer independently. Hima will use the result to mark skills as secure, developing or needing reinforcement and will select follow-up practice automatically."],example:"",support:""}
+      : {kind:"daily",title:selected!.title,unitTitle:context.unitTitle,lines:selected!.lines,example:selected!.example,support:selected!.support,thinking:studyThinking(selected!,baseline)};
+  const questionSource=home.kind==="baseline"?baselineQuestions:assessment?assessment.questions:isReinforcementLessonId(selected!.id)?selected!.questions:studyQuestionSet(selected!,previous);
+  const keys=opaqueKeys(questionSource);
+  const lessonId=home.kind==="baseline"?startingPointId:assessment?assessment.lessonId:selected!.id;
   const {data:id,error:openError}=await admin.rpc("open_mini_study",{learner_uuid:learnerId,class_uuid:context.classId,unit_uuid:context.unitId,
-    lesson_value:home.kind==="baseline"?startingPointId:selected!.id,kind_value:home.kind,content_value:card,keys_value:keys});
+    lesson_value:lessonId,kind_value:home.kind,content_value:card,keys_value:keys});
   if(openError) {
     if(openError.message.includes("finished_today")) return getStudyHome(learnerId);
     throw new Error("Your step could not be opened. Please refresh and try again.");
