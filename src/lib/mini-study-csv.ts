@@ -16,24 +16,36 @@ function reportUnits(records:MiniStudyRecord[],baselines:StudyLegacyBaseline[],u
   return (ids.length?ids:[legacyUnit]).map(id=>({id,label:id===legacyUnit?"Current unit":`Unit ${id}`}));
 }
 
+function learnerWarnings(records:MiniStudyRecord[],learnerId:string){
+  const sevenDaysAgo=Date.now()-7*24*60*60*1000;
+  return records.filter(row=>row.learner_id===learnerId&&row.kind==="daily"&&row.grade&&row.checked_at&&row.status!=="abandoned"&&
+    Date.parse(row.checked_at)>=sevenDaysAgo&&(row.grade.total?row.grade.correct/row.grade.total:0)<.5).length;
+}
+
 /** Exports one current summary per learner and per unit so unlike instruments are never combined. */
 export function miniStudyCsv(group:string,learners:{id:string;name:string}[],records:MiniStudyRecord[],baselines:StudyLegacyBaseline[],units:StudyUnitRef[]=[]){
   const unitRefs=reportUnits(records,baselines,units);
   const unitLabel=new Map(unitRefs.map(unit=>[unit.id,unit.label]));
   const rows:unknown[][]=[
-    ["Short formative self-study; not assignment grades. Different topics and starting-point instruments are not directly comparable."],
-    ["Group","Student","Unit","Record type","Step","Checked at (UTC)","Correct (new learning)","Total (new learning)","Recap correct","Recap total","Completed daily steps","Starting point","Current practice level","Status","Automatic target","Question","First answer","Expected answer","Answer result"],
+    ["Automated self-study and assessment evidence. Learning warnings identify repeated low first-attempt checks; they do not establish a behaviour cause."],
+    ["Group","Student","Unit","Record type","Step","Checked at (UTC)","Correct (new learning)","Total (new learning)","Recap correct","Recap total","Completed daily steps","Starting point","Current expertise","Latest assessment","Assessment skill states","Learning warnings across active units (7 days)","Teacher review required","Status","Automatic target","Question","First answer","Expected answer","Answer result"],
   ];
   for(const learner of learners){
+    const warningCount=learnerWarnings(records,learner.id);
+    const reviewRequired=warningCount>=3;
     for(const unit of unitRefs){
       const own=records.filter(r=>r.learner_id===learner.id&&r.status!=="abandoned"&&evidenceUnit(r)===unit.id);
       const summary=miniStudyLearnerSummary(own);
       const legacy=baselines.find(b=>b.learner_id===learner.id&&evidenceUnit(b)===unit.id);
       const startingPoint=summary.baseline?`${summary.baseline.correct} of ${summary.baseline.total}`:legacy?`${legacy.correct_count} of ${legacy.question_count}`:"Not recorded";
+      const assessment=summary.assessment.latest;
+      const skillStates=assessment?.skills.map(skill=>`${skill.skill}: ${skill.state} (${skill.correct}/${skill.total})`).join("; ")??"Not assessed yet";
       rows.push([group,learner.name,unit.label,"Current summary",summary.latest?.title??"No daily check recorded",summary.latest?.checkedAt,
         summary.latest?.grade.correct,summary.latest?.grade.total,summary.recap?.correct,summary.recap?.total,summary.completedSteps,
-        startingPoint,summary.practiceLevel,summary.needsHelp?"Automatic reinforcement active":summary.latest?"Learning recorded":"Starting point or next step pending",summary.target]);
-      if(legacy)rows.push([group,learner.name,unit.label,"Existing full-unit starting point","Preserved full-unit assessment",legacy.completed_at,legacy.correct_count,legacy.question_count,"","","",`${legacy.correct_count} of ${legacy.question_count}`,summary.practiceLevel,"Completed"]);
+        startingPoint,summary.practiceLevel,assessment?`${assessment.title}: ${assessment.grade.correct}/${assessment.grade.total}`:"Not assessed yet",skillStates,
+        warningCount,reviewRequired?"Yes":"No",
+        reviewRequired?"Teacher review required":summary.needsHelp?"Automatic reinforcement active":summary.latest?"Learning recorded":"Starting point or next step pending",summary.target]);
+      if(legacy)rows.push([group,learner.name,unit.label,"Existing full-unit starting point","Preserved full-unit assessment",legacy.completed_at,legacy.correct_count,legacy.question_count,"","","",`${legacy.correct_count} of ${legacy.question_count}`,summary.practiceLevel,"","",warningCount,reviewRequired?"Yes":"No","Completed"]);
     }
     const own=records.filter(r=>r.learner_id===learner.id&&r.status!=="abandoned"&&r.grade)
       .sort((a,b)=>(a.checked_at??"").localeCompare(b.checked_at??""));
@@ -41,8 +53,9 @@ export function miniStudyCsv(group:string,learners:{id:string;name:string}[],rec
       const grade=record.grade!;
       const recap=grade.feedback.filter(f=>f.recap);
       const label=unitLabel.get(evidenceUnit(record))??"Current unit";
-      for(const answer of grade.feedback)rows.push([group,learner.name,label,record.kind==="baseline"?"Short starting point":"Daily step",record.content.title,record.checked_at,
-        grade.correct,grade.total,recap.length?recap.filter(f=>f.correct).length:"",recap.length||"","","","",record.status,record.target_text,
+      const recordType=record.kind==="baseline"?"Short starting point":record.content.assessmentKind?`${record.content.assessmentKind==="summative"?"Summative":"Formative"} assessment`:"Daily step";
+      for(const answer of grade.feedback)rows.push([group,learner.name,label,recordType,record.content.title,record.checked_at,
+        grade.correct,grade.total,recap.length?recap.filter(f=>f.correct).length:"",recap.length||"","","","","","",warningCount,reviewRequired?"Yes":"No",record.status,record.target_text,
         `${answer.recap?"Recap: ":""}${answer.prompt??answer.skill}`,answer.selectedAnswer??"Not saved in this older record",answer.correctAnswer,answer.correct?"Correct":"Needs practice"]);
     }
   }

@@ -18,6 +18,7 @@ export type StudyCard = {
   sessionId: string; kind: "baseline" | "daily"; title: string; unitTitle: string;
   lines: string[]; example: string; support: string; thinking?: string;
   questions: StudyQuestion[]; secondsPerQuestion?:number;
+  assessmentKind?:"formative"|"summative";assessmentNumber?:number;
 };
 export type StudyResult = { ok: false; message: string } | { ok: true; grade: StudyGrade };
 export type StudyReward = { xp: number; badge: string | null; nextOn: string };
