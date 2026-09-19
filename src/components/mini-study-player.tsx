@@ -14,7 +14,7 @@ export function MiniStudyHome({initial}:{initial:StudyHome}) {
   return <section className="mini-study-panel">
     <p className="mini-study-kicker">Your self-study</p>
     <h1>{home.status==="ready"?(home.kind==="baseline"?"Let's find your starting point":"Your required next step"):home.status==="complete"?"You're up to date":"Your next step"}</h1>
-    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"A short timed starting point, one question at a time. The check moves on automatically.":"If a formal assessment is due, Hima will open it before ordinary practice. Otherwise Hima will choose the next reinforcement or stretch step from your saved learning."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
+    {home.status==="ready"?<><p>{home.unitTitle}</p><p>{home.kind==="baseline"?"A short timed starting point, one question at a time. The check moves on automatically.":"If a formal assessment is due, the SCCB Digital Learning Hub will open it before ordinary practice. Otherwise it will choose the next reinforcement or stretch step from your saved learning."}</p></>:<p role={home.status==="unavailable"?"status":undefined}>{home.message}</p>}
     {home.status!=="complete"&&<button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
       try{setHome(await beginMiniStudy());}
       catch{setHome({status:"unavailable",message:"Your connection was interrupted. Try again to reopen your saved step."});}
@@ -130,8 +130,8 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
   }
   const attentionNotice=grade&&grade.total>0&&grade.correct/grade.total<.5
     ? card.assessmentKind
-      ? "Learning check warning: this assessment needs reinforcement. Hima has recorded it and will automatically give you relevant practice and recheck the skills."
-      : "Learning check warning: this first-attempt check needs attention. Hima will automatically give you extra explanation, practice and another check."
+      ? "Learning check warning: this assessment needs reinforcement. The SCCB Digital Learning Hub has recorded it and will automatically give you relevant practice and recheck the skills."
+      : "Learning check warning: this first-attempt check needs attention. The SCCB Digital Learning Hub will automatically give you extra explanation, practice and another check."
     : undefined;
   if(reward) return <StudyDone reward={reward} attentionNotice={attentionNotice}/>;
 
@@ -141,7 +141,7 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
     <div className="mini-study-explanation">{card.lines.map(line=><p key={line}>{line}</p>)}</div>
     <div className="mini-study-help">
       <h2>Assessment integrity</h2>
-      <p>This assessment must stay in full screen. If you leave full screen or switch away from this page, Hima pauses the assessment and records the event for your tutor. You can return to full screen and continue.</p>
+      <p>This assessment must stay in full screen. If you leave full screen or switch away from this page, the assessment pauses and the event is recorded for your tutor. You can return to full screen and continue.</p>
       <p>Question and answer order may differ from another learner&apos;s. Copy, paste, text selection and the context menu are disabled while the assessment is active.</p>
     </div>
     <button className="mini-study-primary" onClick={enterAssessment}>Enter full screen and start assessment</button>
@@ -151,7 +151,7 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
   if(integrityLocked&&integrityActive)return <section className="mini-study-panel" role="alert" style={{userSelect:"none"}}>
     <p className="mini-study-kicker">Assessment paused</p>
     <h1>Return to full screen to continue your assessment</h1>
-    <p>Your answers are still here. Hima has recorded that the assessment page or full-screen mode was left. This does not automatically fail the assessment.</p>
+    <p>Your answers are still here. The assessment page or full-screen exit has been recorded for your tutor. This does not automatically fail the assessment.</p>
     <button className="mini-study-primary" onClick={returnToFullscreen}>Return to full screen</button>
     {error&&<p className="mini-study-error" role="alert">{error}</p>}
   </section>;
@@ -210,7 +210,7 @@ export function StudyDone({reward,attentionNotice}:{reward:StudyReward;attention
     {reward.xp>0&&<p className="mini-study-xp">+{reward.xp} XP</p>}
     {reward.badge&&<p data-achievement-badge className="mini-study-badge"><span className="gold-badge-icon" aria-hidden="true">★</span>{reward.badge}</p>}
     {attentionNotice&&<p className="mini-study-error" role="status">{attentionNotice}</p>}
-    <p>Well done for taking this step. Hima has saved the result and will choose what you need next automatically. If you want to keep learning, you can do another lesson.</p>
+    <p>Well done for taking this step. Your result has been saved, and the SCCB Digital Learning Hub will choose what you need next automatically. If you want to keep learning, you can do another lesson.</p>
     <p>You can close the portal now.</p>
     <button className="mini-study-primary" disabled={pending} onClick={()=>start(async()=>{
       setError("");
