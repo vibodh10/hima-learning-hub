@@ -71,11 +71,10 @@ export function upcomingAssessmentWindows(day:string,count=4):StudyAssessmentWin
  */
 export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[],day=studyDay(new Date())){
   const lessonById=new Map(lessons.map(lesson=>[lesson.id,lesson]));
-  const skills=new Set<string>();
   return releasedSowLessonIds(unitCode,day).flatMap(id=>{
     const lesson=lessonById.get(id);
-    if(!lesson||["analysis","evaluation"].includes(lesson.skill)||skills.has(lesson.skill))return [];
-    skills.add(lesson.skill);return [lesson];
+    if(!lesson||["analysis","evaluation"].includes(lesson.skill))return [];
+    return [lesson];
   });
 }
 
@@ -86,7 +85,7 @@ function planFor(window:StudyAssessmentWindow,unitCode:string,lessons:StudyLesso
   // window. An overdue Formative 1 therefore never gains topics taught later.
   const eligible=taughtPracticeLessons(unitCode,lessons,window.start);
   const skillLimit=5;
-  // Use the newest five released skills so later formatives naturally include
+  // Use the newest five released lessons so later formatives naturally include
   // recent teaching while retaining overlap with earlier checks where possible.
   const selected=eligible.slice(-skillLimit);
   if(selected.length<2)return null;
