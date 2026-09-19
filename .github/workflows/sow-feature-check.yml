@@ -1,0 +1,23 @@
+name: SOW feature checks
+
+on:
+  push:
+    branches: [feat/sow-driven-unit4-release-v3]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npx vitest run src/lib/mini-study-sow-release.test.ts src/lib/mini-study-assessment.test.ts
+      - name: Lint changed files
+        run: npx eslint src/lib/mini-study-sow-release.ts src/lib/mini-study-sow-release.test.ts src/lib/mini-study-unit4-sow-practice.ts src/lib/mini-study-content-expanded.ts src/lib/mini-study-assessment.ts
