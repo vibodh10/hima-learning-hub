@@ -38,7 +38,7 @@ export function buildFormativeAssessmentReport(records:MiniStudyRecord[]):{asses
     const states=assessmentSkillStates(grade);
     const secure=states.filter(item=>item.state==="Secure");
     const improvement=states.filter(item=>item.state!=="Secure");
-    const linkedPractice=records.filter(item=>item.lesson_id.startsWith(`reinforce:${record.lesson_id}:`));
+    const linkedPractice=record.lesson_id?records.filter(item=>item.lesson_id?.startsWith(`reinforce:${record.lesson_id}:`)):[];
     const whatWentWell=secure.length
       ? secure.map(item=>`${displaySkill(item.skill)} was secure (${item.correct}/${item.total}).`)
       : grade.correct>0?[`${grade.correct} of ${grade.total} assessment answers were correct, but no assessed skill is secure yet.`]
