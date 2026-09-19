@@ -3,7 +3,10 @@ import {assessmentSkillStates} from "./mini-study-assessment";
 
 export type StudyUnitRef={id:string;label:string};
 export type StudyLegacyBaseline={learner_id:string;unit_id?:string;correct_count:number;question_count:number;completed_at:string};
-export type MiniStudyRecord={id:string;learner_id:string;unit_id?:string;kind:"baseline"|"daily";status:string;content:{title?:string;assessmentKind?:"formative"|"summative";assessmentNumber?:number};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
+export type StudyIntegrityEvent={session_id:string;event_type:"fullscreen_exit"|"tab_hidden"|"fullscreen_return";occurred_at:string};
+export type StudyPracticeMiss={id:string;learner_id:string;class_id:string;unit_id:string|null;missed_on:string;learner_notified_at:string|null;teacher_notified_at:string|null;created_at:string};
+export type StudyIntervention={id:string;learner_id:string;class_id:string;kind:string;status:string;evidence:unknown;note:string|null;created_at:string;resolved_at:string|null};
+export type MiniStudyRecord={id:string;learner_id:string;unit_id?:string;lesson_id?:string;kind:"baseline"|"daily";status:string;content:{title?:string;assessmentKind?:"formative"|"summative";assessmentNumber?:number};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
 
 function practiceLevel(records:MiniStudyRecord[],baseline:StudyGrade|null) {
   const recent=records.filter(r=>r.kind==="daily"&&r.status==="completed"&&r.grade)
@@ -26,6 +29,17 @@ function practiceLevel(records:MiniStudyRecord[],baseline:StudyGrade|null) {
 function assessmentEvidence(records:MiniStudyRecord[]){
   const checked=records.filter(row=>row.grade&&row.status!=="abandoned").sort((a,b)=>(b.checked_at??"").localeCompare(a.checked_at??""));
   const latest=checked.find(row=>row.kind==="daily"&&Boolean(row.content.assessmentKind));
+  const formatives=checked.filter(row=>row.kind==="daily"&&row.content.assessmentKind==="formative"&&row.grade)
+    .sort((a,b)=>(a.content.assessmentNumber??0)-(b.content.assessmentNumber??0)||(a.checked_at??"").localeCompare(b.checked_at??""));
+  const previousFormative=formatives.length>1?formatives[formatives.length-2]:null;
+  const latestFormative=formatives.at(-1)??null;
+  const formativeProgress=latestFormative?{
+    from:previousFormative?{number:previousFormative.content.assessmentNumber,correct:previousFormative.grade!.correct,total:previousFormative.grade!.total}:null,
+    to:{number:latestFormative.content.assessmentNumber,correct:latestFormative.grade!.correct,total:latestFormative.grade!.total},
+    percentagePointChange:previousFormative
+      ? Math.round((((latestFormative.grade!.total?latestFormative.grade!.correct/latestFormative.grade!.total:0)-(previousFormative.grade!.total?previousFormative.grade!.correct/previousFormative.grade!.total:0))*100)*10)/10
+      : null,
+  }:null;
   const sevenDaysAgo=Date.now()-7*24*60*60*1000;
   const warnings=checked.filter(row=>{
     if(row.kind!=="daily"||!row.grade||!row.checked_at)return false;
@@ -34,9 +48,10 @@ function assessmentEvidence(records:MiniStudyRecord[]){
   }).length;
   return {
     latest:latest?{
-      title:latest.content.title??"Assessment",kind:latest.content.assessmentKind!,number:latest.content.assessmentNumber,
+      sessionId:latest.id,title:latest.content.title??"Assessment",kind:latest.content.assessmentKind!,number:latest.content.assessmentNumber,
       checkedAt:latest.checked_at,grade:latest.grade!,skills:assessmentSkillStates(latest.grade),
     }:null,
+    formativeProgress,
     warningCount:warnings,
     teacherReviewRequired:warnings>=3,
   };

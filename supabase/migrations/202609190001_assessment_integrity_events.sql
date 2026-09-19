@@ -1,0 +1,25 @@
+-- Factual browser integrity events for formal Hima assessments.
+-- These events are evidence for teacher review, not an automatic finding of cheating.
+create table if not exists public.mini_study_integrity_events (
+  id uuid primary key default gen_random_uuid(),
+  session_id uuid not null references public.mini_study_sessions(id) on delete cascade,
+  event_type text not null check(event_type in ('fullscreen_exit','tab_hidden','fullscreen_return')),
+  occurred_at timestamptz not null default now()
+);
+
+create index if not exists mini_study_integrity_session_time
+  on public.mini_study_integrity_events(session_id,occurred_at);
+
+alter table public.mini_study_integrity_events enable row level security;
+revoke all on public.mini_study_integrity_events from public,anon,authenticated;
+grant select on public.mini_study_integrity_events to authenticated;
+grant all on public.mini_study_integrity_events to service_role;
+
+create policy mini_study_integrity_teacher_read on public.mini_study_integrity_events
+for select to authenticated
+using (
+  exists (
+    select 1 from public.mini_study_sessions s
+    where s.id=session_id and public.can_manage_class(s.class_id)
+  )
+);

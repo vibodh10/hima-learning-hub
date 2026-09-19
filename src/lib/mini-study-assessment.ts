@@ -1,15 +1,15 @@
 import type {StudyCompletion,StudyGrade,StudyLesson,StudyQuestionKey} from "./mini-study";
 
 export type StudyAssessmentKind="formative"|"summative";
+export type StudyAssessmentWindow={kind:StudyAssessmentKind;number:number;title:string;start:string;end:string};
 export type StudyAssessmentPlan={
   lessonId:string;kind:StudyAssessmentKind;number:number;cycle:number;title:string;questions:StudyQuestionKey[];
 };
 export type StudySkillState={skill:string;correct:number;total:number;state:"Secure"|"Developing"|"Needs reinforcement"};
 
-// The first numbered formative assessment is deliberately scheduled for the
-// teaching week beginning 21 September 2026. Formatives then repeat every two
-// weeks. Summatives run in their own four-week cycle, on the intervening week,
-// so Formative Assessment 1, 2, 3... remain a continuous sequence.
+// Formal checks follow the tutor's taught curriculum, not completion of Hima's
+// second-practice lessons. Formative 1 is deliberately available for the full
+// teaching week beginning 21 September 2026.
 const firstFormativeWeek="2026-09-21";
 const firstSummativeWeek="2026-10-12";
 const weekDays=7;
@@ -17,17 +17,19 @@ const formativeIntervalDays=14;
 const summativeIntervalDays=28;
 
 const seededLessonIds:Record<string,string[]>={
-  // Tutor-confirmed material already taught in class. Later coverage expands
-  // automatically from completed Hima lessons rather than exposing future topics.
+  // Tutor-confirmed material already taught in class. Update this map as the
+  // teaching sequence advances; Hima lessons themselves do not unlock formal
+  // assessment topics because Hima is the reinforcement layer, not first teaching.
   "2":["u2-records-v1","u2-validation-v1","u2-queries-reports-v1"],
-  "4":["u4-variables-v1","u4-selection-v1","u4-iteration-v1","u4-data-types-operators-v1"],
-  "6":["u6-semantic-html-v1","u6-navigation-v1"],
+  "4":["u4-variables-v1","u4-selection-v1","u4-iteration-v1","u4-data-types-operators-v1","u4-functions-basics-v1"],
+  "6":["u6-html-page-basics-v1","u6-links-images-folders-v1","u6-css-methods-v1"],
 };
 
 export function isAssessmentLessonId(id:string){return id.startsWith("assessment:");}
 export function isReinforcementLessonId(id:string){return id.startsWith("reinforce:");}
 
 function dayNumber(day:string){return Math.floor(Date.parse(`${day}T12:00:00Z`)/86_400_000);}
+function addDays(day:string,amount:number){const date=new Date(`${day}T12:00:00Z`);date.setUTCDate(date.getUTCDate()+amount);return date.toISOString().slice(0,10);}
 function dueNumber(day:string,first:string,intervalDays:number):number|null{
   const elapsed=dayNumber(day)-dayNumber(first);
   if(elapsed<0)return null;
@@ -35,50 +37,84 @@ function dueNumber(day:string,first:string,intervalDays:number):number|null{
   if(offset<0||offset>=weekDays)return null;
   return Math.floor(elapsed/intervalDays)+1;
 }
-
-function completedLearning(history:StudyCompletion[]){
-  return history.filter(item=>item.kind==="daily"&&!isAssessmentLessonId(item.lessonId)&&!isReinforcementLessonId(item.lessonId));
+function windowFor(kind:StudyAssessmentKind,number:number):StudyAssessmentWindow{
+  const first=kind==="formative"?firstFormativeWeek:firstSummativeWeek;
+  const interval=kind==="formative"?formativeIntervalDays:summativeIntervalDays;
+  const start=addDays(first,(number-1)*interval);
+  return {kind,number,start,end:addDays(start,weekDays-1),title:`${kind==="formative"?"Formative":"Summative"} Assessment ${number}`};
+}
+function scheduledWindowsThrough(day:string):StudyAssessmentWindow[]{
+  const windows:StudyAssessmentWindow[]=[];
+  for(let number=1;number<=40;number++){
+    for(const kind of ["formative","summative"] as const){
+      const window=windowFor(kind,number);
+      if(dayNumber(window.start)<=dayNumber(day))windows.push(window);
+    }
+  }
+  return windows.sort((a,b)=>a.start.localeCompare(b.start)||a.kind.localeCompare(b.kind));
 }
 
-function eligibleLessons(unitCode:string,lessons:StudyLesson[],history:StudyCompletion[]){
-  const completed=completedLearning(history);
+export function activeAssessmentWindow(day:string):StudyAssessmentWindow|null{
+  const summative=dueNumber(day,firstSummativeWeek,summativeIntervalDays);
+  if(summative)return windowFor("summative",summative);
+  const formative=dueNumber(day,firstFormativeWeek,formativeIntervalDays);
+  return formative?windowFor("formative",formative):null;
+}
+
+/** Current or future scheduled windows, used by the teacher preview. */
+export function upcomingAssessmentWindows(day:string,count=4):StudyAssessmentWindow[]{
+  const result:StudyAssessmentWindow[]=[];
+  for(let number=1;number<=20;number++){
+    for(const kind of ["formative","summative"] as const){
+      const window=windowFor(kind,number);
+      if(dayNumber(window.end)>=dayNumber(day))result.push(window);
+    }
+  }
+  return result.sort((a,b)=>a.start.localeCompare(b.start)||a.kind.localeCompare(b.kind)).slice(0,count);
+}
+
+/**
+ * Hima is second practice. Ordinary Hima study as well as formal assessment
+ * coverage stays inside the tutor-confirmed taught pool; it must not become the
+ * learner's first exposure to a future curriculum topic.
+ */
+export function taughtPracticeLessons(unitCode:string,lessons:StudyLesson[]){
   const lessonById=new Map(lessons.map(lesson=>[lesson.id,lesson]));
-  const ordered:StudyLesson[]=[];
-  for(const id of seededLessonIds[unitCode]??[]){const lesson=lessonById.get(id);if(lesson)ordered.push(lesson);}
-  for(const item of completed){const lesson=lessonById.get(item.lessonId);if(lesson)ordered.push(lesson);}
   const skills=new Set<string>();
-  return ordered.filter(lesson=>{
-    if(["analysis","evaluation"].includes(lesson.skill)||skills.has(lesson.skill))return false;
-    skills.add(lesson.skill);return true;
+  return (seededLessonIds[unitCode]??[]).flatMap(id=>{
+    const lesson=lessonById.get(id);
+    if(!lesson||["analysis","evaluation"].includes(lesson.skill)||skills.has(lesson.skill))return [];
+    skills.add(lesson.skill);return [lesson];
   });
 }
 
-function planFor(kind:StudyAssessmentKind,number:number,unitCode:string,lessons:StudyLesson[],history:StudyCompletion[]):StudyAssessmentPlan|null{
-  const lessonId=`assessment:u${unitCode}:${kind}:${number}`;
-  if(history.some(item=>item.lessonId===lessonId))return null;
-  const eligible=eligibleLessons(unitCode,lessons,history);
-  const skillLimit=kind==="summative"?5:4;
+function planFor(window:StudyAssessmentWindow,unitCode:string,lessons:StudyLesson[],history:StudyCompletion[],ignoreCompletion=false):StudyAssessmentPlan|null{
+  const lessonId=`assessment:u${unitCode}:${window.kind}:${window.number}`;
+  if(!ignoreCompletion&&history.some(item=>item.lessonId===lessonId))return null;
+  const eligible=taughtPracticeLessons(unitCode,lessons);
+  const skillLimit=5;
   const selected=eligible.slice(0,skillLimit);
   if(selected.length<2)return null;
   const questions=selected.flatMap(lesson=>lesson.questions.slice(0,2).map(question=>({...question,recap:false})));
   if(questions.length<4)return null;
-  return {lessonId,kind,number,cycle:number,title:`${kind==="summative"?"Summative":"Formative"} Assessment ${number}`,questions:questions.slice(0,10)};
+  return {lessonId,kind:window.kind,number:window.number,cycle:window.number,title:window.title,questions:questions.slice(0,10)};
+}
+
+/** Exact teacher-only preview of a scheduled assessment. */
+export function assessmentPreviewPlan(window:StudyAssessmentWindow,unitCode:string,lessons:StudyLesson[]):StudyAssessmentPlan|null{
+  return planFor(window,unitCode,lessons,[],true);
 }
 
 /**
- * Formative Assessment 1 is available throughout 21-27 September 2026.
- * Formative Assessment 2 follows two weeks later, then 3, 4 and so on.
- * Summative assessments run every four weeks on a separate intervening week.
- * Only already-taught seeded topics and lessons actually completed in Hima are eligible.
+ * The oldest scheduled formal assessment that has not been completed remains
+ * compulsory even after its original assessment week has ended. Newer checks
+ * cannot silently replace a missed Formative/Summative Assessment.
  */
 export function assessmentPlanFor(day:string,unitCode:string,lessons:StudyLesson[],history:StudyCompletion[]):StudyAssessmentPlan|null{
-  const summativeNumber=dueNumber(day,firstSummativeWeek,summativeIntervalDays);
-  if(summativeNumber){
-    const summative=planFor("summative",summativeNumber,unitCode,lessons,history);
-    if(summative)return summative;
+  for(const window of scheduledWindowsThrough(day)){
+    const plan=planFor(window,unitCode,lessons,history);
+    if(plan)return plan;
   }
-  const formativeNumber=dueNumber(day,firstFormativeWeek,formativeIntervalDays);
-  if(formativeNumber)return planFor("formative",formativeNumber,unitCode,lessons,history);
   return null;
 }
 
@@ -91,7 +127,8 @@ export function assessmentPlanFor(day:string,unitCode:string,lessons:StudyLesson
 export function reinforcementLessonFor(lessons:StudyLesson[],history:StudyCompletion[]):StudyLesson|undefined{
   const assessment=[...history].filter(item=>item.kind==="daily"&&isAssessmentLessonId(item.lessonId)).at(-1);
   if(!assessment)return undefined;
-  const missed=[...new Set(assessment.feedback.filter(item=>!item.recap&&!item.correct).map(item=>item.skill))];
+  const missedFeedback=assessment.feedback.filter(item=>!item.recap&&!item.correct);
+  const missed=[...new Set(missedFeedback.map(item=>item.skill))];
   for(const skill of missed){
     const later=history.filter(item=>item.completedAt>assessment.completedAt);
     const corrected=later.some(item=>{
@@ -103,7 +140,9 @@ export function reinforcementLessonFor(lessons:StudyLesson[],history:StudyComple
     const prefix=`reinforce:${assessment.lessonId}:${slug}:`;
     const retries=later.filter(item=>item.lessonId.startsWith(prefix)).length;
     if(retries>=3)continue;
-    const source=lessons.find(lesson=>lesson.skill===skill);
+    const missedQuestionIds=new Set(missedFeedback.filter(item=>item.skill===skill).map(item=>item.questionId));
+    const source=lessons.find(lesson=>lesson.skill===skill&&lesson.questions.some(question=>missedQuestionIds.has(question.id)))
+      ??lessons.find(lesson=>lesson.skill===skill);
     if(!source)continue;
     return {...source,id:`${prefix}${retries+1}`,title:`Practice again: ${source.title}`,
       lines:["Your last assessment showed that this idea needs another check.",...source.lines],
