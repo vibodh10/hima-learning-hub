@@ -3,6 +3,7 @@ import {assessmentSkillStates} from "./mini-study-assessment";
 
 export type StudyUnitRef={id:string;label:string};
 export type StudyLegacyBaseline={learner_id:string;unit_id?:string;correct_count:number;question_count:number;completed_at:string};
+export type StudyIntegrityEvent={session_id:string;event_type:"fullscreen_exit"|"tab_hidden"|"fullscreen_return";occurred_at:string};
 export type MiniStudyRecord={id:string;learner_id:string;unit_id?:string;kind:"baseline"|"daily";status:string;content:{title?:string;assessmentKind?:"formative"|"summative";assessmentNumber?:number};grade:StudyGrade|null;target_text:string|null;needs_help:boolean;checked_at:string|null;completed_at:string|null};
 
 function practiceLevel(records:MiniStudyRecord[],baseline:StudyGrade|null) {
@@ -34,7 +35,7 @@ function assessmentEvidence(records:MiniStudyRecord[]){
   }).length;
   return {
     latest:latest?{
-      title:latest.content.title??"Assessment",kind:latest.content.assessmentKind!,number:latest.content.assessmentNumber,
+      sessionId:latest.id,title:latest.content.title??"Assessment",kind:latest.content.assessmentKind!,number:latest.content.assessmentNumber,
       checkedAt:latest.checked_at,grade:latest.grade!,skills:assessmentSkillStates(latest.grade),
     }:null,
     warningCount:warnings,
