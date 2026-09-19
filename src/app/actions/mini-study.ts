@@ -53,10 +53,19 @@ export async function checkMiniStudy(sessionId:string,responses:unknown):Promise
     if(error) return {ok:false,message:"Your answers could not be saved. Keep this page open and try again."};
     const content=session.content as {assessmentKind?:unknown}|null;
     const formal=Boolean(content&&["formative","summative"].includes(String(content.assessmentKind??"")));
-    // Teachers and automatic reinforcement retain the complete grade in the DB.
-    // Students receive the score only, so the first finisher cannot harvest the
-    // answer key and explanations for classmates during the assessment window.
-    return {ok:true,grade:formal?{correct:grade.correct,total:grade.total,feedback:[]}:grade};
+    if(formal){
+      const first=session.question_keys[0];
+      const safeFeedback=first?[{
+        questionId:first.id,correct:grade.correct===grade.total,recap:false,skill:"assessment",
+        explanation:"Detailed question feedback is kept for your tutor during the assessment period. Hima will automatically select any second practice you need.",
+        correctAnswer:"Detailed answers are not released during the assessment period.",prompt:"Your assessment has been submitted."
+      }]:[];
+      // Teachers and automatic reinforcement retain the complete grade in the DB.
+      // Students receive only a submission message and score, so the first
+      // finisher cannot harvest the answer key for classmates.
+      return {ok:true,grade:{correct:grade.correct,total:grade.total,feedback:safeFeedback}};
+    }
+    return {ok:true,grade};
   } catch { return {ok:false,message:"Your answers could not be saved. Keep this page open and try again."}; }
 }
 
