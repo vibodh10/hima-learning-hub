@@ -36,7 +36,7 @@ export default async function FormativeReportPage({params,searchParams}:{params:
       <h1 className="mt-2 text-3xl font-bold">{learner.name}</h1>
       <p className="mt-2">{group.name} · Unit {unit.code}: {unit.title}</p>
       <p className="mt-1 text-sm text-slate-600">Generated {generated} · Tutor view: {actor.display_name}</p>
-      <p className="mt-3 text-sm">This report is generated from the learner&apos;s saved first responses and recorded SCCB Digital Learning Hub feedback. It keeps the original response evidence alongside improvement targets and later progress.</p>
+      <p className="mt-3 text-sm">This report is generated from the learner&apos;s saved first responses and recorded Digital Learning Hub feedback. It keeps the original response evidence alongside improvement targets and later progress.</p>
     </header>
 
     {!report.assessments.length?<section className="card mt-6"><h2 className="text-xl font-bold">No completed formative assessment yet</h2><p className="mt-2">The report will populate automatically after Formative Assessment 1 is submitted.</p></section>:<>
