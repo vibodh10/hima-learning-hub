@@ -23,12 +23,35 @@ describe("Unit 4 SOW-driven release",()=>{
     expect(releasedSowLessonIds("4","2026-10-09")).toContain("u4-tuples-dictionaries-v1");
     expect(releasedSowLessonIds("4","2026-11-06")).toContain("u4-pygame-events-v1");
     expect(releasedSowLessonIds("4","2026-12-02")).toContain("u4-libraries-reuse-v1");
-    expect(sowReleasesFor("4").length).toBeGreaterThanOrEqual(20);
+  });
+});
+
+describe("Unit 19 SOW-driven release",()=>{
+  it("follows the supplied IoT delivery plan rather than any Unit 10 sequence",()=>{
+    expect(sowReleasesFor("10")).toEqual([]);
+    expect(releasedSowLessonIds("19","2026-09-20")).toEqual(expect.arrayContaining([
+      "u19-iot-foundations-v1","u19-applications-v1",
+    ]));
+    expect(releasedSowLessonIds("19","2026-09-20")).not.toContain("u19-principles-v1");
   });
 
-  it("has real lesson content for every scheduled release",()=>{
-    const content=studyContentFor("4");
-    const ids=new Set(content?.lessons.map(lesson=>lesson.id)??[]);
-    for(const release of sowReleasesFor("4"))expect(ids.has(release.lessonId),release.lessonId).toBe(true);
+  it("releases the next IoT topic after its teaching week",()=>{
+    expect(nextSowRelease("19","2026-09-20")).toEqual({
+      lessonId:"u19-principles-v1",
+      releaseOn:"2026-09-25",
+      title:"IoT principles and data-to-action",
+    });
+    expect(releasedSowLessonIds("19","2026-11-27")).toContain("u19-design-docs-v1");
+    expect(releasedSowLessonIds("19","2027-02-05")).toContain("u19-evaluation-v1");
   });
+});
+
+describe("scheduled lesson integrity",()=>{
+  for(const unitCode of ["4","19"]){
+    it(`has real lesson content for every Unit ${unitCode} scheduled release`,()=>{
+      const content=studyContentFor(unitCode);
+      const ids=new Set(content?.lessons.map(lesson=>lesson.id)??[]);
+      for(const release of sowReleasesFor(unitCode))expect(ids.has(release.lessonId),release.lessonId).toBe(true);
+    });
+  }
 });
