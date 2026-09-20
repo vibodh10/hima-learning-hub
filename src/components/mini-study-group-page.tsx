@@ -16,12 +16,16 @@ export default async function MiniStudyGroupPage({params}:{params:Promise<{id:st
  if(accessError||!allowed)notFound();
  const {data:group,error:groupError}=await client.from("classes").select("name,active_unit_id,published").eq("id",id).is("archived_at",null).maybeSingle();
  if(groupError||!group)notFound();
- const {data:activeUnits,error:unitsError}=await client.from("class_units").select("unit_id,units!inner(code,title)").eq("class_id",id).eq("active",true).is("archived_at",null).order("unit_id");
- const {data:examUnit}=await client.from("class_units").select("units!inner(code)").eq("class_id",id).eq("units.code","14").eq("active",true).is("archived_at",null).maybeSingle();
+ const {data:activeUnits,error:unitsError}=await client.from("class_units").select("unit_id").eq("class_id",id).eq("active",true).is("archived_at",null).order("unit_id");
  const activeUnitIds=(activeUnits??[]).map(unit=>unit.unit_id);
- const reportUnits:StudyUnitRef[]=(activeUnits??[]).map(item=>{const unit=Array.isArray(item.units)?item.units[0]:item.units;return {id:item.unit_id,label:unit?`Unit ${unit.code}: ${unit.title}`:`Unit ${item.unit_id}`};});
- const assessmentUnits=(activeUnits??[]).flatMap(item=>{const unit=Array.isArray(item.units)?item.units[0]:item.units;return unit?[{code:unit.code,title:unit.title}]:[];});
- const evidence=!unitsError?await loadMiniStudyEvidence(client,id,activeUnitIds).catch(()=>null):null;
+ const {data:unitRows,error:unitRowsError}=activeUnitIds.length
+  ? await client.from("units").select("id,code,title").in("id",activeUnitIds).is("archived_at",null)
+  : {data:[],error:null};
+ const unitById=new Map((unitRows??[]).map(unit=>[unit.id,unit]));
+ const reportUnits:StudyUnitRef[]=activeUnitIds.map(unitId=>{const unit=unitById.get(unitId);return {id:unitId,label:unit?`Unit ${unit.code}: ${unit.title}`:"Unit details unavailable"};});
+ const assessmentUnits=activeUnitIds.flatMap(unitId=>{const unit=unitById.get(unitId);return unit?[{code:unit.code,title:unit.title}]:[];});
+ const examUnit=(unitRows??[]).some(unit=>String(unit.code)==="14");
+ const evidence=!unitsError&&!unitRowsError?await loadMiniStudyEvidence(client,id,activeUnitIds).catch(()=>null):null;
  const unitNames=reportUnits.map(unit=>unit.label);
  return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell max-w-5xl py-8">
   <div className="flex flex-wrap items-center justify-between gap-3"><Link className="link" href="/dashboard#groups">← Your groups</Link><Link className="button-secondary" href={`/teacher/classes/${id}/student-view`}>Preview student view</Link></div>
