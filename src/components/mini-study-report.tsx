@@ -9,7 +9,7 @@ const integrityLabel=(event:StudyIntegrityEvent)=>event.event_type==="fullscreen
 
 function inferredUnits(records:MiniStudyRecord[],baselines:StudyLegacyBaseline[]):StudyUnitRef[]{
   const ids=[...new Set([...records.map(evidenceUnit),...baselines.map(evidenceUnit)])];
-  return (ids.length?ids:[legacyUnit]).map(id=>({id,label:id===legacyUnit?"Current unit":`Unit ${id}`}));
+  return (ids.length?ids:[legacyUnit]).map(id=>({id,label:id===legacyUnit?"Current unit":"Unit details unavailable"}));
 }
 
 export function MiniStudyReport({learners,records,baselines=[],integrityEvents=[],practiceMisses=[],interventions=[],units=[],classId,expanded=false}:{learners:{id:string;name:string}[];records:MiniStudyRecord[];baselines?:StudyLegacyBaseline[];integrityEvents?:StudyIntegrityEvent[];practiceMisses?:StudyPracticeMiss[];interventions?:StudyIntervention[];units?:StudyUnitRef[];classId?:string;expanded?:boolean}) {

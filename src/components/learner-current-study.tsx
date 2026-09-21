@@ -9,6 +9,9 @@ export async function LearnerCurrentStudy({learnerId,classId}:{learnerId:string;
   if(access.error||!access.data)throw new Error("This learning record is not available.");
   const group=await client.from("classes").select("active_unit_id").eq("id",classId).single();
   if(group.error)throw new Error("The current group could not be loaded.");
+  const unit=group.data.active_unit_id?await client.from("units").select("id,code,title").eq("id",group.data.active_unit_id).maybeSingle():{data:null,error:null};
+  if(unit.error)throw new Error("The unit label could not be loaded.");
+  const reportUnits=unit.data?[{id:unit.data.id,label:`Unit ${unit.data.code}: ${unit.data.title}`}]:[];
   const evidence=await loadMiniStudyEvidence(client,classId,group.data.active_unit_id);
   const learner=evidence.learners.find(item=>item.id===learnerId);
   if(!learner)return null;
@@ -16,7 +19,7 @@ export async function LearnerCurrentStudy({learnerId,classId}:{learnerId:string;
     .select("id,points,description,awarded_at",{count:"exact"}).eq("learner_id",learnerId)
     .order("awarded_at",{ascending:false}).order("id").range(from,to));
   return <section className="my-6">
-    <MiniStudyReport expanded learners={[learner]} records={evidence.records.filter(r=>r.learner_id===learnerId)} baselines={evidence.baselines.filter(r=>r.learner_id===learnerId)}/>
+    <MiniStudyReport units={reportUnits} expanded learners={[learner]} records={evidence.records.filter(r=>r.learner_id===learnerId)} baselines={evidence.baselines.filter(r=>r.learner_id===learnerId)}/>
     <details className="card mt-4"><summary className="cursor-pointer font-bold">Where the {awards.reduce((sum,row)=>sum+row.points,0)} AP came from</summary>
       <p className="mt-3">AP and XP are the same permanent achievement points. These awards cover this learner&apos;s learning across the organisation. Completing a short lesson can earn points without completing a separate full topic assessment.</p>
       <ul className="mt-4 space-y-2">{awards.map(award=><li key={award.id}><strong>+{award.points} AP</strong> · {award.description} · {new Date(award.awarded_at).toLocaleDateString("en-GB",{timeZone:"Europe/London"})}</li>)}</ul>

@@ -123,7 +123,7 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
     start(async()=>{
       try {
         const result=await finish(card.sessionId);
-        if(result.ok){setReward(result.reward);setError("");}
+        if(result.ok){if(card.kind==="daily")window.dispatchEvent(new Event("required-practice-completed"));setReward(result.reward);setError("");}
         else setError(result.message);
       }catch{setError("We couldn't save your completion. Please try again; you won't receive duplicate rewards.");}
     });
