@@ -27,7 +27,7 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
   if(!unitIds.length)return message("Choose this group's units before downloading its report.",409);
   try{
     const evidence=await loadMiniStudyEvidence(client,id,unitIds);
-    return new Response(miniStudyCsv(group.data.name,evidence.learners,evidence.records,evidence.baselines,reportUnits),{headers:{...headers,
+    return new Response(miniStudyCsv(group.data.name,evidence.learners,evidence.records,evidence.baselines,reportUnits,evidence.integrityEvents,evidence.practiceMisses,evidence.interventions),{headers:{...headers,
       "Content-Type":"text/csv; charset=utf-8","Content-Disposition":'attachment; filename="short-study-records.csv"'}});
   }catch{return message("The complete report could not be loaded. Please refresh and try again; no partial report has been downloaded.",503);}
 }

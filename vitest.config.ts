@@ -6,5 +6,5 @@ export default defineConfig({
     "@": path.resolve(__dirname, "src"),
     "server-only": path.resolve(__dirname, "vitest.server-only.ts"),
   } },
-  test: { environment: "jsdom", setupFiles: ["./vitest.setup.ts"], coverage: { reporter: ["text", "html"] } },
+  test: { include: ["src/**/*.test.{ts,tsx}"], environment: "jsdom", setupFiles: ["./vitest.setup.ts"], coverage: { reporter: ["text", "html"] } },
 });

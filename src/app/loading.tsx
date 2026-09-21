@@ -1,6 +1,6 @@
 export default function Loading() {
   return <main className="shell py-10" aria-live="polite" aria-busy="true">
-    <p className="eyebrow">SCCB Digital Learning Hub</p>
+    <p className="eyebrow">Digital Learning Hub</p>
     <h1 className="mt-3 text-3xl font-bold">Loading your learning portal…</h1>
     <p className="mt-3 text-slate-600">Your units, progress and next actions are being prepared.</p>
     <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">

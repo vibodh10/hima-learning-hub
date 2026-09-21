@@ -14,6 +14,10 @@ beforeEach(()=>{
  mocks.role.mockResolvedValue({role:"teacher",display_name:"Staff"});mocks.rpc.mockResolvedValue({data:true,error:null});
  mocks.tables={
   class_units:{data:[{unit_id:"unit-6",units:{code:"6",title:"Website Development"}}],error:null},
+  units:{data:[{id:"unit-6",code:"6",title:"Website Development"}],error:null},
+  mini_study_practice_misses:{data:[],error:null},
+  interventions:{data:[],error:null},
+  mini_study_integrity_events:{data:[],error:null},
   classes:{data:{name:"Assigned group",active_unit_id:"unit-6",published:true},error:null},
   enrolments:{data:[{student_id:"learner-a",user_profiles:{display_name:"Learner A"}}],error:null},
   mini_study_sessions:{data:[],error:null},
@@ -21,7 +25,7 @@ beforeEach(()=>{
  };
  mocks.from.mockImplementation((table:string)=>{
   const query:Record<string,ReturnType<typeof vi.fn>>={};
-  for(const method of ["select","eq","is","in","neq","maybeSingle","order","range"])query[method]=vi.fn(()=>query);
+  for(const method of ["select","eq","is","in","neq","maybeSingle","order","range","gte","lte"])query[method]=vi.fn(()=>query);
   query.then=vi.fn((resolve:(value:unknown)=>unknown)=>Promise.resolve({...mocks.tables[table],count:Array.isArray(mocks.tables[table].data)?mocks.tables[table].data.length:0}).then(resolve));
   mocks.queries[table]=query;return query;
  });

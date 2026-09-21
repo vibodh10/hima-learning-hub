@@ -1,0 +1,22 @@
+name: Missed practice monitor
+
+on:
+  schedule:
+    # 22:50 UTC is 23:50 during UK summer time and 22:50 in winter.
+    - cron: "50 22 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  check-missed-practice:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Digital Learning Hub practice monitor
+        env:
+          HIMA_CRON_URL: ${{ secrets.HIMA_CRON_URL }}
+          HIMA_CRON_SECRET: ${{ secrets.HIMA_CRON_SECRET }}
+        run: |
+          test -n "$HIMA_CRON_URL"
+          test -n "$HIMA_CRON_SECRET"
+          curl --fail --show-error --silent \
+            -X POST "$HIMA_CRON_URL/api/cron/missed-practice" \
+            -H "Authorization: Bearer $HIMA_CRON_SECRET"

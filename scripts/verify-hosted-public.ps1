@@ -38,10 +38,10 @@ function Test-ProtectedPage([string]$Path, [string]$ForbiddenText) {
   if (-not $passed) { throw "$Path exposed protected content to an anonymous request." }
 }
 
-Test-PublicPage "/" "SCCB Digital Learning Hub"
+Test-PublicPage "/" "Digital Learning Hub"
 Test-PublicPage "/login" "One account has one role"
 Test-PublicPage "/forgot-password" "Reset your password"
-Test-PublicPage "/privacy" "How SCCB Digital Learning Hub handles learner data"
+Test-PublicPage "/privacy" "How Digital Learning Hub handles learner data"
 Test-PublicPage "/register" "Student registration is controlled by your teacher"
 Test-PublicPage "/register/teacher" "Set up your teacher access"
 Test-PublicPage "/update-password" "Choose a new password"

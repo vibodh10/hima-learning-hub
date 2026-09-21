@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const metadata = { title: "Teacher registration | SCCB", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
+export const metadata = { title: "Teacher registration | Digital Learning Hub", robots: { index: false, follow: false }, referrer: "no-referrer" as const };
 
 export default async function TeacherRegistrationPage({ searchParams }: {
   searchParams: Promise<{ token_hash?: string; error?: string }>;

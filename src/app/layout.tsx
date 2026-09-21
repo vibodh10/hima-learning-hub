@@ -6,9 +6,9 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: { default: "SCCB Digital Learning Hub", template: "%s · SCCB Digital Learning Hub" },
+  title: { default: "Digital Learning Hub", template: "%s · Digital Learning Hub" },
   description: "Purposeful learning practice and progress for Level 3 Computing and Digital.",
-  applicationName: "SCCB Digital Learning Hub",
+  applicationName: "Digital Learning Hub",
   manifest: "/manifest.webmanifest",
 };
 
@@ -37,7 +37,12 @@ export default async function RootLayout({
   }
   return (
     <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
-      <body className="min-h-full flex flex-col" data-theme={theme||undefined} data-badge-frame={badgeFrame||undefined} data-celebration-effect={celebrationEffect||undefined}><OceanScene backdrop/>{children}<ServiceWorkerRegistration /></body>
+      <body className="min-h-full flex flex-col" data-theme={theme||undefined} data-badge-frame={badgeFrame||undefined} data-celebration-effect={celebrationEffect||undefined}>
+        <OceanScene backdrop/>
+        {children}
+        <footer className="mt-auto border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-500">Developed by Hima</footer>
+        <ServiceWorkerRegistration />
+      </body>
     </html>
   );
 }

@@ -1,5 +1,5 @@
 import {cleanup,fireEvent,render,screen} from "@testing-library/react";
-import {afterEach,describe,expect,it,vi} from "vitest";
+import {afterEach,beforeEach,describe,expect,it,vi} from "vitest";
 import {MiniStudyHome,MiniStudyPlayer,StudyDone} from "./mini-study-player";
 import {beginMiniStudy} from "@/app/actions/mini-study";
 import {gradeStudy,publicStudyQuestions,type StudyCard} from "@/lib/mini-study";
@@ -7,6 +7,7 @@ import {unit6StudyLessons} from "@/lib/mini-study-content";
 
 vi.mock("@/app/actions/mini-study",()=>({beginMiniStudy:vi.fn(),checkMiniStudy:vi.fn(),finishMiniStudy:vi.fn()}));
 afterEach(cleanup);
+beforeEach(()=>vi.mocked(beginMiniStudy).mockReset());
 const lesson=unit6StudyLessons[0];
 function card():StudyCard {return {sessionId:"test-session",kind:"daily",title:lesson.title,unitTitle:"Website Development",lines:lesson.lines,example:lesson.example,support:lesson.support,questions:publicStudyQuestions(lesson.questions,"test-session")};}
 
@@ -17,17 +18,17 @@ describe("one-step student experience",()=>{
   render(<StudyDone reward={{xp:20,badge:null,nextOn:"2026-09-09"}}/>);
   expect(screen.getByRole("heading",{name:"You're done for today"})).toBeInTheDocument();
   expect(beginMiniStudy).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button",{name:"Do another lesson"}));
+  fireEvent.click(screen.getByRole("button",{name:"Continue learning"}));
   expect(await screen.findByRole("heading",{name:lesson.title})).toBeInTheDocument();
   expect(beginMiniStudy).toHaveBeenCalledWith(true);
  });
  it("keeps the completion receipt and retry button if opening an extra lesson fails",async()=>{
   vi.mocked(beginMiniStudy).mockRejectedValueOnce(new Error("offline"));
   render(<StudyDone reward={{xp:20,badge:null,nextOn:"2026-09-09"}}/>);
-  fireEvent.click(screen.getByRole("button",{name:"Do another lesson"}));
+  fireEvent.click(screen.getByRole("button",{name:"Continue learning"}));
   expect(await screen.findByRole("alert")).toHaveTextContent("completed step is saved");
   expect(screen.getByText("+20 XP")).toBeInTheDocument();
-  expect(await screen.findByRole("button",{name:"Do another lesson"})).toBeEnabled();
+  expect(await screen.findByRole("button",{name:"Continue learning"})).toBeEnabled();
  });
  it("offers a safe retry if the connection fails while opening a step",async()=>{
   vi.mocked(beginMiniStudy).mockRejectedValueOnce(new Error("offline"));

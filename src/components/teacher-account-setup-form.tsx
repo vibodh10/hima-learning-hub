@@ -12,7 +12,7 @@ export function TeacherAccountSetupForm({existingAccounts=[]}:{existingAccounts?
   return <section className="card mt-6 border-teal-200" aria-labelledby="teacher-account-title">
     <p className="eyebrow">Secure tutor onboarding</p>
     <h2 className="mt-2 text-2xl font-bold" id="teacher-account-title">Teacher access</h2>
-    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Choose a tutor and enter their verified SCCB email, then create a registration link to share privately in Teams. No email delivery is needed. The tutor chooses their own password. This also works for an existing teacher who cannot sign in.</p>
+    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Choose a tutor and enter their verified staff email, then create a registration link to share privately in Teams. No email delivery is needed. The tutor chooses their own password. This also works for an existing teacher who cannot sign in.</p>
     <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Requested teacher account status">
       {requestedTeacherNames.map(name=>{
         const account=existingAccounts.find(item=>item.name===name);
@@ -41,7 +41,7 @@ export function TeacherAccountSetupForm({existingAccounts=[]}:{existingAccounts?
       {state.errors?.name?.[0]&&<p className="text-sm text-red-700">{state.errors.name[0]}</p>}
       {state.errors?.email?.[0]&&<p className="text-sm text-red-700 md:col-start-2">{state.errors.email[0]}</p>}
       {state.message&&<p role="status" className={`rounded-xl p-3 text-sm md:col-span-3 ${state.ok?"bg-teal-50 text-teal-950":"bg-amber-50 text-amber-950"}`}>{state.message}</p>}
-      {state.setupUrl&&<div className="rounded-xl border border-teal-200 bg-teal-50 p-4 md:col-span-3"><label className="grid gap-2 text-sm font-semibold">Private one-time setup link<input className="input bg-white" readOnly value={state.setupUrl} onFocus={event=>event.currentTarget.select()}/></label><button className="button-secondary mt-3" type="button" onClick={async()=>{await navigator.clipboard.writeText(state.setupUrl??"");setCopied(true);}}>{copied?"Copied":"Copy secure link"}</button><p className="mt-2 text-xs text-slate-600">Send this only to the named tutor through their verified SCCB Teams account. Generate a fresh link if it is used or expires.</p></div>}
+      {state.setupUrl&&<div className="rounded-xl border border-teal-200 bg-teal-50 p-4 md:col-span-3"><label className="grid gap-2 text-sm font-semibold">Private one-time setup link<input className="input bg-white" readOnly value={state.setupUrl} onFocus={event=>event.currentTarget.select()}/></label><button className="button-secondary mt-3" type="button" onClick={async()=>{await navigator.clipboard.writeText(state.setupUrl??"");setCopied(true);}}>{copied?"Copied":"Copy secure link"}</button><p className="mt-2 text-xs text-slate-600">Send this only to the named tutor through their verified staff Teams account. Generate a fresh link if it is used or expires.</p></div>}
     </form>
   </section>;
 }
