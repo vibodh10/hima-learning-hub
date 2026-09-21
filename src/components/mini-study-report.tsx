@@ -7,10 +7,10 @@ const evidenceUnit=(row:{unit_id?:string})=>row.unit_id??legacyUnit;
 
 function inferredUnits(records:MiniStudyRecord[],baselines:StudyLegacyBaseline[]):StudyUnitRef[]{
   const ids=[...new Set([...records.map(evidenceUnit),...baselines.map(evidenceUnit)])];
-  return (ids.length?ids:[legacyUnit]).map(id=>({id,label:id===legacyUnit?"Current unit":`Unit ${id}`}));
+  return (ids.length?ids:[legacyUnit]).map(id=>({id,label:id===legacyUnit?"Current unit":"Unit details unavailable"}));
 }
 
-export function MiniStudyReport({learners,records,baselines=[],units=[],classId,expanded=false}:{learners:{id:string;name:string}[];records:MiniStudyRecord[];baselines?:StudyLegacyBaseline[];units?:StudyUnitRef[];classId?:string;expanded?:boolean}) {
+export function MiniStudyReport({learners,records,baselines=[],units=[],overdueLearnerIds=[],classId,expanded=false}:{learners:{id:string;name:string}[];records:MiniStudyRecord[];baselines?:StudyLegacyBaseline[];units?:StudyUnitRef[];overdueLearnerIds?:string[];classId?:string;expanded?:boolean}) {
   const reportUnits=units.length?units:inferredUnits(records,baselines);
   const unitLabel=new Map(reportUnits.map(unit=>[unit.id,unit.label]));
   const rows=learners.map(learner=>{
@@ -25,8 +25,8 @@ export function MiniStudyReport({learners,records,baselines=[],units=[],classId,
   return <section aria-labelledby="mini-report-title">
     <h1 id="mini-report-title" className="text-3xl font-bold">Short self-study records</h1>
     <p className="mt-3 max-w-3xl">Starting points, recent practice level, first answers and automatic next targets. Each unit is shown separately so evidence from different units is never combined. These are formative learning checks, not assignment grades.</p>
-    {!rows.length?<p className="card mt-6">No students have joined this group yet.</p>:<div className="mt-6 grid gap-4">{rows.map(row=><details className="card" key={row.id} open={expanded}>
-      <summary className="cursor-pointer text-lg font-bold">{row.name} · {row.needsHelp?"Automatic reinforcement active":row.hasLearning?"Learning recorded":row.hasStartingPoint?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}</summary>
+    {!rows.length?<p className="card mt-6">No students have joined this group yet.</p>:<div className="mt-6 grid gap-4">{rows.map(row=><details className={`card ${overdueLearnerIds.includes(row.id)?"practice-overdue-record":""}`} key={row.id} open={expanded}>
+      <summary className="cursor-pointer text-lg font-bold">{row.name} · {overdueLearnerIds.includes(row.id)?"Practice overdue - student reminder active":row.needsHelp?"Automatic reinforcement active":row.hasLearning?"Learning recorded":row.hasStartingPoint?"Starting point recorded · next lesson pending":"No short lesson recorded yet"}</summary>
       <div className="mt-5 grid gap-5">{row.learnerUnits.map(item=><article key={item.unit.id} className="rounded-xl border border-slate-200 p-5">
         <h2 className="text-xl font-bold">{item.unit.label}</h2>
         {item.summary.supportReason&&<p className="mt-4 rounded-lg bg-amber-50 p-4"><strong>Automatic support signal: </strong>{item.summary.supportReason}</p>}

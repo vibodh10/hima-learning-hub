@@ -202,3 +202,8 @@ body[data-theme="ocean"] > .ocean-backdrop { display: block; }
 body[data-badge-frame="python"] [data-achievement-badge] { position:relative; padding-bottom:3rem; }
 @keyframes python-hello { from { opacity:0; translate:0 12px; } to { opacity:1; translate:0 0; } }
 @media (prefers-reduced-motion:reduce) { .python-code,.python-preview::after,body[data-badge-frame="python"] [data-achievement-badge]::after { animation:none; } }
+
+/* Keep reading panels legible while overdue practice is highlighted. */
+.mini-study-surface.practice-overdue { background: #fee2e2 !important; box-shadow: inset 0 0 0 6px #b91c1c; }
+
+.card.practice-overdue-record { border:2px solid #b91c1c; background:#fff1f2; }
