@@ -1,0 +1,4 @@
+# Keep source text consistent across Windows and deployment hosts.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

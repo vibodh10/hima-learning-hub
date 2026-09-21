@@ -1,2 +1,0 @@
-from pathlib import Path
-p=Path('src/lib/mini-study-server.ts');s=p.read_text();lines=s.splitlines();lines=[('    ? {kind:"baseline",title:"Your starting point",unitTitle:context.unitTitle,secondsPerQuestion:5,lines:["10 short prerequisite questions. Five seconds each, with automatic advance.","Timeouts need another check; they do not prove a missing skill."],example:"",support:""}' if '? {kind:"baseline",title:' in l else l) for l in lines];p.write_text('\n'.join(lines)+'\n')
