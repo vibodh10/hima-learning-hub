@@ -9,10 +9,13 @@ export async function TeacherHomeDashboard(){
   .order("name");
 
  return <main className="shell max-w-4xl py-10">
-  <header>
-   <p className="eyebrow">Teacher dashboard</p>
-   <h1 className="mt-2 text-3xl font-bold">Your groups</h1>
-   <p className="mt-3 text-slate-600">Choose a group to view its students, progress, starting points, learning activity and reports.</p>
+  <header className="flex flex-wrap items-start justify-between gap-4">
+   <div>
+    <p className="eyebrow">Teacher dashboard</p>
+    <h1 className="mt-2 text-3xl font-bold">Your groups</h1>
+    <p className="mt-3 text-slate-600">Choose a group to view its students, progress, starting points, learning activity and reports.</p>
+   </div>
+   <Link className="button-secondary" href="/teacher/groups/new">Create another group</Link>
   </header>
 
   <section id="groups" className="mt-8 grid gap-4 md:grid-cols-2" aria-label="Your groups">
