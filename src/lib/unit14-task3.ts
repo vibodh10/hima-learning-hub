@@ -19,7 +19,7 @@ export const unit14Task3Lessons:Task3Lesson[]=[
       "Cover both hardware and software. A network diagram with no software explanation is incomplete.",
       "Keep linking every choice back to the scenario, its rooms, staff, tasks and future requirements."
     ],
-    memory:"Use MAP IT: Map locations and links; Apply every choice to the scenario; Processes and data flows; IT hardware and software; Tell how the whole solution works.",
+    memory:"Check that the solution clearly represents locations, data/information requirements, hardware, software and how the service works.",
     exam:["Annotate a proposed IT service delivery solution.","Explain how the proposed solution works for the organisation.","Identify missing parts of a weak solution and improve it."],
     quizzes:[
       {question:"Which response is closest to a high-band Activity 3 approach?",options:["A connected map of locations, users, hardware, software and data flows with scenario-specific explanations","A long shopping list of expensive hardware","A diagram made only from computer icons with no labels"],answer:"A connected map of locations, users, hardware, software and data flows with scenario-specific explanations",explanation:"The examiner feedback rewards a fully mapped solution, understanding of how it works, data/information coverage, hardware/software coverage and scenario awareness."},
@@ -36,7 +36,7 @@ export const unit14Task3Lessons:Task3Lesson[]=[
       "A room can contain several users, but each device still needs a clear purpose.",
       "Keep server or security equipment in an appropriate secure area if the scenario supports one."
     ],
-    memory:"Use ROOMS for every location: Role, Operations, Objects/devices, Movement/connection, Software/data.",
+    memory:"For each location, identify the staff, activities, hardware, software and data/information requirements from the scenario.",
     exam:["Place appropriate IT equipment into each named room.","Explain why a device belongs in a particular location.","Correct a room plan where devices do not match staff responsibilities."],
     quizzes:[
       {question:"A workshop manager monitors vehicle servicing, faults and stock. Which placement best follows the scenario?",options:["A workstation in or beside the workshop with access to servicing, fault and stock information","A graphics tablet in reception only","A printer in a remote building with no network link"],answer:"A workstation in or beside the workshop with access to servicing, fault and stock information",explanation:"The device and software should be close to the role and tasks described in the scenario."},
@@ -160,7 +160,7 @@ export const unit14Task3Lessons:Task3Lesson[]=[
       "Do not make the diagram hard to follow by using connection lines as pointers to text labels.",
       "Do not invent roles, rooms or equipment that are not justified by the scenario."
     ],
-    memory:"Use MISS before finishing: Missing locations? Internet/connectivity? Software? Stored/flowing data?",
+    memory:"Before finishing, check for missing locations, connectivity, software and essential data/information.",
     exam:["Critique a weak solution and identify omissions.","Rewrite an explanation so it links to the scenario.","Repair an unclear network or DFD."],
     quizzes:[
       {question:"Which omission was explicitly identified in a low Activity 3 response?",options:["No internet connection","No decorative title page","No brand logos"],answer:"No internet connection",explanation:"The examiner feedback notes that the weak diagram omitted the internet connection."},
@@ -172,19 +172,19 @@ export const unit14Task3Lessons:Task3Lesson[]=[
     id:"twenty-mark",title:"Build the 20-mark answer in a repeatable order",focus:"Use a reliable routine under exam pressure.",
     learn:[
       "Step 1: underline rooms/sites, roles, tasks, data, current problems and future requirements in the scenario.",
-      "Step 2: make a ROOMS list for each location.",
+      "Step 2: identify the staff, activities, hardware, software and data/information requirements for each location.",
       "Step 3: draw the connected service/network solution and label the major links.",
       "Step 4: add the DFD/data model where information flow or structure needs to be shown.",
       "Step 5: annotate hardware, software and role access with scenario-specific reasons.",
-      "Step 6: trace at least two complete user journeys through the design and run the MISS check before finishing."
+      "Step 6: trace at least two complete user journeys through the design and check for missing locations, connectivity, software and essential data/information."
     ],
-    memory:"Read → ROOMS → connect → DFD/data → explain → MISS check.",
+    memory:"Read the scenario, identify requirements, represent the service with appropriate diagrams, explain the choices, then check for omissions.",
     exam:["Produce the complete Activity 3 solution under a time limit.","Explain your diagram in enough detail that a non-specialist can follow it.","Use a final five-minute audit to repair omissions."],
     quizzes:[
       {question:"What should you do before drawing equipment?",options:["Extract rooms, roles, tasks, data and constraints from the scenario","Choose a favourite laptop brand","Start writing a conclusion for Activity 5"],answer:"Extract rooms, roles, tasks, data and constraints from the scenario",explanation:"The design must be driven by the scenario."},
       {question:"What is a good final check?",options:["Trace user journeys and use MISS to find missing locations, connectivity, software and data","Count the number of icons","Change every line to a different colour"],answer:"Trace user journeys and use MISS to find missing locations, connectivity, software and data",explanation:"The final check targets the omissions identified in examiner feedback."}
     ],
-    matching:[{left:"Read",right:"Extract scenario facts and requirements"},{left:"ROOMS",right:"Plan each location from role to software/data"},{left:"Connect",right:"Show complete logical network/service paths"},{left:"DFD/data",right:"Show information movement and record structure"},{left:"Explain",right:"Annotate choices with scenario-specific reasoning"},{left:"MISS",right:"Audit for missing locations, internet, software and data"}]
+    matching:[{left:"Read",right:"Extract scenario facts and requirements"},{left:"Locations",right:"Plan each location from staff activity to hardware, software and data/information needs"},{left:"Connect",right:"Show complete logical network/service paths"},{left:"DFD/data",right:"Show information movement and record structure"},{left:"Explain",right:"Annotate choices with scenario-specific reasoning"},{left:"MISS",right:"Audit for missing locations, internet, software and data"}]
   }
 ];
 
@@ -193,13 +193,13 @@ export const unit14Task3QuestionFamilies=[
   "Place suitable hardware in each room and explain why each item is needed there.",
   "Complete or correct a network diagram containing missing router, firewall, switch, server, WAP, printer or internet links.",
   "Explain how a user in one location reaches a shared service or data store.",
-  "Create a context DFD showing the system, external entities and labelled information flows.",
-  "Expand a context diagram into a Level 0 DFD with main processes and data stores.",
-  "Break one Level 0 process into a Level 1 DFD.",
+  "Create a data flow diagram showing relevant external entities, processes, data stores and labelled information flows.",
+  "Develop a more detailed data flow diagram with main processes and data stores where the scenario requires it.",
+  "Add further process detail to a data flow diagram where it improves the representation of the service.",
   "Identify incorrect DFD symbols, unlabelled flows or illogical direct connections and repair them.",
   "Where useful, identify records/entities required by the scenario and show suitable relationships between them.",
   "Choose useful fields for Customer, Booking, Staff, Stock, Vehicle/Asset, Repair/Service or equivalent scenario records.",
-  "Explain the difference between a network/infrastructure diagram and a DFD; recognise a context diagram as the whole-system DFD view, and use a data model/ERD only when record relationships add value.",
+  "Explain the difference between the Pearson diagram categories: functional chart, data flow diagram, building/floor plan and network diagram, then choose the type that best represents the requirement."
   "Recommend software for each role and explain the information that role should be able to access.",
   "Explain how hardware and software work together to support a named member of staff.",
   "Review a weak solution and identify omitted rooms, users, software, data, internet connectivity or future requirements.",
