@@ -2,60 +2,12 @@
 
 import {useState} from "react";
 import {unit14Task3FinalChecklist,unit14Task3Lessons,unit14Task3QuestionFamilies,unit14Task3ScenarioDrills} from "@/lib/unit14-task3";
+import {Unit14DiagramMasteryLab} from "@/components/unit14-diagram-mastery-lab";
 
 function rotate<T>(items:T[],amount:number){
   if(!items.length)return items;
   const offset=((amount%items.length)+items.length)%items.length;
   return [...items.slice(offset),...items.slice(0,offset)];
-}
-
-function NetworkExample(){
-  return <figure className="rounded-2xl border border-slate-300 bg-white p-4">
-    <figcaption className="font-bold">Example: physical/service network view</figcaption>
-    <p className="mt-1 text-sm text-slate-600">The exact design can differ. The point is that every room has a traceable path to the services it needs.</p>
-    <div className="mt-4 grid gap-3 text-center text-sm">
-      <div className="mx-auto rounded-lg border-2 border-slate-700 px-4 py-2 font-bold">Internet / external service</div>
-      <div aria-hidden="true" className="font-black">↓</div>
-      <div className="mx-auto rounded-lg border-2 border-slate-700 px-4 py-2">Router / firewall edge</div>
-      <div aria-hidden="true" className="font-black">↓</div>
-      <div className="mx-auto rounded-lg border-2 border-slate-700 px-4 py-2">Core switch</div>
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-300 p-3"><strong>General office</strong><p>Desktops · printer · booking/payment software</p><p className="mt-2">↑ Ethernet</p></div>
-        <div className="rounded-xl border border-slate-300 p-3"><strong>Secure service area</strong><p>Shared servers / data stores</p><p className="mt-2">↑ Ethernet</p></div>
-        <div className="rounded-xl border border-slate-300 p-3"><strong>Workshop</strong><p>WAP → tablet/diagnostic devices</p><p className="mt-2">↑ Ethernet to WAP · Wi-Fi to devices</p></div>
-      </div>
-    </div>
-  </figure>;
-}
-
-function DfdExample(){
-  return <figure className="rounded-2xl border border-slate-300 bg-white p-4">
-    <figcaption className="font-bold">Example: Level 0 data-flow view</figcaption>
-    <p className="mt-1 text-sm text-slate-600">A DFD is about information movement and processing, not cables.</p>
-    <div className="mt-4 grid gap-3 text-center text-sm md:grid-cols-[1fr_auto_1.3fr_auto_1fr] md:items-center">
-      <div className="rounded-none border-2 border-slate-700 p-3"><strong>Customer</strong><p>external entity</p></div>
-      <div className="font-bold">booking request →</div>
-      <div className="rounded-full border-2 border-slate-700 p-4"><strong>1.0 Process booking</strong><p>process</p></div>
-      <div className="font-bold">booking record →</div>
-      <div className="border-x-4 border-slate-700 p-3"><strong>Bookings</strong><p>data store</p></div>
-    </div>
-    <p className="mt-3 text-center text-sm"><strong>Return flow:</strong> Process booking → booking confirmation → Customer.</p>
-  </figure>;
-}
-
-function DataModelExample(){
-  return <figure className="rounded-2xl border border-slate-300 bg-white p-4">
-    <figcaption className="font-bold">Example: stored-data relationship view</figcaption>
-    <p className="mt-1 text-sm text-slate-600">This is different from a DFD. It shows how records relate.</p>
-    <div className="mt-4 grid gap-3 text-sm md:grid-cols-3 md:items-center">
-      <div className="rounded-lg border-2 border-slate-700 p-3"><strong>Customer</strong><p>CustomerID · Name · Contact</p></div>
-      <div className="text-center font-bold">1 → many</div>
-      <div className="rounded-lg border-2 border-slate-700 p-3"><strong>Booking</strong><p>BookingID · CustomerID · Date · Status</p></div>
-      <div className="rounded-lg border-2 border-slate-700 p-3"><strong>Vehicle / resource</strong><p>ResourceID · Status</p></div>
-      <div className="text-center font-bold">1 → many</div>
-      <div className="rounded-lg border-2 border-slate-700 p-3"><strong>Booking allocation</strong><p>BookingID · ResourceID</p></div>
-    </div>
-  </figure>;
 }
 
 export function Unit14Task3Practice(){
@@ -98,12 +50,7 @@ export function Unit14Task3Practice(){
       <details className="mini-study-help mt-5"><summary>What might I be asked to do with this?</summary><ul className="mt-2 list-disc space-y-1 pl-6">{lesson.exam.map(item=><li key={item}>{item}</li>)}</ul></details>
     </section>
 
-    <section className="mini-study-panel">
-      <p className="mini-study-kicker">Diagram lab</p>
-      <h2 className="text-2xl font-bold">Know which diagram you are drawing</h2>
-      <div className="mt-4 grid gap-4"><NetworkExample/><DfdExample/><DataModelExample/></div>
-      <p className="mt-4 text-sm"><strong>Quick distinction:</strong> network diagram = devices/locations/connections; DFD = information movement and processing; data model/ERD = stored records and relationships.</p>
-    </section>
+    <Unit14DiagramMasteryLab/>
 
     <section className="mini-study-panel">
       <p className="mini-study-kicker">Retrieval practice</p>
