@@ -117,16 +117,16 @@ export const unit14Task3Lessons:Task3Lesson[]=[
     matching:[{left:"Context",right:"Whole system shown as one process"},{left:"Level 0",right:"Main internal processes and data stores"},{left:"Level 1",right:"Detailed breakdown of one Level 0 process"},{left:"Balancing",right:"Keeping important inputs and outputs logically consistent between levels"}]
   },
   {
-    id:"data-model",title:"Do not confuse a DFD with the data model",focus:"Show both movement of information and the structure of the records when the task needs them.",
+    id:"data-model",title:"Optional extension: data models and ERDs",focus:"Use a data model only when showing record structure or relationships adds useful evidence to the solution.",
     learn:[
-      "A DFD shows how data moves and is processed.",
-      "A data model or entity relationship diagram shows how stored records relate to each other.",
+      "A DFD shows how data moves and is processed and is directly useful when explaining information requirements.",
+      "A data model or entity relationship diagram shows how stored records relate to each other. It can support a solution, but Pearson does not prescribe it as one of three compulsory Activity 3 diagrams.",
       "Typical scenario entities might include Customer, Booking, Staff, Vehicle, Repair and Stock, but you must use the actual scenario.",
       "Primary keys identify records. Foreign keys link related records where a relational design is appropriate.",
       "Use meaningful field names. The examiner needs to see that the information supports the organisation's work."
     ],
-    memory:"DFD = movement. ERD/data model = structure. Ask: am I showing where data travels, or how records relate?",
-    exam:["Identify entities and relationships from a scenario.","Choose suitable fields for a record.","Explain how the data model supports the service solution."],
+    memory:"DFD = movement. ERD/data model = structure. Use the ERD only when the relationship between stored records genuinely helps explain your proposed service.",
+    exam:["Identify useful records and relationships when the scenario benefits from a data model.","Choose suitable fields for a record.","Explain how a data model could support the service solution without treating it as compulsory evidence."],
     quizzes:[
       {question:"Which diagram best shows that one customer can have several bookings?",options:["Entity relationship/data model diagram","Only a room layout","Only a Wi-Fi coverage map"],answer:"Entity relationship/data model diagram",explanation:"Relationships between stored records belong in a data model rather than a physical network diagram."},
       {question:"What does a DFD add that an ERD does not?",options:["The movement and processing of information","The colour of the server room","The price of each laptop"],answer:"The movement and processing of information",explanation:"A DFD focuses on flows and processes; an ERD focuses on stored data structure."}
@@ -197,9 +197,9 @@ export const unit14Task3QuestionFamilies=[
   "Expand a context diagram into a Level 0 DFD with main processes and data stores.",
   "Break one Level 0 process into a Level 1 DFD.",
   "Identify incorrect DFD symbols, unlabelled flows or illogical direct connections and repair them.",
-  "Identify the records/entities required by the scenario and show suitable relationships between them.",
+  "Where useful, identify records/entities required by the scenario and show suitable relationships between them.",
   "Choose useful fields for Customer, Booking, Staff, Stock, Vehicle/Asset, Repair/Service or equivalent scenario records.",
-  "Explain the difference between a network diagram, a DFD and a data model/ERD, then choose which one is needed.",
+  "Explain the difference between a network/infrastructure diagram and a DFD; recognise a context diagram as the whole-system DFD view, and use a data model/ERD only when record relationships add value.",
   "Recommend software for each role and explain the information that role should be able to access.",
   "Explain how hardware and software work together to support a named member of staff.",
   "Review a weak solution and identify omitted rooms, users, software, data, internet connectivity or future requirements.",
