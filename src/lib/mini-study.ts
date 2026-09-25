@@ -86,7 +86,7 @@ export function gradeStudy(keys: StudyQuestionKey[], input: unknown): StudyGrade
   }
   const feedback = keys.map((q):StudyFeedback=>{
     const actual = answers.get(q.id);
-    const normaliseCode=(value:string)=>value.replace(/\\r\\n?/g,"\\n").split("\\n").map(line=>line.replace(/[ \\t]+$/,"")).join("\\n").trim();
+    const normaliseCode=(value:string)=>value.replace(/\r\n?/g,"\n").split("\n").map(line=>line.replace(/[ \t]+$/,"")).join("\n").trim();
     const correct = q.kind==="code" && typeof q.answer==="string" && typeof actual==="string"
       ? normaliseCode(actual)===normaliseCode(q.answer)
       : typeof q.answer === "string" ? actual===q.answer
