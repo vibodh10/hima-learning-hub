@@ -17,6 +17,17 @@ const unit4TaughtIdeas:ShortStudyIdea[]=[
     analyse:"Separating setup from the repeating section makes it easier to see which values should be created once and which behaviour must happen every frame.",
     evaluate:"A clear program structure is easier to test and change because repeated behaviour is not mixed with one-time setup."},
 
+  {id:"indentation",topic:"A4",title:"Python indentation and code blocks",skill:"indentation",
+    lines:["Python uses indentation as part of its syntax, not just to make code look tidy.","Indented lines belong to the function, loop or if block above them.","A colon normally starts a new block after def, if, elif, else, for or while."],
+    example:"def greet(name):\n    print(\"Hello\", name)\n\ngreet(\"Sam\")",
+    help:"After a line ending with a colon, look for the indented block underneath it. Keep the same indentation level for lines that belong together.",
+    question:"Why is the print line indented under def greet(name):?",answers:["Because it belongs inside the function","Because print always needs four spaces everywhere","Because indentation is optional in Python"],
+    feedback:"Python uses indentation to define the function body. Incorrect indentation can change the program structure or cause an error.",
+    pairs:[["Colon :","Starts a code block"],["Indentation","Shows which statements belong inside that block"]],
+    analyse:"Correct indentation makes control flow visible and is required for Python to understand where a block begins and ends.",
+    evaluate:"Use consistent indentation throughout a program; four spaces is the usual Python convention.",
+    codePractice:{prompt:"Type a correct function called greet with one parameter called name. Inside it, print Hello followed by the name. Then call greet with Sam. Indentation must be correct.",starter:"def greet(name):\nprint(\"Hello\", name)\n\ngreet(\"Sam\")",answer:"def greet(name):\n    print(\"Hello\", name)\n\ngreet(\"Sam\")",feedback:"The print statement belongs inside the function, so it must be indented. The function call is outside the function and returns to the left margin."}},
+
   {id:"functions-basics",topic:"A4",title:"Function 1: define it, then call it",skill:"functions",
     lines:["A function groups instructions under a reusable name.","Writing def creates the function; writing the function name with brackets calls it.","The code inside the function only runs when the function is called."],
     example:"def jump(): groups the instructions for a Pony Runner jump. Writing jump() later calls that function.",
@@ -35,7 +46,8 @@ const unit4TaughtIdeas:ShortStudyIdea[]=[
     feedback:"The parameter is named in the function definition. The argument is the value supplied when the function is called.",
     pairs:[["Parameter","Name used by the function to receive a value"],["Argument","Actual value supplied in a call"]],
     analyse:"Parameters make movement code reusable because speed can change without creating another move function.",
-    evaluate:"Use parameters for values the caller genuinely needs to vary; too many unrelated parameters can make a function difficult to understand."},
+    evaluate:"Use parameters for values the caller genuinely needs to vary; too many unrelated parameters can make a function difficult to understand.",
+    codePractice:{prompt:"Write a function called add_points with parameters score and bonus. Return score + bonus. Then print the result of add_points(10, 5).",starter:"def add_points(score, bonus):\n    # write the return line\n\n# call the function and print the result",answer:"def add_points(score, bonus):\n    return score + bonus\n\nprint(add_points(10, 5))",feedback:"The parameters belong inside the brackets, the return line is indented inside the function, and the function call supplies the arguments 10 and 5."}},
 
   {id:"while-practice",topic:"A4-A6",title:"While loop: keep going until the condition changes",skill:"iteration",
     lines:["A while loop repeats while its condition is True.","Something inside or around the loop must eventually change the condition when the program needs to stop.","Game loops often use a Boolean variable such as running."],
@@ -45,7 +57,8 @@ const unit4TaughtIdeas:ShortStudyIdea[]=[
     feedback:"The loop continues while its condition is True. Changing running to False lets the program leave the loop.",
     pairs:[["while running:","Repeats while running is True"],["running = False","Allows the loop to finish"]],
     analyse:"A Boolean running flag gives the program one clear state controlling whether the repeated game loop continues.",
-    evaluate:"Always check that a while loop has a realistic stopping route so it cannot continue accidentally forever."},
+    evaluate:"Always check that a while loop has a realistic stopping route so it cannot continue accidentally forever.",
+    codePractice:{prompt:"Write a while loop that starts count at 1, prints count while it is less than or equal to 3, and increases count by 1 each time.",starter:"count = 1\nwhile count <= 3:\n    # print and update count",answer:"count = 1\nwhile count <= 3:\n    print(count)\n    count = count + 1",feedback:"Both statements are indented inside the while loop. Updating count is essential so the condition eventually becomes False."}},
 
   {id:"return-values-practice",topic:"A4",title:"Return: send a result back from a function",skill:"return-values",
     lines:["A function can calculate a result and return it to the code that called the function.","return ends that function call and provides a value that can be stored or used.","Printing a value displays it; returning a value lets the rest of the program use it."],
@@ -115,7 +128,8 @@ const unit4TaughtIdeas:ShortStudyIdea[]=[
     feedback:"A DataFrame stores structured tabular data in labelled rows and columns.",
     pairs:[["Row","One record in the table"],["Column","One named field across records"]],
     analyse:"Using labelled columns can make it clearer which value is being read or changed compared with relying only on numeric positions.",
-    evaluate:"Pandas is useful for structured data work, but it should be used because the data task needs it rather than added to a game unnecessarily."},
+    evaluate:"Pandas is useful for structured data work, but it should be used because the data task needs it rather than added to a game unnecessarily.",
+    codePractice:{prompt:"Using pandas as pd, create a DataFrame from the data dictionary below and print the DataFrame. Data: Name = Aisha, Ben; Score = 10, 12.",starter:"import pandas as pd\n\ndata = {\"Name\": [\"Aisha\", \"Ben\"], \"Score\": [10, 12]}\n# create df\n# print df",answer:"import pandas as pd\n\ndata = {\"Name\": [\"Aisha\", \"Ben\"], \"Score\": [10, 12]}\ndf = pd.DataFrame(data)\nprint(df)",feedback:"pd.DataFrame(data) turns the dictionary into a DataFrame, and print(df) displays the table."}},
 
   {id:"pygame-runner-loop",topic:"A4-A6",title:"Pygame runner: understand the main game loop",skill:"pygame-loop",
     lines:["A Pygame runner game repeatedly checks events, updates game values and redraws the scene.","The main while loop keeps these steps happening many times per second.","Functions can separate jobs such as moving the player, drawing the background and creating obstacles."],
