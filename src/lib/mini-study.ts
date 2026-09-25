@@ -1,8 +1,9 @@
 /** Shared contracts and pure rules. Answer keys live in server-side content, never the initial client payload. */
 export type StudyOption = { id: string; text: string };
 export type StudyQuestion = {
-  id: string; skill: string; prompt: string; kind: "choice" | "match";
+  id: string; skill: string; prompt: string; kind: "choice" | "match" | "code";
   options: StudyOption[]; stems?: StudyOption[]; recap?: boolean;
+  language?: "python"; starter?: string;
 };
 export type StudyQuestionKey = StudyQuestion & { answer: string | Record<string, string>; explanation: string };
 export type StudyLesson = {
@@ -54,6 +55,8 @@ export function publicStudyQuestions(keys: StudyQuestionKey[], seed: string): St
     id:q.id,skill:q.skill,prompt:q.prompt,kind:q.kind,recap:q.recap,
     options:studyShuffle(q.options, `${seed}:${q.id}:options`),
     ...(q.stems ? {stems:studyShuffle(q.stems, `${seed}:${q.id}:stems`)} : {}),
+    ...(q.language ? {language:q.language} : {}),
+    ...(q.starter !== undefined ? {starter:q.starter} : {}),
   }));
 }
 
@@ -70,6 +73,8 @@ export function gradeStudy(keys: StudyQuestionKey[], input: unknown): StudyGrade
     if (!question) return null;
     if (question.kind === "choice") {
       if (typeof record.answer !== "string" || !question.options.some(o=>o.id===record.answer)) return null;
+    } else if (question.kind === "code") {
+      if (typeof record.answer !== "string" || !record.answer.trim() || record.answer.length > 8000) return null;
     } else {
       if (!record.answer || typeof record.answer !== "object" || Array.isArray(record.answer)) return null;
       const pairs = record.answer as Record<string,unknown>;
@@ -81,11 +86,16 @@ export function gradeStudy(keys: StudyQuestionKey[], input: unknown): StudyGrade
   }
   const feedback = keys.map((q):StudyFeedback=>{
     const actual = answers.get(q.id);
-    const correct = typeof q.answer === "string" ? actual===q.answer
+    const normaliseCode=(value:string)=>value.replace(/\\r\\n?/g,"\\n").split("\\n").map(line=>line.replace(/[ \\t]+$/,"")).join("\\n").trim();
+    const correct = q.kind==="code" && typeof q.answer==="string" && typeof actual==="string"
+      ? normaliseCode(actual)===normaliseCode(q.answer)
+      : typeof q.answer === "string" ? actual===q.answer
       : Object.entries(q.answer).every(([stem,option])=>actual && typeof actual!=="string" && actual[stem]===option);
-    const correctAnswer = typeof q.answer === "string" ? q.options.find(o=>o.id===q.answer)!.text
+    const correctAnswer = q.kind==="code" && typeof q.answer==="string" ? q.answer
+      : typeof q.answer === "string" ? q.options.find(o=>o.id===q.answer)!.text
       : q.stems!.map(s=>`${s.text}: ${q.options.find(o=>o.id===(q.answer as Record<string,string>)[s.id])!.text}`).join("; ");
-    const selectedAnswer=typeof actual==="string"?q.options.find(o=>o.id===actual)!.text
+    const selectedAnswer=q.kind==="code"&&typeof actual==="string"?actual
+      : typeof actual==="string"?q.options.find(o=>o.id===actual)!.text
       : q.stems!.map(s=>`${s.text}: ${q.options.find(o=>o.id===(actual as Record<string,string>)[s.id])!.text}`).join("; ");
     return {questionId:q.id,prompt:q.prompt,skill:q.skill,correct,recap:Boolean(q.recap),explanation:q.explanation,correctAnswer,selectedAnswer};
   });
