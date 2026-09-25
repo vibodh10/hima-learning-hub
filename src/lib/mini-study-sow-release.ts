@@ -4,15 +4,37 @@ export type SowRelease={lessonId:string;releaseOn:string;title:string};
  * Automatic second-practice release dates for the 2026-27 teaching sequence.
  * Dates are placed after the corresponding classroom teaching point so the
  * Digital Learning Hub reinforces taught content rather than introducing it.
+ *
+ * Unit 4 deliberately becomes cumulative after the first formal check: learners
+ * revisit individual constructs, combine them into menus and loops, then apply
+ * the same ideas to the practical Pygame runner work already completed in class.
  */
 const unit4Releases:SowRelease[]=[
   {lessonId:"u4-variables-v1",releaseOn:"2026-09-01",title:"Variables"},
   {lessonId:"u4-data-types-operators-v1",releaseOn:"2026-09-04",title:"Data types and operators"},
   {lessonId:"u4-selection-v1",releaseOn:"2026-09-08",title:"Selection and control statements"},
   {lessonId:"u4-iteration-v1",releaseOn:"2026-09-11",title:"Loops and iteration"},
-  {lessonId:"u4-functions-basics-v1",releaseOn:"2026-09-18",title:"Create and call simple functions"},
+  {lessonId:"u4-functions-basics-v1",releaseOn:"2026-09-18",title:"Function 1: define and call a function"},
+
+  // These practical consolidation steps begin after the 21 September formative
+  // window opens, so Formative Assessment 1 stays frozen to what had been
+  // formally taught at the start of that week.
+  {lessonId:"u4-program-environment-v1",releaseOn:"2026-09-22",title:"Read the shape of a Python program"},
+  {lessonId:"u4-function-two-v1",releaseOn:"2026-09-23",title:"Function 2: pass a value into a function"},
   {lessonId:"u4-functions-parameters-v1",releaseOn:"2026-09-23",title:"Functions with parameters and return values"},
+  {lessonId:"u4-while-practice-v1",releaseOn:"2026-09-23",title:"While loop: keep going until the condition changes"},
+  {lessonId:"u4-return-values-practice-v1",releaseOn:"2026-09-23",title:"Return: send a result back from a function"},
+  {lessonId:"u4-function-while-v1",releaseOn:"2026-09-24",title:"Combine a function with a while loop"},
+  {lessonId:"u4-function-while-if-v1",releaseOn:"2026-09-24",title:"Combine a function, while loop and if decision"},
+  {lessonId:"u4-choice-menu-if-v1",releaseOn:"2026-09-24",title:"Build a simple menu using choice and if"},
+  {lessonId:"u4-function-menu-choice-if-v1",releaseOn:"2026-09-24",title:"Put the menu inside a function"},
+  {lessonId:"u4-lists-practical-v1",releaseOn:"2026-09-24",title:"Use a list, display values and change a value"},
+  {lessonId:"u4-pandas-practical-v1",releaseOn:"2026-09-25",title:"Pandas: display and change table values"},
+  {lessonId:"u4-pygame-runner-loop-v1",releaseOn:"2026-09-25",title:"Pygame runner: understand the main game loop"},
+  {lessonId:"u4-pygame-moving-world-v1",releaseOn:"2026-09-25",title:"Move the character and scrolling background"},
+  {lessonId:"u4-pygame-obstacles-v1",releaseOn:"2026-09-25",title:"Add colourful obstacles using functions, loops and if"},
   {lessonId:"u4-scope-v1",releaseOn:"2026-09-25",title:"Local and global scope"},
+
   {lessonId:"u4-file-handling-v1",releaseOn:"2026-09-30",title:"Open, read, write and close files"},
   {lessonId:"u4-files-functions-v1",releaseOn:"2026-10-02",title:"Use files with functions"},
   {lessonId:"u4-arrays-collections-v1",releaseOn:"2026-10-07",title:"Lists, arrays and collections"},
