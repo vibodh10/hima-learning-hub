@@ -19,45 +19,24 @@ describe("Unit 4 SOW-driven release",()=>{
     });
     const ids=releasedSowLessonIds("4","2026-09-23");
     expect(ids).toContain("u4-program-environment-v1");
+    expect(ids).toContain("u4-indentation-v1");
     expect(ids).toContain("u4-function-two-v1");
-    expect(ids).toContain("u4-functions-parameters-v1");
     expect(ids).toContain("u4-while-practice-v1");
-    expect(ids).toContain("u4-return-values-practice-v1");
+    expect(ids).not.toContain("u4-functions-parameters-v1");
+    expect(ids).not.toContain("u4-return-values-practice-v1");
   });
 
-  it("combines functions loops decisions menus and lists before the game application",()=>{
-    const ids=releasedSowLessonIds("4","2026-09-24");
-    expect(ids).toContain("u4-function-while-v1");
-    expect(ids).toContain("u4-function-while-if-v1");
-    expect(ids).toContain("u4-choice-menu-if-v1");
-    expect(ids).toContain("u4-function-menu-choice-if-v1");
-    expect(ids).toContain("u4-lists-practical-v1");
-    expect(ids).not.toContain("u4-pygame-runner-loop-v1");
-  });
-
-  it("releases the taught Pandas and Pygame runner consolidation by 25 September",()=>{
+  it("keeps untaught combinations menus scope and Pygame locked on 25 September",()=>{
     const ids=releasedSowLessonIds("4","2026-09-25");
     expect(ids).toContain("u4-pandas-practical-v1");
-    expect(ids).toContain("u4-pygame-runner-loop-v1");
-    expect(ids).toContain("u4-pygame-moving-world-v1");
-    expect(ids).toContain("u4-pygame-obstacles-v1");
-    expect(ids).toContain("u4-scope-v1");
-
-    const order=[
-      "u4-function-two-v1",
-      "u4-while-practice-v1",
-      "u4-return-values-practice-v1",
-      "u4-function-while-v1",
-      "u4-function-while-if-v1",
-      "u4-choice-menu-if-v1",
-      "u4-function-menu-choice-if-v1",
-      "u4-lists-practical-v1",
-      "u4-pandas-practical-v1",
-      "u4-pygame-runner-loop-v1",
-      "u4-pygame-moving-world-v1",
-      "u4-pygame-obstacles-v1",
-    ];
-    expect(order.map(id=>ids.indexOf(id))).toEqual([...order.map(id=>ids.indexOf(id))].sort((a,b)=>a-b));
+    expect(ids).toContain("u4-indentation-v1");
+    expect(ids).toContain("u4-function-two-v1");
+    expect(ids).toContain("u4-while-practice-v1");
+    expect(ids).not.toContain("u4-return-values-practice-v1");
+    expect(ids).not.toContain("u4-function-while-v1");
+    expect(ids).not.toContain("u4-choice-menu-if-v1");
+    expect(ids).not.toContain("u4-scope-v1");
+    expect(ids).not.toContain("u4-pygame-runner-loop-v1");
   });
 
   it("continues automatically through the autumn Unit 4 sequence",()=>{
