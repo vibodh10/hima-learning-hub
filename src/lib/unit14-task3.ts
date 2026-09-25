@@ -199,7 +199,7 @@ export const unit14Task3QuestionFamilies=[
   "Identify incorrect DFD symbols, unlabelled flows or illogical direct connections and repair them.",
   "Where useful, identify records/entities required by the scenario and show suitable relationships between them.",
   "Choose useful fields for Customer, Booking, Staff, Stock, Vehicle/Asset, Repair/Service or equivalent scenario records.",
-  "Explain the difference between the Pearson diagram categories: functional chart, data flow diagram, building/floor plan and network diagram, then choose the type that best represents the requirement."
+  "Explain the difference between the Pearson diagram categories: functional chart, data flow diagram, building/floor plan and network diagram, then choose the type that best represents the requirement.",
   "Recommend software for each role and explain the information that role should be able to access.",
   "Explain how hardware and software work together to support a named member of staff.",
   "Review a weak solution and identify omitted rooms, users, software, data, internet connectivity or future requirements.",
