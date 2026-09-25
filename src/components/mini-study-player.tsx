@@ -83,7 +83,7 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
   const feedback=grade?card.questions.flatMap(q=>grade.feedback.filter(f=>f.questionId===q.id)):[];
   const currentFeedback=feedback[feedbackIndex];
   const answer=responses[question?.id];
-  const validAnswer=question?.kind==="choice"?typeof answer==="string":
+  const validAnswer=question?.kind==="choice"?typeof answer==="string":question?.kind==="code"?typeof answer==="string"&&answer.trim().length>0:
     Boolean(answer && typeof answer!=="string" && question.stems?.every(s=>answer[s.id]) && new Set(Object.values(answer)).size===question.stems?.length);
   const setAnswer=(value:StudyResponse["answer"])=>{setResponses(current=>({...current,[question.id]:value}));setError("");};
 
@@ -173,7 +173,15 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
         {question.options.map(option=><label key={option.id} className="mini-study-option">
           <input type="radio" name={question.id} value={option.id} checked={answer===option.id} disabled={pending} onChange={()=>setAnswer(option.id)}/><span>{option.text}</span>
         </label>)}
-      </fieldset>:<fieldset className="mini-study-matches"><legend>Use each answer once.</legend>
+      </fieldset>:question.kind==="code"?<div className="mini-study-code-workspace">
+        <div className="mini-study-code-toolbar"><strong>Python practice</strong><span>Type the code yourself. Indentation counts.</span></div>
+        {question.starter&&<div className="mini-study-code-starter"><p>Starter:</p><pre><code>{question.starter}</code></pre></div>}
+        <label className="mini-study-code-label" htmlFor={"code-"+question.id}>Your code</label>
+        <textarea id={"code-"+question.id} className="mini-study-code-editor" rows={12} spellCheck={false} autoCapitalize="off" autoCorrect="off"
+          value={typeof answer==="string"?answer:""} disabled={pending}
+          onChange={event=>setAnswer(event.target.value)} placeholder="Type your Python code here..."/>
+        <p className="mini-study-code-note">Use spaces or Tab carefully. Python uses indentation to decide which lines belong inside functions, loops and if statements.</p>
+      </div>:<fieldset className="mini-study-matches"><legend>Use each answer once.</legend>
         {question.stems?.map(stem=><label key={stem.id}><span>{stem.text}</span><select
           aria-label={stem.text} value={typeof answer==="object"?answer[stem.id]??"":""} disabled={pending}
           onChange={event=>setAnswer({...typeof answer==="object"?answer:{},[stem.id]:event.target.value})}>
@@ -187,7 +195,7 @@ export function UntimedStudyPlayer({card,initialGrade,check=checkMiniStudy,finis
       <p className="mini-study-position">{currentFeedback.recap?"Your recap":"Your answer"}</p>
       <h1 ref={heading} tabIndex={-1}>{currentFeedback.correct?"That's right":"Let's look at this together"}</h1>
       <p>{currentFeedback.prompt??card.questions[feedbackIndex].prompt}</p>
-      <p className="mini-study-feedback-answer">{currentFeedback.correctAnswer}</p>
+      {card.questions.find(q=>q.id===currentFeedback.questionId)?.kind==="code"?<pre className="mini-study-feedback-answer"><code>{currentFeedback.correctAnswer}</code></pre>:<p className="mini-study-feedback-answer">{currentFeedback.correctAnswer}</p>}
       <p>{currentFeedback.explanation}</p>
       <button className="mini-study-primary" disabled={pending} onClick={()=>feedbackIndex<feedback.length-1?setFeedbackIndex(feedbackIndex+1):finishStep()}>
         {pending?(savingCompletion?"Saving your completion…":"Loading feedback…"):feedbackIndex<feedback.length-1?"Continue":"Finish for today"}
