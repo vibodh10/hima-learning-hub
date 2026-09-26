@@ -25,6 +25,7 @@ export default async function MiniStudyGroupPage({params}:{params:Promise<{id:st
  const reportUnits:StudyUnitRef[]=activeUnitIds.map(unitId=>{const unit=unitById.get(unitId);return {id:unitId,label:unit?`Unit ${unit.code}: ${unit.title}`:"Unit details unavailable"};});
  const assessmentUnits=activeUnitIds.flatMap(unitId=>{const unit=unitById.get(unitId);return unit?[{code:unit.code,title:unit.title}]:[];});
  const examUnit=(unitRows??[]).some(unit=>String(unit.code)==="14");
+ const unit2Exam=(unitRows??[]).some(unit=>String(unit.code)==="2");
  const evidence=!unitsError&&!unitRowsError?await loadMiniStudyEvidence(client,id,activeUnitIds).catch(()=>null):null;
  const unitNames=reportUnits.map(unit=>unit.label);
  return <><AppHeader name={actor.display_name} role={actor.role}/><main className="shell max-w-5xl py-8">
@@ -33,9 +34,9 @@ export default async function MiniStudyGroupPage({params}:{params:Promise<{id:st
   {unitNames.length>0&&<p className="mt-2 text-slate-600">{unitNames.join(" · ")}</p>}
   {!activeUnitIds.length||!group.published?<section className="card mt-5"><h1 className="text-3xl font-bold">Finish this group’s setup</h1><p className="mt-3">Choose the units you teach before students begin.</p><Link className="button mt-5" href={`/teacher/classes/${id}/settings`}>Set up group →</Link></section>:<>
    <MiniStudyAssessmentPreview units={assessmentUnits}/>
-   <div className="mt-5">{!evidence?<section className="card" role="alert"><h1 className="text-2xl font-bold">Records could not be loaded</h1><p className="mt-3">Refresh to try again. Missing evidence has not been shown as zero progress.</p></section>:<><MiniStudyReport {...evidence} units={reportUnits} classId={id}/><a className="button-secondary mt-6" href={`/api/reports/classes/${id}/mini-study`}>Download short-study spreadsheet</a></>}</div>
+   <div className="mt-5">{!evidence?<section className="card" role="alert"><h1 className="text-2xl font-bold">Records could not be loaded</h1><p className="mt-3">Refresh to try again. Missing evidence has not been shown as zero progress.</p></section>:<><MiniStudyReport {...evidence} units={reportUnits} classId={id}/><div className="mt-6 flex flex-wrap gap-3"><a className="button-secondary" href={`/api/reports/classes/${id}/mini-study`}>Download short-study spreadsheet</a>{reportUnits.map(unit=><Link key={unit.id} className="button-secondary" href={`/teacher/classes/${id}/formative-assessments?unitId=${unit.id}`}>{unit.label} · whole-class formative view</Link>)}</div></>}</div>
   </>}
-  {examUnit&&<Link className="button mt-6" href={`/study/unit14-exam?classId=${id}`}>Unit 14 teaching and exam practice →</Link>}
+  <div className="mt-6 flex flex-wrap gap-3">{unit2Exam&&<Link className="button" href={`/study/unit2-exam?classId=${id}`}>Unit 2 external exam activities →</Link>}{examUnit&&<Link className="button" href={`/study/unit14-exam?classId=${id}`}>Unit 14 teaching and exam practice →</Link>}</div>
   <nav className="mt-8 flex flex-wrap gap-5 border-t border-slate-200 pt-5" aria-label="Group options"><Link className="link" href={`/teacher/classes/${id}/settings`}>Registration link and group units</Link><Link className="link" href={`/teacher/classes/${id}/history`}>Earlier records and reports</Link></nav>
  </main></>;
 }
