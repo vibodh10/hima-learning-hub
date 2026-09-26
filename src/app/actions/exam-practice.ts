@@ -16,9 +16,12 @@ export async function submitExamPractice(_:ExamPracticeState,form:FormData):Prom
  const validPaper=unitCode==="2"?unit2Paper:unit14Paper;
  if(!/^[0-9a-f-]{36}$/i.test(classId)||!/^\d$/.test(raw)||!validUnit||!validActivity||!validPaper||response.length<40||response.length>50000)return {message:"Choose a valid practice activity and write your own response (40–50,000 characters)."};
  const client=await createClient();
- const {data,error}=await client.from("exam_practice_attempts").insert({class_id:classId,unit_code:unitCode,paper_id:paper,activity,response}).select("id").single();
- if(error)return {message:"Your attempt was not saved. Check your group access and try again."};
- revalidatePath(unitCode==="2"?"/study/unit2-exam":"/study/unit14-exam");return {ok:true,id:data.id,message:"Your attempt is saved. Now compare it with the guidance below."};
+ let saved=await client.from("exam_practice_attempts").insert({class_id:classId,unit_code:unitCode,paper_id:paper,activity,response}).select("id").single();
+ // Keep existing Unit 14 practice working during the short deploy window before
+ // the database migration that adds unit_code is applied.
+ if(saved.error&&unitCode==="14")saved=await client.from("exam_practice_attempts").insert({class_id:classId,paper_id:paper,activity,response}).select("id").single();
+ if(saved.error)return {message:unitCode==="2"?"Unit 2 saving is not ready yet. Ask your tutor to apply the latest database migration, then try again.":"Your attempt was not saved. Check your group access and try again."};
+ revalidatePath(unitCode==="2"?"/study/unit2-exam":"/study/unit14-exam");return {ok:true,id:saved.data.id,message:"Your attempt is saved. Now compare it with the guidance below."};
 }
 export async function reflectExamPractice(_:ExamPracticeState,form:FormData):Promise<ExamPracticeState>{
  const actor=await requireRole("student");const id=String(form.get("id")??"");const reflection=String(form.get("reflection")??"").trim();
