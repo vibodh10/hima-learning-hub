@@ -40,7 +40,7 @@ export default async function Unit2ExamPage({searchParams}:{searchParams:Promise
   const attempts=group?await allStudyRows((from,to)=>{
     let query=client.from("exam_practice_attempts")
       .select("id,learner_id,paper_id,activity,response,reflection,submitted_at,reviewed_at,user_profiles!exam_practice_attempts_learner_id_fkey(display_name)",{count:"exact"})
-      .eq("class_id",group.id).eq("unit_code","2");
+      .eq("class_id",group.id).in("paper_id",unit2PracticeScenarios.map(item=>item.id));
     if(!staff)query=query.eq("learner_id",actor.id);
     return query.order("submitted_at",{ascending:false}).order("id").range(from,to);
   }):[];
