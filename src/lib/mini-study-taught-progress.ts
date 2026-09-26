@@ -162,6 +162,26 @@ const unit4TaughtIdeas:ShortStudyIdea[]=[
     evaluate:"A working runner game should still be checked for readable structure, sensible function responsibilities and predictable collision behaviour."},
 ];
 
+  {id:"requirements-analysis",topic:"B1",title:"Turn a problem into clear requirements",skill:"requirements",
+    lines:["Requirements describe what the software must do and the constraints it must work within.","Functional requirements describe behaviours or features; non-functional requirements describe qualities such as usability, performance or reliability.","A programmer should understand the problem before jumping into code."],
+    example:"For a runner game, a functional requirement could be 'the player can jump over obstacles'. A non-functional requirement could be 'the controls should respond quickly enough to feel playable'.",
+    help:"Ask: who is the user, what do they need to do, what data is involved, and what rules or limits matter?",
+    question:"Which is a functional requirement?",answers:["The player must be able to jump over an obstacle","The program should be easy to maintain","The interface should look professional"],
+    feedback:"A functional requirement describes what the system must do. Maintainability and appearance are quality-related non-functional requirements.",
+    pairs:[["Functional requirement","What the system must do"],["Non-functional requirement","A quality or constraint the system should meet"]],
+    analyse:"Clear requirements give programmers something specific to design, code and test against instead of relying on assumptions.",
+    evaluate:"Good requirements should be clear, testable and linked to the user's actual need rather than vague statements such as 'make it good'."},
+
+  {id:"testing-evidence",topic:"C1-C2",title:"Testing and evidence: prove that the program works",skill:"testing-evidence",
+    lines:["Testing compares actual behaviour with an expected result.","A useful test records the input, expected result, actual result and whether the test passed.","Evidence can include screenshots, output, test tables and explanations that show what was checked.","Typical, boundary/extreme and erroneous data help test different kinds of behaviour."],
+    example:"For an age rule allowing 16 to 99, test 25 as typical, 16 and 99 as boundary values, and 15 or text as erroneous input. Record expected and actual results.",
+    help:"Do not write 'it works'. Show what you tested, what you expected and what actually happened.",
+    question:"Which is the strongest testing evidence?",answers:["Input 16, expected accepted, actual accepted, pass","It worked when I tried it","The code looks correct"],
+    feedback:"Strong evidence records the exact test and outcome so another person can understand what was checked.",
+    pairs:[["Expected result","What should happen before the test is run"],["Actual result","What really happened when the test was run"]],
+    analyse:"Recording expected and actual outcomes makes bugs easier to locate and provides evidence that requirements have been checked.",
+    evaluate:"Passing a few tests does not prove a program has no bugs; test cases should cover important paths, boundaries and invalid input."},
+
 const unit6TaughtIdeas:ShortStudyIdea[]=[
   {id:"html-page-basics",topic:"B2",title:"Build the basic structure of an HTML page",skill:"html",
     lines:["An HTML page uses html, head and body to organise the document.","The title belongs in the head and visible page content belongs in the body.","Headings, paragraphs, div, section and main organise visible content."],
