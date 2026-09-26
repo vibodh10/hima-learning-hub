@@ -26,7 +26,7 @@ export default async function Unit14ExamPage({searchParams}:{searchParams:Promis
  const group=requested?groups.find(g=>g.id===requested):groups[0];
  const task3Only=Boolean(group&&/wednesday/i.test(group.name));
  const attempts=group?await allStudyRows((from,to)=>{
-  let query=client.from("exam_practice_attempts").select("id,learner_id,paper_id,activity,response,reflection,submitted_at,reviewed_at,user_profiles!exam_practice_attempts_learner_id_fkey(display_name)",{count:"exact"}).eq("class_id",group.id);
+  let query=client.from("exam_practice_attempts").select("id,learner_id,paper_id,activity,response,reflection,submitted_at,reviewed_at,user_profiles!exam_practice_attempts_learner_id_fkey(display_name)",{count:"exact"}).eq("class_id",group.id).eq("unit_code","14");
   if(!staff)query=query.eq("learner_id",actor.id);
   return query.order("submitted_at",{ascending:false}).order("id").range(from,to);
  }):[];
