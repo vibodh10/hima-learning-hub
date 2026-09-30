@@ -28,8 +28,9 @@ export default async function StudyPage() {
     <header className="mini-study-header"><Link href="/study">Digital Learning Hub</Link><form action={logout}><button type="submit">Sign out</button></form></header>
     <main id="study-main" className="mini-study-main">
       <StudentPracticeBadges misses={misses}/>
+      {showAssignment && <aside className="mini-study-example"><h2>Working on Unit 6 Assignment 1?</h2><p>Open one small step at a time while you write in your assignment document.</p><Link className="mini-study-primary" href="/study/assignment-one">Open the assignment guide</Link></aside>}
       <MiniStudyHome initial={home}/>
     </main>
-    <footer className="mini-study-footer"><Link href="/rewards">My rewards · points, badges and themes</Link>{showAssignment&&<Link href="/study/assignment-one">Unit 6 Assignment 1 · 28 September</Link>}{assignedUnits.includes("4")&&<Link href="/study/programming-assignment-one">Unit 4 Assignment 1 · 28 September</Link>}{assignedUnits.includes("2")&&<Link href="/study/unit2-exam">Unit 2 · external exam activities</Link>}{assignedUnits.includes("14")&&<Link href="/study/unit14-exam">Unit 14 · January exam preparation</Link>}<Link href="/help">Need help?</Link></footer>
+    <footer className="mini-study-footer"><Link href="/rewards">My rewards · points, badges and themes</Link>{showAssignment&&<Link href="/study/assignment-one">Unit 6 Assignment 1 · Step by step guide</Link>}{assignedUnits.includes("4")&&<Link href="/study/programming-assignment-one">Unit 4 Assignment 1 · 28 September</Link>}{assignedUnits.includes("2")&&<Link href="/study/unit2-exam">Unit 2 · external exam activities</Link>}{assignedUnits.includes("14")&&<Link href="/study/unit14-exam">Unit 14 · January exam preparation</Link>}<Link href="/help">Need help?</Link></footer>
   </PracticeReminderSurface>;
 }
