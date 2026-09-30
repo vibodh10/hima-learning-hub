@@ -160,7 +160,6 @@ const unit4TaughtIdeas:ShortStudyIdea[]=[
     pairs:[["Obstacle list","Stores several obstacles"],["Collision if statement","Chooses what happens when player and obstacle meet"]],
     analyse:"This structure combines the core ideas already learned: variables hold positions, a loop repeats, functions organise behaviour and if statements react to conditions.",
     evaluate:"A working runner game should still be checked for readable structure, sensible function responsibilities and predictable collision behaviour."},
-];
 
   {id:"requirements-analysis",topic:"B1",title:"Turn a problem into clear requirements",skill:"requirements",
     lines:["Requirements describe what the software must do and the constraints it must work within.","Functional requirements describe behaviours or features; non-functional requirements describe qualities such as usability, performance or reliability.","A programmer should understand the problem before jumping into code."],
@@ -181,6 +180,8 @@ const unit4TaughtIdeas:ShortStudyIdea[]=[
     pairs:[["Expected result","What should happen before the test is run"],["Actual result","What really happened when the test was run"]],
     analyse:"Recording expected and actual outcomes makes bugs easier to locate and provides evidence that requirements have been checked.",
     evaluate:"Passing a few tests does not prove a program has no bugs; test cases should cover important paths, boundaries and invalid input."},
+
+];
 
 const unit6TaughtIdeas:ShortStudyIdea[]=[
   {id:"html-page-basics",topic:"B2",title:"Build the basic structure of an HTML page",skill:"html",
