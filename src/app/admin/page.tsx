@@ -9,6 +9,7 @@ import { BadgeDefinitionForm } from "@/components/gamification-config-forms";
 import { AcademicCalendarForm } from "@/components/academic-calendar-form";
 import { AchievementLevelForm, AchievementRuleForm, CertificateEligibilityReviewForm, RecognitionTemplateForm } from "@/components/achievement-config-forms";
 import { TeacherAccountSetupForm } from "@/components/teacher-account-setup-form";
+import { StudentPasswordForm } from "@/components/student-password-form";
 import {
   AcademicYearCreateForm, AcademicYearStatusForm, CourseStatusForm,
   CurriculumVersionCreateForm, CurriculumVersionStatusForm,
@@ -62,6 +63,7 @@ export default async function AdminPage(){
       <Metric label="Classes" value={String(classes?.filter(item=>!item.archived_at).length??0)}/>
     </section>
     <section className="card mt-6 border-teal-200 bg-teal-50"><p className="eyebrow">Normal workflow</p><h2 className="mt-2 text-2xl font-bold">Most days, use Groups</h2><p className="mt-2 text-sm text-slate-700">Open a group to see students, progress and reports. Come back here only to create a teacher account or change organisation-wide setup.</p><Link className="button mt-5" href="/dashboard#groups">Open groups</Link></section>
+    <StudentPasswordForm students={(profiles??[]).filter(profile=>profile.role==="student"&&!profile.archived_at).map(profile=>({id:profile.id,display_name:profile.display_name}))}/>
     <TeacherAccountSetupForm existingAccounts={requestedTeacherAccounts}/>
     <details className="card mt-6"><summary className="cursor-pointer text-lg font-bold">Advanced administration</summary><p className="mt-2 text-sm text-slate-600">Occasional curriculum, calendar, privacy and recognition settings. These remain hidden from teachers.</p><div className="mt-5">
     <section className="mt-6 grid gap-6 lg:grid-cols-2">
