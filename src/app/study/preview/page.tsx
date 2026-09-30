@@ -15,5 +15,5 @@ export default async function StudyPreview({searchParams}:{searchParams:Promise<
     unitTitle:"Website Development",lines:kind==="baseline"?["Four short questions, one at a time.","It is fine to choose ‘I'm not sure yet’."]:lesson.lines,example:kind==="baseline"?"":lesson.example,support:kind==="baseline"?"":lesson.support,
     questions:publicStudyQuestions(keys,mode??"daily")};
   return <div className="mini-study-surface"><header className="mini-study-header">Digital Learning Hub · Preview only</header>
-    <main className="mini-study-main"><p className="mb-4">Test preview: no learner records or rewards are changed.</p><MiniStudyPlayer card={card} check={checkPreviewStudy} finish={finishPreviewStudy}/></main><footer className="mini-study-footer"><Link href="/study/preview/assignment-one">Assignment 1 preparation · 28 September</Link></footer></div>;
+    <main className="mini-study-main"><p className="mb-4">Test preview: no learner records or rewards are changed.</p><MiniStudyPlayer card={card} check={checkPreviewStudy} finish={finishPreviewStudy}/></main><footer className="mini-study-footer"><Link href="/study/preview/assignment-one">Unit 6 Assignment 1 · Step by step guide</Link></footer></div>;
 }
