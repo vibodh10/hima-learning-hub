@@ -25,7 +25,7 @@ export async function TeacherHomeDashboard(){
   </header>
 
   <div className="mt-8">
-   <SowAssessmentGenerator/>
+   <SowAssessmentGenerator groups={(groups.data??[]).map(group=>({id:group.id,name:group.name}))}/>
   </div>
 
   <section id="groups" className="mt-8 grid gap-4 md:grid-cols-2" aria-label="Your groups">
