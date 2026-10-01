@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {createClient} from "@/lib/supabase/server";
 import {CreateClassForm} from "./class-forms";
+import {SowAssessmentGenerator} from "./sow-assessment-generator";
 
 export async function TeacherHomeDashboard(){
  const client=await createClient();
@@ -18,10 +19,14 @@ export async function TeacherHomeDashboard(){
    <div>
     <p className="eyebrow">Teacher dashboard</p>
     <h1 className="mt-2 text-3xl font-bold">Your groups</h1>
-    <p className="mt-3 text-slate-600">Choose a group to view its students, progress, starting points, learning activity and reports.</p>
+    <p className="mt-3 text-slate-600">Upload your Scheme of Work first, then manage groups, students, progress, learning activity and reports.</p>
    </div>
    <Link className="button-secondary" href="#create-group">Create another group</Link>
   </header>
+
+  <div className="mt-8">
+   <SowAssessmentGenerator/>
+  </div>
 
   <section id="groups" className="mt-8 grid gap-4 md:grid-cols-2" aria-label="Your groups">
    {groups.error
