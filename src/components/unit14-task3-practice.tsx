@@ -3,6 +3,7 @@
 import {useState} from "react";
 import {unit14Task3FinalChecklist,unit14Task3Lessons,unit14Task3QuestionFamilies,unit14Task3ScenarioDrills} from "@/lib/unit14-task3";
 import {Unit14DiagramMasteryLab} from "@/components/unit14-diagram-mastery-lab";
+import {Unit14Task3ModelAnswers} from "@/components/unit14-task3-model-answers";
 
 function rotate<T>(items:T[],amount:number){
   if(!items.length)return items;
@@ -40,6 +41,8 @@ export function Unit14Task3Practice(){
       <div className="mt-5 rounded-xl bg-amber-50 p-4"><strong>Do not memorise one finished diagram.</strong> The sector changes. Memorise the method, the symbols and the checks so you can rebuild the solution from any scenario.</div>
       <nav className="mt-5 flex flex-wrap gap-2" aria-label="Task 3 lesson topics">{unit14Task3Lessons.map((item,index)=><button key={item.id} type="button" className={index===lessonIndex?"button":"button-secondary"} onClick={()=>changeLesson(index)}>{index+1}. {item.title}</button>)}</nav>
     </section>
+
+    <Unit14Task3ModelAnswers/>
 
     <section className="mini-study-panel">
       <p className="mini-study-kicker">Learn · {lessonIndex+1} of {unit14Task3Lessons.length}</p>
