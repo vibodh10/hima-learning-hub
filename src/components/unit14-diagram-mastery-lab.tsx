@@ -85,33 +85,49 @@ function FloorPlanExample(){
   return <figure className="rounded-2xl border border-slate-300 bg-white p-5">
     <figcaption className="text-lg font-bold">Worked example · Building / floor plan</figcaption>
     <p className="mt-1 text-sm text-slate-600">This is the large room-style diagram. It shows physical areas first, then annotates the IT provision required in each area.</p>
-    <div className="mt-5 grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+    <div className="mt-5 grid gap-5">
       <div className="rounded-3xl border-4 border-slate-900 bg-slate-100 p-4">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-2">
           {[
             ["Reception","2 × PCs · network printer · VoIP phone","booking system · payments · customer details"],
             ["Manager office","laptop / desktop · printer access","reporting tools · staff information · management reports"],
             ["Workshop","workstation · tablets · wireless access point","repair jobs · diagnostic software · job progress"],
             ["Parts / secure IT area","stock workstation · switch · server / shared storage","stock system · parts records · shared service data"],
-          ].map(([room,hardware,data])=><section key={room} className="rounded-2xl border-2 border-slate-800 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3"><h4 className="text-lg font-bold">{room}</h4><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">Room</span></div>
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-xl bg-slate-50 p-3"><strong className="text-sm">Hardware</strong><p className="mt-1 text-sm">{hardware}</p></div>
-              <div className="rounded-xl bg-slate-50 p-3"><strong className="text-sm">Software and data</strong><p className="mt-1 text-sm">{data}</p></div>
+          ].map(([room,hardware,data])=><section key={room} className="min-w-0 rounded-2xl border-2 border-slate-800 bg-white p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h4 className="min-w-0 break-normal text-lg font-bold leading-snug">{room}</h4>
+              <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">Room</span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="min-w-0 rounded-xl bg-slate-50 p-3">
+                <strong className="text-sm">Hardware</strong>
+                <p className="mt-1 whitespace-normal break-words text-sm leading-6">{hardware}</p>
+              </div>
+              <div className="min-w-0 rounded-xl bg-slate-50 p-3">
+                <strong className="text-sm">Software and data</strong>
+                <p className="mt-1 whitespace-normal break-words text-sm leading-6">{data}</p>
+              </div>
             </div>
           </section>)}
         </div>
-        <div className="mt-4 rounded-2xl border-2 border-dashed border-slate-500 bg-white p-4 text-center text-sm font-semibold">Annotate connections and access requirements between rooms where the scenario justifies them.</div>
+        <div className="mt-4 rounded-2xl border-2 border-dashed border-slate-500 bg-white p-4 text-sm font-semibold leading-6">
+          Annotate connections and access requirements between rooms where the scenario justifies them.
+        </div>
       </div>
-      <aside className="rounded-xl bg-slate-50 p-5">
-        <h4 className="font-bold">What the student should show</h4>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
-          <li>Named rooms or physical areas from the scenario.</li>
-          <li>Where staff work and where IT provision is required.</li>
-          <li>Appropriate hardware in each location.</li>
-          <li>Relevant software and data/information needs as annotations.</li>
-          <li>Enough detail for the proposed IT service to be understood.</li>
-        </ul>
+
+      <aside className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <h4 className="text-lg font-bold">What the student should show</h4>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            "Named rooms or physical areas from the scenario.",
+            "Where staff work and where IT provision is required.",
+            "Appropriate hardware in each location.",
+            "Relevant software and data/information needs as annotations.",
+            "Enough detail for the proposed IT service to be understood.",
+          ].map(item=><div key={item} className="rounded-xl bg-white p-3 text-sm leading-6">
+            <span className="mr-2 font-bold">✓</span>{item}
+          </div>)}
+        </div>
       </aside>
     </div>
   </figure>;
