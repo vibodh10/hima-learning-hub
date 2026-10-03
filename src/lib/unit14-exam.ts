@@ -16,6 +16,17 @@ export const unit14Papers:ExamPaper[]=[
 {id:"2024-june",title:"June 2024",links:[]},
 ];
 export const unit14Activities=["Outline service strategy","IT service catalogue","IT service delivery solution","Justification of the solution","Service management implications"];
+export const unit14TaskOwners=["Lee","Lee","Hima","Lee","Hima + Lee"] as const;
+export const unit14TaskOwnership=unit14Activities.map((title,index)=>({
+  task:index+1,
+  title,
+  owner:unit14TaskOwners[index],
+  note:index===2
+    ?"Hima leads this task, including diagrams, service design and the written explanation."
+    :index===4
+      ?"Hima and Lee may both teach and review this task."
+      :"Lee leads this task."
+}));
 export function unit14Checkpoint(day:string){
  if(day<"2026-10-01")return "September: learn the foundations and complete short checks. Use the sample task to practise one section at a time.";
  if(day<"2026-11-01")return "October: apply the teaching to two contrasting released scenarios. Review each section before starting another.";
