@@ -1,6 +1,7 @@
 "use client";
 
 import {useState} from "react";
+import {FunctionalChartExample,DfdExample,FloorPlanExample,NetworkExample} from "./unit14-connected-diagrams";
 
 type PearsonDiagram="functional"|"dfd"|"floor"|"network";
 
@@ -46,109 +47,6 @@ const pearsonNames:Record<PearsonDiagram,{title:string;purpose:string;question:s
   }
 };
 
-function FunctionalChartExample(){
-  return <figure className="rounded-2xl border border-slate-300 bg-white p-5">
-    <figcaption className="text-lg font-bold">Worked example · Functional chart</figcaption>
-    <p className="mt-1 text-sm text-slate-600">Vehicle repair business. This is a Pearson-aligned worked example, not a prescribed Pearson template.</p>
-    <div className="mt-5 flex flex-col items-center gap-4 text-center">
-      <div className="rounded-xl border-2 border-slate-800 px-8 py-3 font-bold">Vehicle repair business</div>
-      <div aria-hidden="true">↓</div>
-      <div className="grid w-full gap-4 md:grid-cols-4">
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Reception</strong><p className="mt-2 text-sm">Bookings · customer details · payments · communication</p></div>
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Workshop</strong><p className="mt-2 text-sm">Repair jobs · diagnostics · job progress</p></div>
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Parts / stock</strong><p className="mt-2 text-sm">Stock levels · parts ordering · availability</p></div>
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Management</strong><p className="mt-2 text-sm">Reports · staffing · performance · planning</p></div>
-      </div>
-    </div>
-  </figure>;
-}
-
-function DfdExample(){
-  return <figure className="rounded-2xl border border-slate-300 bg-white p-5">
-    <figcaption className="text-lg font-bold">Worked example · Data flow diagram (DFD)</figcaption>
-    <p className="mt-1 text-sm text-slate-600">The arrows are labelled with data or information, not with network cables.</p>
-    <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto_1.2fr_auto_1fr] md:items-center text-center">
-      <div className="border-2 border-slate-800 p-4"><strong>Customer</strong><p className="text-sm">external entity</p></div>
-      <div className="font-semibold">booking details →</div>
-      <div className="rounded-full border-2 border-slate-800 p-5"><strong>1.0 Process booking</strong><p className="text-sm">process</p></div>
-      <div className="font-semibold">booking record →</div>
-      <div className="border-x-4 border-slate-800 p-4"><strong>Booking records</strong><p className="text-sm">data store</p></div>
-    </div>
-    <div className="mt-4 text-center font-semibold">Process booking → booking confirmation → Customer</div>
-    <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm">
-      <strong>Context-level DFD note:</strong> a context-level view can show the whole system as one process with its external entities and flows. It is a way of presenting a DFD at a high level; it is not listed by Pearson as a separate fifth diagram category in Unit 14.
-    </div>
-  </figure>;
-}
-
-function FloorPlanExample(){
-  return <figure className="rounded-2xl border border-slate-300 bg-white p-5">
-    <figcaption className="text-lg font-bold">Worked example · Building / floor plan</figcaption>
-    <p className="mt-1 text-sm text-slate-600">This is the large room-style diagram. It shows physical areas first, then annotates the IT provision required in each area.</p>
-    <div className="mt-5 grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-      <div className="grid min-h-[520px] grid-cols-2 grid-rows-2 border-4 border-slate-900">
-        <div className="border-b-2 border-r-2 border-slate-900 p-5">
-          <h4 className="text-lg font-bold">Reception</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">2 × PCs<br/>network printer<br/>VoIP phone</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">booking system<br/>payment software<br/>customer details</p></div>
-          </div>
-        </div>
-        <div className="border-b-2 border-slate-900 p-5">
-          <h4 className="text-lg font-bold">Manager office</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">laptop / desktop<br/>network printer access</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">reporting tools<br/>staff information<br/>management reports</p></div>
-          </div>
-        </div>
-        <div className="border-r-2 border-slate-900 p-5">
-          <h4 className="text-lg font-bold">Workshop</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">workstation<br/>tablets<br/>wireless access point</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">repair jobs<br/>diagnostic software<br/>job progress</p></div>
-          </div>
-        </div>
-        <div className="p-5">
-          <h4 className="text-lg font-bold">Parts / secure IT area</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">stock workstation<br/>switch<br/>server / shared storage</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">stock system<br/>parts records<br/>shared service data</p></div>
-          </div>
-        </div>
-      </div>
-      <aside className="rounded-xl bg-slate-50 p-5">
-        <h4 className="font-bold">What the student should show</h4>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
-          <li>Named rooms or physical areas from the scenario.</li>
-          <li>Where staff work and where IT provision is required.</li>
-          <li>Appropriate hardware in each location.</li>
-          <li>Relevant software and data/information needs as annotations.</li>
-          <li>Enough detail for the proposed IT service to be understood.</li>
-        </ul>
-      </aside>
-    </div>
-  </figure>;
-}
-
-function NetworkExample(){
-  return <figure className="rounded-2xl border border-slate-300 bg-white p-5">
-    <figcaption className="text-lg font-bold">Worked example · Network diagram</figcaption>
-    <p className="mt-1 text-sm text-slate-600">This diagram focuses on the network components and their connections.</p>
-    <div className="mt-5 flex flex-col items-center gap-3 text-center">
-      <div className="rounded-lg border-2 border-slate-800 px-8 py-3 font-bold">Internet</div>
-      <div aria-hidden="true">↓</div>
-      <div className="rounded-lg border-2 border-slate-800 px-8 py-3 font-bold">Router / firewall</div>
-      <div aria-hidden="true">↓</div>
-      <div className="rounded-lg border-2 border-slate-800 px-8 py-3 font-bold">Network switch</div>
-      <div className="grid w-full gap-4 md:grid-cols-4">
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Reception</strong><p className="mt-2 text-sm">PCs + printer<br/>Ethernet</p></div>
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Manager office</strong><p className="mt-2 text-sm">PC / laptop<br/>Ethernet or Wi-Fi</p></div>
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Workshop</strong><p className="mt-2 text-sm">WAP → tablets<br/>Wi-Fi</p></div>
-        <div className="rounded-xl border-2 border-slate-700 p-4"><strong>Shared service</strong><p className="mt-2 text-sm">server / storage<br/>Ethernet</p></div>
-      </div>
-    </div>
-  </figure>;
-}
 
 export function Unit14DiagramMasteryLab(){
   const [selected,setSelected]=useState<PearsonDiagram>("floor");
