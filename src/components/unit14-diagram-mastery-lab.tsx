@@ -86,35 +86,22 @@ function FloorPlanExample(){
     <figcaption className="text-lg font-bold">Worked example · Building / floor plan</figcaption>
     <p className="mt-1 text-sm text-slate-600">This is the large room-style diagram. It shows physical areas first, then annotates the IT provision required in each area.</p>
     <div className="mt-5 grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-      <div className="grid min-h-[520px] grid-cols-2 grid-rows-2 border-4 border-slate-900">
-        <div className="border-b-2 border-r-2 border-slate-900 p-5">
-          <h4 className="text-lg font-bold">Reception</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">2 × PCs<br/>network printer<br/>VoIP phone</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">booking system<br/>payment software<br/>customer details</p></div>
-          </div>
+      <div className="rounded-3xl border-4 border-slate-900 bg-slate-100 p-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          {[
+            ["Reception","2 × PCs · network printer · VoIP phone","booking system · payments · customer details"],
+            ["Manager office","laptop / desktop · printer access","reporting tools · staff information · management reports"],
+            ["Workshop","workstation · tablets · wireless access point","repair jobs · diagnostic software · job progress"],
+            ["Parts / secure IT area","stock workstation · switch · server / shared storage","stock system · parts records · shared service data"],
+          ].map(([room,hardware,data])=><section key={room} className="rounded-2xl border-2 border-slate-800 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3"><h4 className="text-lg font-bold">{room}</h4><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">Room</span></div>
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-xl bg-slate-50 p-3"><strong className="text-sm">Hardware</strong><p className="mt-1 text-sm">{hardware}</p></div>
+              <div className="rounded-xl bg-slate-50 p-3"><strong className="text-sm">Software and data</strong><p className="mt-1 text-sm">{data}</p></div>
+            </div>
+          </section>)}
         </div>
-        <div className="border-b-2 border-slate-900 p-5">
-          <h4 className="text-lg font-bold">Manager office</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">laptop / desktop<br/>network printer access</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">reporting tools<br/>staff information<br/>management reports</p></div>
-          </div>
-        </div>
-        <div className="border-r-2 border-slate-900 p-5">
-          <h4 className="text-lg font-bold">Workshop</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">workstation<br/>tablets<br/>wireless access point</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">repair jobs<br/>diagnostic software<br/>job progress</p></div>
-          </div>
-        </div>
-        <div className="p-5">
-          <h4 className="text-lg font-bold">Parts / secure IT area</h4>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-lg border p-3"><strong>Hardware</strong><p className="mt-2 text-sm">stock workstation<br/>switch<br/>server / shared storage</p></div>
-            <div className="rounded-lg border p-3"><strong>Software / data</strong><p className="mt-2 text-sm">stock system<br/>parts records<br/>shared service data</p></div>
-          </div>
-        </div>
+        <div className="mt-4 rounded-2xl border-2 border-dashed border-slate-500 bg-white p-4 text-center text-sm font-semibold">Annotate connections and access requirements between rooms where the scenario justifies them.</div>
       </div>
       <aside className="rounded-xl bg-slate-50 p-5">
         <h4 className="font-bold">What the student should show</h4>
