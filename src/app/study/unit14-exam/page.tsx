@@ -5,7 +5,7 @@ import {requireCurriculumUnitAccess} from "@/lib/curriculum-access";
 import {createClient} from "@/lib/supabase/server";
 import {allStudyRows} from "@/lib/mini-study-evidence";
 import {studyDay} from "@/lib/mini-study";
-import {unit14Activities,unit14Checkpoint,unit14Papers,unit14Spec} from "@/lib/unit14-exam";
+import {unit14Activities,unit14Checkpoint,unit14Papers,unit14Spec,unit14TaskOwnership} from "@/lib/unit14-exam";
 import {unit14Models} from "@/lib/unit14-models";
 import {Unit14Teaching} from "@/components/unit14-teaching";
 import {Unit14Task3Practice} from "@/components/unit14-task3-practice";
@@ -32,7 +32,21 @@ export default async function Unit14ExamPage({searchParams}:{searchParams:Promis
  }):[];
  return <div className="mini-study-surface"><header className="mini-study-header"><Link href={staff?"/dashboard":"/study"}>Digital Learning Hub</Link></header><main className="mini-study-main">
  <h1 className="text-3xl font-bold">Unit 14 · Ready for January</h1><p className="mt-3">IT Service Delivery · January 2027. Learn a little, practise it, then improve your answer.</p><p className="assignment-deadline">{task3Only?"Wednesday group: Activity 3 is the only exam focus in this area for now.":unit14Checkpoint(studyDay(new Date()))}</p>
- <p className="assignment-note">Hima and Lee are teaching Unit 14 before the January assessment. Unit 19 follows afterwards. Your teachers will confirm the exact assessment dates and permitted preparation.</p>
+ <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+  <div className="flex flex-wrap items-end justify-between gap-3">
+    <div><p className="mini-study-kicker">Who is teaching each task</p><h2 className="text-xl font-bold">Unit 14 teaching split</h2></div>
+    <p className="text-sm text-slate-600">Task 5 is shared.</p>
+  </div>
+  <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    {unit14TaskOwnership.map(item=><article key={item.task} className={item.task===3?"rounded-xl border-2 border-purple-300 bg-purple-50 p-4":"rounded-xl border border-slate-200 bg-slate-50 p-4"}>
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Task {item.task}</p>
+      <h3 className="mt-1 font-bold">{item.title}</h3>
+      <p className="mt-3 text-sm"><strong>{item.owner}</strong></p>
+      <p className="mt-2 text-xs leading-5 text-slate-600">{item.note}</p>
+    </article>)}
+  </div>
+</section>
+<p className="assignment-note">Unit 19 follows afterwards. Your teachers will confirm the exact assessment dates and permitted preparation.</p>
  <details className="mini-study-help"><summary>The assessment and our plan</summary><p>Unit 14 is a Pearson external set task. Practise applying knowledge to an organisation, designing a connected service and justifying your decisions. Cover content areas A–D and assessment outcomes AO1–AO5 with your teachers.</p>{task3Only?<p>For the Wednesday group, this page is deliberately narrowed to Activity 3: IT service delivery solution. The intensive practice concentrates on network/service diagrams, DFDs, room and role mapping, data/information, hardware, software and clear scenario-specific explanations.</p>:<p>Start with individual activities. Work towards full mocks following each selected paper&apos;s instructions. Old paper dates and timings are not your January 2027 timetable.</p>}<p>Use this portal for practice, not during the live assessment.</p><p><a className="link" href={unit14Spec} target="_blank" rel="noreferrer">Pearson Extended Diploma specification</a></p><p><a className="link" href="https://qualifications.pearson.com/content/dam/pdf/BTEC-Nationals/Information-Technology/2016/External-assessments/asg-unit14-20161k-amended.pdf" target="_blank" rel="noreferrer">Pearson Unit 14 assessment guidance</a></p><p><Link className="link" href="/curriculum/units/14">Explore all Unit 14 topics and further practice</Link></p></details>
  {groups.length>1&&<nav aria-label="Choose group" className="my-4 flex flex-wrap gap-3">{groups.map(g=><Link key={g.id} className="link" href={`?classId=${g.id}`}>{g.name}</Link>)}</nav>}
  <div className="mt-6">{task3Only?<Unit14Task3Practice/>:<Unit14Teaching/>}</div>
